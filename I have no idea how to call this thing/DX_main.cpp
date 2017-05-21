@@ -88,8 +88,8 @@ namespace DX2D
 	void initships();
 	//engine-specific ( mostly ) 
 	struct physreactonset;
-	ID2D1HwndRenderTarget *hwndRT = nullptr;
-	ID2D1Factory* pD2DFactory = nullptr;
+	ID2D1DeviceContext *hwndRT = nullptr;
+	ID2D1Factory1* pD2DFactory = nullptr;
 
 	void(*fformaintocall)(physobj*, physobj*);
 	physobj* objtc1;

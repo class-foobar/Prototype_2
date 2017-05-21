@@ -4,7 +4,7 @@
 #include <afxwin.h>
 #include <algorithm>
 #include <AM_uber.h>
-#include <dwrite.h>
+#include <dwrite_1.h>
 #include <boost\any.hpp>
 #include <boost\algorithm\\clamp.hpp>
 #include <afxrendertarget.h>
@@ -15,7 +15,8 @@
 #include <conio.h>
 #include <cstring>
 #include <cstdint>
-#include <d2d1.h>
+#include <d2d1_1.h>
+#include <d2d1_1helper.h>
 #include <d3d11_1.h>
 #include <d3dcompiler.h>
 #include <direct.h>
@@ -40,7 +41,7 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <Wincodec.h>
-
+#include <d2d1effecthelpers.h>
 #ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC
 #define _CRTDBG_MAPALLOC
