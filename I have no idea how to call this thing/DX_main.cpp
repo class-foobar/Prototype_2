@@ -388,44 +388,44 @@ namespace DX2D
 			RECT rc;
 			GetClientRect(hwnd, &rc);
 			debugging::dbm = &dbmain;
-#if defined(DEBUG) || defined(_DEBUG)
-			D2D1_FACTORY_OPTIONS options;
-			options.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
-
-			HRESULT hr = D2D1CreateFactory(
-				D2D1_FACTORY_TYPE_SINGLE_THREADED,
-				options,
-				&pD2DFactory
-			);
-#else
-			HRESULT hr = D2D1CreateFactory(
-				D2D1_FACTORY_TYPE_SINGLE_THREADED,
-				&pD2DFactory
-			);
-#endif
-
-			// Create a Direct2D render target	
-			hr = pD2DFactory->CreateHwndRenderTarget(
-				D2D1::RenderTargetProperties(),
-				D2D1::HwndRenderTargetProperties(
-					hwnd,
-					D2D1::SizeU(
-						rc.right - rc.left,
-						rc.bottom - rc.top)
-				),
-				&RenderTarget
-			);
-			D2D1_RENDER_TARGET_PROPERTIES rtpnc = D2D1::RenderTargetProperties(
-				D2D1_RENDER_TARGET_TYPE_DEFAULT,
-				D2D1::PixelFormat(
-					DXGI_FORMAT_UNKNOWN,
-					D2D1_ALPHA_MODE_IGNORE),
-				0,
-				0,
-				D2D1_RENDER_TARGET_USAGE_NONE,
-				D2D1_FEATURE_LEVEL_DEFAULT
-			);
-			const D2D1_RENDER_TARGET_PROPERTIES rtp = rtpnc;
+//#if defined(DEBUG) || defined(_DEBUG)
+//			D2D1_FACTORY_OPTIONS options;
+//			options.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
+//
+//			HRESULT hr = D2D1CreateFactory(
+//				D2D1_FACTORY_TYPE_SINGLE_THREADED,
+//				options,
+//				&pD2DFactory
+//			);
+//#else
+//			HRESULT hr = D2D1CreateFactory(
+//				D2D1_FACTORY_TYPE_SINGLE_THREADED,
+//				&pD2DFactory
+//			);
+//#endif
+//
+//			// Create a Direct2D render target	
+//			hr = pD2DFactory->CreateHwndRenderTarget(
+//				D2D1::RenderTargetProperties(),
+//				D2D1::HwndRenderTargetProperties(
+//					hwnd,
+//					D2D1::SizeU(
+//						rc.right - rc.left,
+//						rc.bottom - rc.top)
+//				),
+//				&RenderTarget
+//			);
+//			D2D1_RENDER_TARGET_PROPERTIES rtpnc = D2D1::RenderTargetProperties(
+//				D2D1_RENDER_TARGET_TYPE_DEFAULT,
+//				D2D1::PixelFormat(
+//					DXGI_FORMAT_UNKNOWN,
+//					D2D1_ALPHA_MODE_IGNORE),
+//				0,
+//				0,
+//				D2D1_RENDER_TARGET_USAGE_NONE,
+//				D2D1_FEATURE_LEVEL_DEFAULT
+//			);
+//			const D2D1_RENDER_TARGET_PROPERTIES rtp = rtpnc;
 			hwndRT = RenderTarget;
 			maincam = new camera;
 			if (!SUCCEEDED(hr))
