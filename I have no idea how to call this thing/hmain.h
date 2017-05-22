@@ -742,7 +742,7 @@ namespace GAME
 }
 namespace DX2D
 {
-	extern ID2D1HwndRenderTarget *hwndRT;
+	extern ID2D1DeviceContext *hwndRT;
 	class main;
 	void init(mainwins style);
 	void Release();

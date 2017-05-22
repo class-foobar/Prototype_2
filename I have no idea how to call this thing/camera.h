@@ -5,7 +5,7 @@ using namespace std;
 using namespace D2D1;
 namespace DX2D
 {
-	extern ID2D1HwndRenderTarget *hwndRT;
+	extern ID2D1DeviceContext *hwndRT;
 	class scene
 	{
 	public:

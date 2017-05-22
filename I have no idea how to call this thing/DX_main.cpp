@@ -90,7 +90,11 @@ namespace DX2D
 	struct physreactonset;
 	ID2D1DeviceContext *hwndRT = nullptr;
 	ID2D1Factory1* pD2DFactory = nullptr;
-
+	ID3D11Device1 *Direct3DDevice;
+	ID3D11DeviceContext1 *Direct3DContext;
+	ID2D1Device *Direct2DDevice;
+	IDXGISwapChain1 *DXGISwapChain;
+	ID2D1Bitmap1 *Direct2DBackBuffer;
 	void(*fformaintocall)(physobj*, physobj*);
 	physobj* objtc1;
 	physobj* objtc2;
@@ -388,6 +392,75 @@ namespace DX2D
 			RECT rc;
 			GetClientRect(hwnd, &rc);
 			debugging::dbm = &dbmain;
+			//
+			HRESULT hr = NULL;
+#if defined(DEBUG) || defined(_DEBUG)
+			D2D1_FACTORY_OPTIONS options;
+			ZeroMemory(&options, sizeof(D2D1_FACTORY_OPTIONS));
+			options.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
+			hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory1), &options, reinterpret_cast<void **>(&pD2DFactory));
+#else
+			D2D1_FACTORY_OPTIONS options;
+			ZeroMemory(&options, sizeof(D2D1_FACTORY_OPTIONS));
+
+			hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory1), &options, reinterpret_cast<void **>(&pD2DFactory));
+#endif
+			D3D_FEATURE_LEVEL featureLevels[] =
+			{
+				D3D_FEATURE_LEVEL_11_1,
+				D3D_FEATURE_LEVEL_11_0,
+				D3D_FEATURE_LEVEL_10_1,
+				D3D_FEATURE_LEVEL_10_0,
+				D3D_FEATURE_LEVEL_9_3,
+				D3D_FEATURE_LEVEL_9_2,
+				D3D_FEATURE_LEVEL_9_1
+			};
+			UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+			ID3D11Device *device;
+			ID3D11DeviceContext *context;
+			D3D_FEATURE_LEVEL returnedFeatureLevel;
+			D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, 0, creationFlags, featureLevels, ARRAYSIZE(featureLevels), D3D11_SDK_VERSION,
+				&device, &returnedFeatureLevel, &context);
+			device->QueryInterface(__uuidof(ID3D11Device1), (void **)&Direct3DDevice);
+			context->QueryInterface(__uuidof(ID3D11DeviceContext1), (void **)&Direct3DContext);
+			IDXGIDevice *dxgiDevice;
+			Direct3DDevice->QueryInterface(__uuidof(IDXGIDevice), (void **)&dxgiDevice);
+			pD2DFactory->CreateDevice(dxgiDevice, &Direct2DDevice);
+			Direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &hwndRT);
+			IDXGIAdapter *dxgiAdapter;
+			dxgiDevice->GetAdapter(&dxgiAdapter);
+			IDXGIFactory2 *dxgiFactory;
+			dxgiAdapter->GetParent(IID_PPV_ARGS(&dxgiFactory));
+			DXGI_SWAP_CHAIN_DESC1 swapChainDesc = { 0 };
+			swapChainDesc.Width = rc.right-rc.left;
+			swapChainDesc.Height = rc.bottom-rc.top;
+			swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+			swapChainDesc.Stereo = false;
+			swapChainDesc.SampleDesc.Count = 1;
+			swapChainDesc.SampleDesc.Quality = 0;
+			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+			swapChainDesc.BufferCount = 2;
+			swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+			swapChainDesc.Flags = 0;
+			dxgiFactory->CreateSwapChainForHwnd(Direct3DDevice, hwnd, &swapChainDesc, nullptr, nullptr, &DXGISwapChain);
+			IDXGISurface *dxgiBackBuffer;
+			DXGISwapChain->GetBuffer(0, IID_PPV_ARGS(&dxgiBackBuffer));
+			FLOAT dpiX, dpiY;
+			pD2DFactory->GetDesktopDpi(&dpiX, &dpiY);
+			D2D1_BITMAP_PROPERTIES1 bitmapProperties =
+				D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+					D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_IGNORE), dpiX, dpiY);
+
+			hwndRT->CreateBitmapFromDxgiSurface(dxgiBackBuffer, &bitmapProperties, &Direct2DBackBuffer);
+			hwndRT->SetTarget(Direct2DBackBuffer);
+			dxgiBackBuffer->Release();
+			dxgiFactory->Release();
+			dxgiAdapter->Release();
+			dxgiDevice->Release();
+			context->Release();
+			device->Release();
+
 //#if defined(DEBUG) || defined(_DEBUG)
 //			D2D1_FACTORY_OPTIONS options;
 //			options.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
@@ -426,7 +499,6 @@ namespace DX2D
 //				D2D1_FEATURE_LEVEL_DEFAULT
 //			);
 //			const D2D1_RENDER_TARGET_PROPERTIES rtp = rtpnc;
-			hwndRT = RenderTarget;
 			maincam = new camera;
 			if (!SUCCEEDED(hr))
 			{
@@ -1447,11 +1519,61 @@ namespace DX2D
 				D2D1_SIZE_F drf = { clientsize.right,clientsize.bottom };
 				drf.width *= DXclass->maincam->scale.x;
 				drf.height *= DXclass->maincam->scale.y;
-				hwndRT->Resize({ (ui)drf.width,(ui)drf.height });
-				hwndRT->CreateCompatibleRenderTarget(drf, BRT);
-				//DXclass->maincam->SetOffset(((int2)drf / 2)*1);
+				//hwndRT->Resize({ (ui)drf.width,(ui)drf.height });
 				int2 i2 = ((((uni2<float>)DXclass->con.lastmousepos*DXclass->maincam->scale - ((uni2<float>)drf)/2)) / 10).toint2();
 				DXclass->maincam->SetXY(*DXclass->maincam->GetXYp()+i2);
+				D3D_FEATURE_LEVEL featureLevels[] =
+				{
+					D3D_FEATURE_LEVEL_11_1,
+					D3D_FEATURE_LEVEL_11_0,
+					D3D_FEATURE_LEVEL_10_1,
+					D3D_FEATURE_LEVEL_10_0,
+					D3D_FEATURE_LEVEL_9_3,
+					D3D_FEATURE_LEVEL_9_2,
+					D3D_FEATURE_LEVEL_9_1
+				};
+				UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+				ID3D11Device *device;
+				ID3D11DeviceContext *context;
+				D3D_FEATURE_LEVEL returnedFeatureLevel;
+				D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, 0, creationFlags, featureLevels, ARRAYSIZE(featureLevels), D3D11_SDK_VERSION,
+					&device, &returnedFeatureLevel, &context);
+				device->QueryInterface(__uuidof(ID3D11Device1), (void **)&Direct3DDevice);
+				context->QueryInterface(__uuidof(ID3D11DeviceContext1), (void **)&Direct3DContext);
+				IDXGIDevice *dxgiDevice;
+				Direct3DDevice->QueryInterface(__uuidof(IDXGIDevice), (void **)&dxgiDevice);
+				pD2DFactory->CreateDevice(dxgiDevice, &Direct2DDevice);
+				Direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &hwndRT);
+				IDXGIAdapter *dxgiAdapter;
+				dxgiDevice->GetAdapter(&dxgiAdapter);
+				IDXGIFactory2 *dxgiFactory;
+				dxgiAdapter->GetParent(IID_PPV_ARGS(&dxgiFactory));
+				DXGI_SWAP_CHAIN_DESC1 swapChainDesc = { 0 };
+				swapChainDesc.Width = (ui)drf.width;
+				swapChainDesc.Height = (ui)drf.height;
+				swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+				swapChainDesc.Stereo = false;
+				swapChainDesc.SampleDesc.Count = 1;
+				swapChainDesc.SampleDesc.Quality = 0;
+				swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+				swapChainDesc.BufferCount = 2;
+				swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+				swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+				swapChainDesc.Flags = 0;
+				dxgiFactory->CreateSwapChainForHwnd(Direct3DDevice, hwnd, &swapChainDesc, nullptr, nullptr, &DXGISwapChain);
+				IDXGISurface *dxgiBackBuffer;
+				DXGISwapChain->GetBuffer(0, IID_PPV_ARGS(&dxgiBackBuffer));
+				FLOAT dpiX, dpiY;
+				pD2DFactory->GetDesktopDpi(&dpiX, &dpiY);
+				D2D1_BITMAP_PROPERTIES1 bitmapProperties =
+					D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+						D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_IGNORE), dpiX, dpiY);
+
+				hwndRT->CreateBitmapFromDxgiSurface(dxgiBackBuffer, &bitmapProperties, &Direct2DBackBuffer);
+				hwndRT->SetTarget(Direct2DBackBuffer);
+
+				DXclass->maincam->SetOffset(((int2)drf / 2) * 1);
+				hwndRT->CreateCompatibleRenderTarget(drf, BRT);
 				int bulllshitbreakpoint = 0;
 			}
 			else

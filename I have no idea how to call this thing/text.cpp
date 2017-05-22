@@ -2,7 +2,7 @@
 using namespace std;
 namespace DX2D
 {
-	extern 	ID2D1HwndRenderTarget *hwndRT;
+	extern 	ID2D1DeviceContext *hwndRT;
 	std::wstring STRtoWSTR(const std::string& s)
 	{
 		int len;
