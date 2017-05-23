@@ -194,7 +194,7 @@ namespace DX2D
 			return apploc + elemloc;
 		}
 		physics pclass;
-		ID2D1HwndRenderTarget* RenderTarget = nullptr;
+		ID2D1DeviceContext* RenderTarget = nullptr;
 		camera* maincam;
 		int GetpoX(float perc)
 		{
@@ -434,8 +434,9 @@ namespace DX2D
 			DXGI_SWAP_CHAIN_DESC1 swapChainDesc = { 0 };
 			swapChainDesc.Width = rc.right-rc.left;
 			swapChainDesc.Height = rc.bottom-rc.top;
-			swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+			swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 			swapChainDesc.Stereo = false;
+			//swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
 			swapChainDesc.SampleDesc.Count = 1;
 			swapChainDesc.SampleDesc.Quality = 0;
 			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -443,16 +444,16 @@ namespace DX2D
 			swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
 			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 			swapChainDesc.Flags = 0;
-			dxgiFactory->CreateSwapChainForHwnd(Direct3DDevice, hwnd, &swapChainDesc, nullptr, nullptr, &DXGISwapChain);
+			hr = dxgiFactory->CreateSwapChainForHwnd(Direct3DDevice, hwnd, &swapChainDesc, nullptr, nullptr, &DXGISwapChain);
 			IDXGISurface *dxgiBackBuffer;
 			DXGISwapChain->GetBuffer(0, IID_PPV_ARGS(&dxgiBackBuffer));
 			FLOAT dpiX, dpiY;
 			pD2DFactory->GetDesktopDpi(&dpiX, &dpiY);
 			D2D1_BITMAP_PROPERTIES1 bitmapProperties =
 				D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
-					D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_IGNORE), dpiX, dpiY);
+					D2D1::PixelFormat(DXGI_FORMAT_R8G8B8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), dpiX, dpiY);
 
-			hwndRT->CreateBitmapFromDxgiSurface(dxgiBackBuffer, &bitmapProperties, &Direct2DBackBuffer);
+			hr = hwndRT->CreateBitmapFromDxgiSurface(dxgiBackBuffer, &bitmapProperties, &Direct2DBackBuffer);
 			hwndRT->SetTarget(Direct2DBackBuffer);
 			dxgiBackBuffer->Release();
 			dxgiFactory->Release();
@@ -500,6 +501,7 @@ namespace DX2D
 //			);
 //			const D2D1_RENDER_TARGET_PROPERTIES rtp = rtpnc;
 			maincam = new camera;
+			DXclass->RenderTarget = hwndRT;
 			if (!SUCCEEDED(hr))
 			{
 				DebugBreak();
