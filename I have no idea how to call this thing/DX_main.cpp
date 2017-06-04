@@ -177,7 +177,7 @@ namespace DX2D
 		}
 	public:
 		debugging::debugmain dbmain;
-
+		
 		factions facclass;
 		map<string, module*> modtemps;
 		map<string, AZfile> modules;
@@ -386,6 +386,12 @@ namespace DX2D
 			}
 			RT->SetTransform(oldtransform);
 		}
+		IDXGIFactory2 *dxgiFactory;
+		IDXGIAdapter *dxgiAdapter;
+		IDXGIDevice *dxgiDevice;
+		ID3D11Device *device;
+		ID3D11DeviceContext *context;
+		IDXGISurface *dxgiBackBuffer;
 		void init(mainwins style)
 		{
 			int i = 0;		
@@ -416,20 +422,15 @@ namespace DX2D
 				D3D_FEATURE_LEVEL_9_1
 			};
 			UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
-			ID3D11Device *device;
-			ID3D11DeviceContext *context;
 			D3D_FEATURE_LEVEL returnedFeatureLevel;
 			D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, 0, creationFlags, featureLevels, ARRAYSIZE(featureLevels), D3D11_SDK_VERSION,
 				&device, &returnedFeatureLevel, &context);
 			device->QueryInterface(__uuidof(ID3D11Device1), (void **)&Direct3DDevice);
 			context->QueryInterface(__uuidof(ID3D11DeviceContext1), (void **)&Direct3DContext);
-			IDXGIDevice *dxgiDevice;
 			Direct3DDevice->QueryInterface(__uuidof(IDXGIDevice), (void **)&dxgiDevice);
 			pD2DFactory->CreateDevice(dxgiDevice, &Direct2DDevice);
 			Direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &hwndRT);
-			IDXGIAdapter *dxgiAdapter;
 			dxgiDevice->GetAdapter(&dxgiAdapter);
-			IDXGIFactory2 *dxgiFactory;
 			dxgiAdapter->GetParent(IID_PPV_ARGS(&dxgiFactory));
 			DXGI_SWAP_CHAIN_DESC1 swapChainDesc = { 0 };
 			swapChainDesc.Width = rc.right-rc.left;
@@ -445,7 +446,6 @@ namespace DX2D
 			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 			swapChainDesc.Flags = 0;
 			hr = dxgiFactory->CreateSwapChainForHwnd(Direct3DDevice, hwnd, &swapChainDesc, nullptr, nullptr, &DXGISwapChain);
-			IDXGISurface *dxgiBackBuffer;
 			DXGISwapChain->GetBuffer(0, IID_PPV_ARGS(&dxgiBackBuffer));
 			FLOAT dpiX, dpiY;
 			pD2DFactory->GetDesktopDpi(&dpiX, &dpiY);
@@ -455,12 +455,6 @@ namespace DX2D
 
 			hr = hwndRT->CreateBitmapFromDxgiSurface(dxgiBackBuffer, &bitmapProperties, &Direct2DBackBuffer);
 			hwndRT->SetTarget(Direct2DBackBuffer);
-			dxgiBackBuffer->Release();
-			dxgiFactory->Release();
-			dxgiAdapter->Release();
-			dxgiDevice->Release();
-			context->Release();
-			device->Release();
 
 //#if defined(DEBUG) || defined(_DEBUG)
 //			D2D1_FACTORY_OPTIONS options;
@@ -676,13 +670,27 @@ namespace DX2D
 					//cout << "ship " << i << " pos is " << "X=" << ships[i].pos->x << " Y=" << ships[i].pos->y << endl;
 					i++;
 				}
+				i = 0;
+				if (uniclass != nullptr)
+				{
+					while (i < uniclass->sysvec.size())
+					{
+						int ii = 0;
+						while (ii < uniclass->sysvec[i]->statvec.size())
+						{
+							station* stat = uniclass->sysvec[i]->statvec[ii];
+							stat->tick();
+							ii++;
+						}
+						i++;
+					}
+				}
 				t = clock();
 			}
 		}
 		i = 0;
 		DXclass->RenderTarget->BeginDraw();
 		DXclass->RenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::Black));
-		//DXclass->RenderTarget->Clear();
 		int2 offsetmc = { 0,0 };
 		if (DXclass->maincam->usescale && DXclass->maincam->scale.x > 1 && DXclass->maincam->scale.y > 1)
 		{
@@ -846,7 +854,7 @@ namespace DX2D
 			DXclass->RenderTarget->SetTransform(Matrix3x2F::Translation(addoffset.x, addoffset.y)*
 				Matrix3x2F::Rotation((DXclass->maincam->GetRot()), p2f));
 
-			DXclass->RenderTarget->DrawBitmap(bmcopy, oldRECT, 1.0, defaultinterpolationmode);
+			DXclass->RenderTarget->DrawBitmap(bmcopy, oldRECT, 1.0, advancedinterpolatonmode);
 			DXclass->RenderTarget->SetTransform(ot);
 			bmcopy->Release();
 			//}
@@ -857,9 +865,20 @@ namespace DX2D
 			//}
 		}
 		else
-			scaleend:DXclass->RenderTarget->DrawBitmap(bm1, d2r, 1.0, defaultinterpolationmode);
+			scaleend:DXclass->RenderTarget->DrawBitmap(bm1, d2r, 1.0, advancedinterpolatonmode);
 		//bm1->Release();
 		hr = DXclass->RenderTarget->EndDraw();
+		displayHRerrors(hr, hwnd, __LINE__ - 1, false, "ID2D1DeviceContext->EndDraw has failed");
+
+		DXGI_PRESENT_PARAMETERS parameters = { 0 };
+		parameters.DirtyRectsCount = 0;
+		parameters.pDirtyRects = nullptr;
+		parameters.pScrollRect = nullptr;
+		parameters.pScrollOffset = nullptr;
+
+		hr = DXGISwapChain->Present1(1, 0, &parameters);
+		displayHRerrors(hr, hwnd, __LINE__ - 1, false, "DXGISwapChain->Present1 has failed");
+
 	}
 	bool wp = false;
 	bool sp = false;
@@ -1508,6 +1527,7 @@ namespace DX2D
 		scaleset:;
 			if ((DXclass->maincam->scale.x >= 1.0f || b1) && !b)
 			{
+				HRESULT hr = NULL;
 				ID2D1BitmapRenderTarget** BRT = DXclass->maincam->GetRenderTargetP();
 				ID2D1Bitmap* BMTRL = NULL;
 				(*BRT)->GetBitmap(&BMTRL);
@@ -1524,37 +1544,12 @@ namespace DX2D
 				//hwndRT->Resize({ (ui)drf.width,(ui)drf.height });
 				int2 i2 = ((((uni2<float>)DXclass->con.lastmousepos*DXclass->maincam->scale - ((uni2<float>)drf)/2)) / 10).toint2();
 				DXclass->maincam->SetXY(*DXclass->maincam->GetXYp()+i2);
-				D3D_FEATURE_LEVEL featureLevels[] =
-				{
-					D3D_FEATURE_LEVEL_11_1,
-					D3D_FEATURE_LEVEL_11_0,
-					D3D_FEATURE_LEVEL_10_1,
-					D3D_FEATURE_LEVEL_10_0,
-					D3D_FEATURE_LEVEL_9_3,
-					D3D_FEATURE_LEVEL_9_2,
-					D3D_FEATURE_LEVEL_9_1
-				};
-				UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
-				ID3D11Device *device;
-				ID3D11DeviceContext *context;
-				D3D_FEATURE_LEVEL returnedFeatureLevel;
-				D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, 0, creationFlags, featureLevels, ARRAYSIZE(featureLevels), D3D11_SDK_VERSION,
-					&device, &returnedFeatureLevel, &context);
-				device->QueryInterface(__uuidof(ID3D11Device1), (void **)&Direct3DDevice);
-				context->QueryInterface(__uuidof(ID3D11DeviceContext1), (void **)&Direct3DContext);
-				IDXGIDevice *dxgiDevice;
-				Direct3DDevice->QueryInterface(__uuidof(IDXGIDevice), (void **)&dxgiDevice);
-				pD2DFactory->CreateDevice(dxgiDevice, &Direct2DDevice);
-				Direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &hwndRT);
-				IDXGIAdapter *dxgiAdapter;
-				dxgiDevice->GetAdapter(&dxgiAdapter);
-				IDXGIFactory2 *dxgiFactory;
-				dxgiAdapter->GetParent(IID_PPV_ARGS(&dxgiFactory));
 				DXGI_SWAP_CHAIN_DESC1 swapChainDesc = { 0 };
-				swapChainDesc.Width = (ui)drf.width;
-				swapChainDesc.Height = (ui)drf.height;
-				swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+				swapChainDesc.Width = drf.width;
+				swapChainDesc.Height = drf.height;
+				swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 				swapChainDesc.Stereo = false;
+				//swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
 				swapChainDesc.SampleDesc.Count = 1;
 				swapChainDesc.SampleDesc.Quality = 0;
 				swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -1562,19 +1557,27 @@ namespace DX2D
 				swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
 				swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 				swapChainDesc.Flags = 0;
-				dxgiFactory->CreateSwapChainForHwnd(Direct3DDevice, hwnd, &swapChainDesc, nullptr, nullptr, &DXGISwapChain);
-				IDXGISurface *dxgiBackBuffer;
-				DXGISwapChain->GetBuffer(0, IID_PPV_ARGS(&dxgiBackBuffer));
+				DXGISwapChain->Release();
+				DXclass->dxgiBackBuffer->Release();
+				hr = DXclass->dxgiFactory->CreateSwapChainForHwnd(Direct3DDevice, hwnd, &swapChainDesc, nullptr, nullptr, &DXGISwapChain);
+				DXGISwapChain->GetBuffer(0, IID_PPV_ARGS(&DXclass->dxgiBackBuffer));
 				FLOAT dpiX, dpiY;
 				pD2DFactory->GetDesktopDpi(&dpiX, &dpiY);
 				D2D1_BITMAP_PROPERTIES1 bitmapProperties =
 					D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
-						D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_IGNORE), dpiX, dpiY);
-
-				hwndRT->CreateBitmapFromDxgiSurface(dxgiBackBuffer, &bitmapProperties, &Direct2DBackBuffer);
+						D2D1::PixelFormat(DXGI_FORMAT_R8G8B8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), dpiX, dpiY);
+				Direct2DBackBuffer->Release();
+				hr = hwndRT->CreateBitmapFromDxgiSurface(DXclass->dxgiBackBuffer, &bitmapProperties, &Direct2DBackBuffer);
 				hwndRT->SetTarget(Direct2DBackBuffer);
-
-				DXclass->maincam->SetOffset(((int2)drf / 2) * 1);
+				if (DXclass->maincam->scale > DXclass->maincam->oldscale)
+				{
+					DXclass->maincam->SetOffset(((int2)drf / 2) * 1);
+				}
+				else
+				{
+					DXclass->maincam->SetOffset(-(((int2)drf / 2) * 1));
+				}
+				DXclass->maincam->oldscale = DXclass->maincam->scale;
 				hwndRT->CreateCompatibleRenderTarget(drf, BRT);
 				int bulllshitbreakpoint = 0;
 			}

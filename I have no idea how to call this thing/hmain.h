@@ -22,6 +22,7 @@
 #include <direct.h>
 #include <directxcolors.h>
 #include <DirectXMath.h>
+#include <stdarg.h>
 #include <directxmath.h>
 #include <fstream>
 #include <iomanip>
@@ -115,6 +116,11 @@ namespace classvariables
 		int2 operator*(int n)
 		{
 			return{ x*n,y*n };
+		}
+		int2 operator-()const
+		{
+			int2 nv = { -x,-y };
+			return nv;
 		}
 		int2 operator-(int2 &n)
 		{
@@ -225,6 +231,11 @@ namespace classvariables
 		int x;
 		int y;
 		int z;
+		int3 operator-()const
+		{
+			int3 nv = { -x,-y,-z };
+			return nv;
+		}
 		int3 operator-(int3 n)
 		{
 			return int3(x - n.x, y - n.y, z - n.z);
@@ -287,6 +298,11 @@ namespace classvariables
 		operator D2D1_RECT_U() const
 		{
 			return{(ui) x,(ui)y,(ui)z,(ui)w };
+		}
+		int4 operator-()const
+		{
+			int4 nv = { -x,-y,-z,-w };
+			return nv;
 		}
 		int4 operator-(int4 n)
 		{
@@ -413,6 +429,11 @@ namespace classvariables
 		std::vector<univar> vec2()
 		{
 			return{ x,y };
+		}
+		uni2 operator-()const
+		{
+			uni2 nv = { -x,-y };
+			return nv;
 		}
 		uni2 operator/(univar n)
 		{
@@ -564,6 +585,7 @@ namespace classvariables
 #define catchleaks				0
 #define sectorsize				299792
 #define defaultinterpolationmode D2D1_BITMAP_INTERPOLATION_MODE_LINEAR  //D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR
+#define advancedinterpolatonmode D2D1_INTERPOLATION_MODE::D2D1_INTERPOLATION_MODE_ANISOTROPIC
 #define stationsizemultip 2.0f
 inline bool operator>(float2 f0, float2 f1)
 {
@@ -776,6 +798,40 @@ inline int2 percentageofresi(int2 res, float xperc, float yperc)
 inline uni2<float> percentageofresf(int2 res, uni2<float> perc)
 {
 	return uni2<float>(res.x, res.y)* perc;
+}
+inline void displayHRerrors(HRESULT hr, HWND hwnd, int line = -1, bool fstop = false, string errormessage = "", string name = "error", vector<string>adinfonames = {}, ...)
+{
+	if (SUCCEEDED(hr))
+		return;
+	va_list vl;
+	int i = 0;
+	string adstr = "";
+	if (adinfonames.size() > 0)
+	{
+		va_start(vl, adinfonames);
+		while (i < adinfonames.size())
+		{
+			adstr += adinfonames[i] + " " + va_arg(vl, string) + ", ";
+			i++;
+		}
+		adstr.erase(adstr.length() - 1);
+		adstr.erase(adstr.length() - 1);
+		va_end(vl);
+	}
+	string text = "An error has occurred";
+	if (line != -1)
+		text += " at line " + to_string(line);
+	if (errormessage != "")
+		text += ": " + errormessage;
+	if (adstr != "")
+		text += "\nAdditional info:\n" + adstr;
+	text += "\nAttemnpt to continue?";
+	int res = MessageBox(hwnd,text.c_str(),name.c_str(), MB_YESNO| MB_ICONERROR);
+	if (res == IDNO)
+		DebugBreak();
+	if (fstop)
+		DebugBreak();
+	i = 0;
 }
 #define poresi percentageofresi
 #define poresf percentageofresf

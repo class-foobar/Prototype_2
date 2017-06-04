@@ -136,6 +136,26 @@ namespace GAME
 		int2 size;
 		void tick(stationmodOUT* base);
 	};
+
+	class stationmodOUTslot
+	{
+	public:
+		int2* pos;
+		stationmodOUT* mod = nullptr;
+		int slotnum;
+		float slotrot = 0;
+		int slotsize;
+	};
+	class stationmodINslot
+	{
+	public:
+		int2* pos;
+		stationmodIN* mod = nullptr;
+		int slotnum;
+		float slotrot = 0;
+		int slotsize;
+	};
+	extern int dbxyz; // if you remove this line the compiler will... well... http://i.imgur.com/snFoWUG.png
 	class stationmodtempOUT
 	{
 		friend class stationmodOUT;
@@ -598,26 +618,8 @@ namespace GAME
 		int2 sizet;
 		int2 size;
 		void loadsubmods(AZfile& af, string lk);
-		class stationmodOUTslot
-		{
-		public:
-			int2* pos;
-			stationmodOUT* mod = nullptr;
-			int slotnum;
-			float slotrot = 0;
-			int slotsize;
-		};
 		vector<sub> subs;
 		float hpd = -1;
-		class stationmodINslot
-		{
-		public:
-			int2* pos;
-			stationmodIN* mod = nullptr;
-			int slotnum;
-			float slotrot = 0;
-			int slotsize;
-		};
 		vector<stationmodINslot*>slotsin;
 		vector<stationmodOUTslot*>slotsout;
 		stationmodOUT()
@@ -685,7 +687,7 @@ namespace GAME
 			}
 			i = 0;
 		}
-		void RenderInit(camera* ncam, frame* nf, string nstationname);
+		void RenderInit(camera* ncam, frame* nf, string nstationname,stationmodOUTslot* slot);
 		void  RenderRelease();
 	};
 	class stationmodIN
@@ -714,24 +716,6 @@ namespace GAME
 		int2 posin;
 		int2 sizet;
 		int2 size;
-		class stationmodINslot
-		{
-		public:
-			int2* pos;
-			stationmodIN* mod = nullptr;
-			int slotnum;
-			int slotsize;
-			float slotrot = 0;
-		};
-		class stationmodOUTslot
-		{
-		public:
-			int2* pos;
-			stationmodOUT* mod = nullptr;
-			int slotnum;
-			float slotrot;
-			int slotsize;
-		};
 		vector<stationmodINslot*>slotsin;
 		vector<stationmodOUTslot*>slotsout;
 		int slotsize;
@@ -804,7 +788,7 @@ namespace GAME
 		bool hpdstatel = false;
 
 		void tick();
-		void RenderInit(camera* ncam, frame* nf, string nstationname)
+		void RenderInit(camera* ncam, frame* nf, string nstationname, stationmodINslot* slot)
 		{
 			stationname = "";
 			stationname = nstationname;
@@ -815,7 +799,7 @@ namespace GAME
 			tx.size = (D2D_SIZE_F)(sizet*stationsizemultip);
 			tx.SetOffsetXYp(new int2(int2{ 0,0 }-postm), true);
 			tx.SyncPos(pos,false);
-			tx.SetRot(INangle);
+			tx.SetRot(slot->slotrot);
 			renderp = new bool(true);
 			identp = new bool(true);
 			tx.render = renderp;
@@ -826,14 +810,14 @@ namespace GAME
 			while (i < slotsin.size())
 			{
 				if(slotsin[i]->mod != nullptr )
-					slotsin[i]->mod->RenderInit(ncam, nf, nstationname);
+					slotsin[i]->mod->RenderInit(ncam, nf, nstationname, slotsin[i]);
 				i++;
 			}
 			i = 0;
 			while (i < slotsout.size())
 			{
 				if (slotsout[i]->mod != nullptr)
-					slotsout[i]->mod->RenderInit(ncam, nf, nstationname);
+					slotsout[i]->mod->RenderInit(ncam, nf, nstationname, slotsout[i]);
 				i++;
 			}
 			return;
@@ -929,6 +913,21 @@ namespace GAME
 			storagelimit = MaptoVec(storagelimitm);
 		}
 		frame* f = nullptr;
+		void tick()
+		{
+			int i = 0;
+			while (i < sINv.size())
+			{
+				sINv[i]->tick();
+				i++;
+			}
+			i = 0;
+			while (i < sOUTv.size())
+			{
+				sOUTv[i]->tick();
+				i++;
+			}
+		}
 		void RenderInit( frame* mf , camera* cam)
 		{
 			if(f == nullptr )
@@ -942,22 +941,27 @@ namespace GAME
 			core->pos = pos;
 			f->ismactive = true;
 			f->ischfact = true;
-			core->RenderInit(cam,f,name);
+			auto fakeslot = new stationmodINslot;
+			fakeslot->slotrot = 0.0f;
+			fakeslot->pos = new int2 ( 0,0 );
+			core->RenderInit(cam,f,name,fakeslot);
 			int i = 0;
 			while (i < core->slotsin.size())
 			{
 				if (core->slotsin[i]->mod != nullptr)
-					core->slotsin[i]->mod->RenderInit(cam, f, name);
+					core->slotsin[i]->mod->RenderInit(cam, f, name,core->slotsin[i]);
 				i++;
 			}
 			i = 0;
 			while (i < core->slotsout.size())
 			{
 				if (core->slotsout[i]->mod != nullptr)
-					core->slotsout[i]->mod->RenderInit(cam, f, name);
+					core->slotsout[i]->mod->RenderInit(cam, f, name, core->slotsout[i]);
 				i++;
 			}
 			int DONT_OPTIMISE_THIS_SHIT = abs(-1);
+			delete fakeslot->pos;
+			delete fakeslot;
 			return;
 		}
 		void RenderEnd()

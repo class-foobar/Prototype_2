@@ -34,7 +34,8 @@ namespace DX2D
 		bool usecustomrenderrotpoint = false;
 		bool ignoreXYforrendering = false;
 		D2D1_POINT_2F scalepoint;
-		float2 scale = { 1,1 };
+		uni2<float> scale = { 1,1 };
+		uni2<float> oldscale = { 1,1 };
 		bool usescale = false;
 		int2 rotpointoffset = { 0,0 };
 		D2D1_POINT_2F customrotpoint;

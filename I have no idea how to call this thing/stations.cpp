@@ -313,7 +313,7 @@ namespace GAME
 			i = 0;
 		}
 	}
-	void stationmodOUT::RenderInit(camera* ncam, frame* nf, string nstationname)
+	void stationmodOUT::RenderInit (camera* ncam, frame* nf, string nstationname, stationmodOUTslot* slot)
 	{
 		stationname = "";
 		stationname = nstationname;
@@ -323,7 +323,8 @@ namespace GAME
 		tx.SetBitmapFromFile(STRtoWSTR(textureloc).c_str(), *cam->GetRenderTargetP());
 		tx.size = (D2D_SIZE_F)(sizet*stationsizemultip);
 		tx.SetOffsetXYp(new int2(int2{ 0,0 }-postm), true);
-		tx.SyncPos(pos, false);
+		//tx.SyncPos(pos, false);
+		tx.SetRot(slot->slotrot);
 		renderp = new bool(true);
 		identp = new bool(true);
 		tx.render = renderp;
@@ -334,14 +335,14 @@ namespace GAME
 		while (i < slotsin.size())
 		{
 			if (slotsin[i]->mod != nullptr)
-				slotsin[i]->mod->RenderInit(ncam, nf, nstationname);
+				slotsin[i]->mod->RenderInit(ncam, nf, nstationname, slotsin[i]);
 			i++;
 		}
 		i = 0;
 		while (i < slotsout.size())
 		{
 			if (slotsout[i]->mod != nullptr)
-				slotsout[i]->mod->RenderInit(ncam, nf, nstationname);
+				slotsout[i]->mod->RenderInit(ncam, nf, nstationname, slotsout[i]);
 			i++;
 		}
 		return;

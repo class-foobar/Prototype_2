@@ -17,6 +17,7 @@ namespace GAME
 	string version = "null";
 	ui build = 0;
 	universe* uniclass = nullptr;
+	int dbxyz = 0;
 }
 inline std::string __INTtoSTR(int i)
 {
