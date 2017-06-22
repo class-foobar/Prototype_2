@@ -946,7 +946,7 @@ namespace GAME
 			fakeslot->pos = new int2 ( 0,0 );
 			core->RenderInit(cam,f,name,fakeslot);
 			int i = 0;
-			while (i < core->slotsin.size())
+			/*while (i < core->slotsin.size())
 			{
 				if (core->slotsin[i]->mod != nullptr)
 					core->slotsin[i]->mod->RenderInit(cam, f, name,core->slotsin[i]);
@@ -958,8 +958,8 @@ namespace GAME
 				if (core->slotsout[i]->mod != nullptr)
 					core->slotsout[i]->mod->RenderInit(cam, f, name, core->slotsout[i]);
 				i++;
-			}
-			int DONT_OPTIMISE_THIS_SHIT = abs(-1);
+			}*/
+			int DONT_OPTIMISE_THIS_SHIT = abs(-1*(rand()/2));
 			delete fakeslot->pos;
 			delete fakeslot;
 			return;

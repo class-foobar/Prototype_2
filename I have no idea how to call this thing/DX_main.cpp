@@ -228,6 +228,7 @@ namespace DX2D
 			else 
 				trans = Matrix3x2F::Translation(cam->GetX(), cam->GetY());
 			RT->GetTransform(&oldtransform);
+			RT->SetTransform(trans);
 			D2D_SIZE_F SZ = RT->GetSize();
 			while (i < f.size())
 			{
@@ -273,20 +274,50 @@ namespace DX2D
 								continue;
 							}
 						}
+						if (f[i]->sprites[ii].forceoverridepos)
+						{
+							if (f[i]->sprites[ii].overridepos != nullptr)
+							{
+								f[i]->sprites[ii].SyncPos(new int2(*f[i]->sprites[ii].overridepos),false);
+								f[i]->sprites[ii].forceoverridepos = false;
+							}
+						}
 						D2D_RECT_F loc;
 						loc.top = (f[i]->sprites[ii].GetY() + f[i]->sprites[ii].GetOffSetp()->y);
 						loc.left = (f[i]->sprites[ii].GetX() + f[i]->sprites[ii].GetOffSetp()->x+0);
 						loc.bottom = (f[i]->sprites[ii].GetY() + f[i]->sprites[ii].size.height + f[i]->sprites[ii].GetOffSetp()->y)/**cam->scale.y*/;
 						loc.right = (f[i]->sprites[ii].GetX() + f[i]->sprites[ii].size.width + f[i]->sprites[ii].GetOffSetp()->x)/**cam->scale.x*/;
+						if (f[i]->sprites[ii].savelastloc)
+						{
+							if (f[i]->sprites[ii].lastlochaststarted)
+							{
+								if (f[i]->sprites[ii].breakonlocchange)
+								{
+									if ((int4)loc != (int4)f[i]->sprites[ii].lastloc)
+									{
+										DebugBreak();
+									}
+								}
+								f[i]->sprites[ii].lastloc = loc;
+							}
+							else
+							{
+								f[i]->sprites[ii].lastloc = loc;
+							}
+						}
 						D2D_MATRIX_3X2_F oldtransform2;
 						RT->GetTransform(&oldtransform2);
 						D2D_POINT_2F p;
 						if (!cam->usecustomrenderrotpoint)
 						{
-							p = { (f[i]->sprites[ii].GetX() + f[i]->sprites[ii].GetOffSetp()->x + (f[i]->sprites[ii].size.width / 2))/**cam->scale.x*/,
-							(f[i]->sprites[ii].GetY() + f[i]->sprites[ii].GetOffSetp()->y + (f[i]->sprites[ii].size.height / 2))/**cam->scale.y*/ };
-							RT->SetTransform(trans/*Matrix3x2F::Translation(cam->GetX(), cam->GetY())*/*Matrix3x2F::Rotation(f[i]->sprites[ii].GetRot(), p));
+							p = { cam->GetX()+(f[i]->sprites[ii].GetX() + f[i]->sprites[ii].GetOffSetp()->x + (f[i]->sprites[ii].size.width / 2))/**cam->scale.x*/,
+							cam->GetY()+(f[i]->sprites[ii].GetY() + f[i]->sprites[ii].GetOffSetp()->y + (f[i]->sprites[ii].size.height / 2))/**cam->scale.y*/ };
+							RT->SetTransform(trans*/*Matrix3x2F::Translation(cam->GetX(), cam->GetY())**/Matrix3x2F::Rotation(f[i]->sprites[ii].GetRot(), p));
 						}
+						//else
+						//{
+						//	RT->SetTransform(trans*Matrix3x2F::Rotation(f[i]->sprites[ii].GetRot(), cam->customrotpoint));
+						//}
 						RT->DrawBitmap(f[i]->sprites[ii].GetBitmap(), loc, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
 						RT->SetTransform(oldtransform2);
 						ii++;

@@ -323,14 +323,20 @@ namespace GAME
 		tx.SetBitmapFromFile(STRtoWSTR(textureloc).c_str(), *cam->GetRenderTargetP());
 		tx.size = (D2D_SIZE_F)(sizet*stationsizemultip);
 		tx.SetOffsetXYp(new int2(int2{ 0,0 }-postm), true);
-		//tx.SyncPos(pos, false);
+		tx.SyncPos(pos, false);
+		tx.forceoverridepos = true;
+		tx.overridepos = pos;
 		tx.SetRot(slot->slotrot);
 		renderp = new bool(true);
 		identp = new bool(true);
 		tx.render = renderp;
 		tx.identp = identp;
 		tx.useidentp = true;
+		tx.savelastloc = true;
+		tx.breakonlocchange = true;
 		nf->sprites.push_back(tx);
+		random_shuffle(nf->sprites.begin(), nf->sprites.end());
+		auto sptr = nf->sprites[nf->sprites.size() - 1].GetXYpp();
 		int i = 0;
 		while (i < slotsin.size())
 		{

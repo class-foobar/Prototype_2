@@ -1,7 +1,12 @@
 #include "hmain.h"
 #include "debugmodule.h"
+using namespace std;
 namespace debugging
 {
+	namespace debugfunctions
+	{
+		map<string, void(*)(vector<boost::any >, void*)> defaultm;
+	}
 	extern debugmain *dbm;
 	string getstrfromtnv(string type, string name, boost::any val)
 	{
@@ -420,4 +425,171 @@ namespace debugging
 	{
 		th = new thread(&debugmain::dmain, this);
 	}
+
+	void debugconsole::thread_loop()
+	{
+	lock:;
+		unique_lock<std::mutex> lk(m);
+		mttw.wait(lk);
+	nolock:;
+		while (!active&&!killthread);
+		if (killthread)
+		{
+			return;
+		}
+		while (active)
+		{
+			string message = read();
+			if (isblankstr(message))
+				continue;
+			auto result = processfunction(message);
+			if (result.ID == CON_EXIT)
+			{
+				write(result.message);
+				write("exiting...");
+				Sleep(2);
+				isthalive = false;
+				active = false;
+				return;
+			}
+			if (result.ID > 0)
+			{
+				write("An error has occured:");
+				write(result.message);
+			}
+			else
+			{
+				write(result.message);
+			}
+		}
+		if (killthread)
+		{
+			return;
+		}
+	}
+
+	debugconsole::result debugconsole::processfunction(string line)
+	{
+		vector<boost::any> args = {};
+		string fname = "";
+		result res;
+		int i = 0;
+		res.ID = CON_NULL;
+		while (!isblankch(line[i]) && i < line.size())
+			fname += line[i++];
+		if ((i < line.size()))
+		{
+			vector <string>strarg;
+			string str = "";
+			do
+			{
+				str = "";
+				while (isblankch(line[i]) && i < line.size())
+					i++;
+				while (!isblankch(line[i]) && i < line.size())
+					str += line[i++];
+				if (str != "")
+					strarg.push_back(str);
+
+			} while (str != "");
+			i = 0;
+			while (i < strarg.size())
+			{
+				if (IsNumberSTR(strarg[0], true))
+				{
+					int ii = 0;
+					bool b = false;
+					while (ii < str.size())
+					{
+						if (str[i] == '.')
+						{
+							b = true;
+							break;
+						}
+						ii++;
+					}
+					if (b)
+					{
+						args.push_back(stof(strarg[i]));
+					}
+					else
+					{
+						args.push_back(stoll(strarg[i]));
+					}
+				}
+				else
+				{
+					args.push_back(strarg[i])
+				}
+				i++;
+			}
+
+		}
+		if (MapFind(funcmap, fname))
+			(funcmap[fname](args, (void*)&res));
+		else
+		{
+			res.ID = 5;
+			res.message = "function not found";
+		}
+		return res;
+	}
+
+	void debugconsole::hide()
+	{
+		//TODO hide/show
+	}
+
+	void debugconsole::show()
+	{
+
+	}
+	void debugconsole::switchwis()
+	{
+		if (isvis)
+			hide();
+		else
+			show();
+		isvis = !isvis;
+	}
+
+	void debugconsole::init(bool usedefwincon, map<string, void(*)(vector<boost::any >,void*)>deffuncmap)
+	{
+		th = new thread(&debugconsole::thread_loop, this);
+		winconmode = usedefwincon;
+		isthalive = true;
+		active = false;
+		killthread = false;
+		funcmap = SumMaps(deffuncmap, debugfunctions::defaultm);
+	}
+
+	void debugconsole::start()
+	{
+		active = true;
+		mttw.notify_one();
+	}
+
+	void debugconsole::end(bool force)
+	{
+		if (!isthalive)
+			return;
+		active = false;
+		if (force)
+			th->join();
+		killthread = true;
+	}
+
+	void debugconsole::release(bool suicide)
+	{
+		end(true);
+		delete th;
+		if (suicide)
+			delete this;
+	}
+
+	void debugconsole::execute(string line)
+	{
+		processfunction(line);
+	}
+
 }

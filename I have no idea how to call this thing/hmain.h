@@ -360,6 +360,13 @@ namespace classvariables
 			z = n1.x;
 			w = n1.y;
 		}
+		inline int4(D2D_RECT_F r)
+		{
+			x = r.left;
+			y = r.top;
+			z = r.right;
+			w = r.bottom;
+		}
 		int4()
 		{
 
@@ -1093,4 +1100,22 @@ inline std::string RandomString(int len, ui seed = 0/*won't be used if 0*/)
 		i++;
 	}
 	return retval;
+}
+inline bool isblankch(char ch)
+{
+	if (ch == NULL || ch == ' ' || ch == '\t' || ch == '\n')
+		return true;
+	return false;
+}
+inline bool isblankstr(string str)
+{
+	int i = 0;
+	if (str == "")
+		return true;
+	while (i < str.size())
+	{
+		if (!isblankch(str[i]))
+			return false;
+	}
+	return true;
 }

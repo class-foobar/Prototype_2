@@ -16,12 +16,18 @@ namespace DX2D
 
 		}
 	public:
+		bool forceoverridepos = false;
+		int2* overridepos = nullptr;
 		bool useidentp = false; // if true and identp == nullptr then sprite will be deleted
 		bool* identp = nullptr; //^
 		bool* render = nullptr; // if nullptr or true sprite will be rendered. 
 		bool deleteatdest = true;
 		/*XMMATRIX matrix;*/
 		D2D1::Matrix3x2F matrix;
+		D2D_RECT_F lastloc = { 0,0,0,0 };
+		bool savelastloc = false;
+		bool lastlochaststarted = false;
+		bool breakonlocchange = true;
 		bool isrendonscreen = false;
 		D2D1_SIZE_F size;
 		void copypointers()
@@ -118,6 +124,10 @@ namespace DX2D
 		inline int2* GetXYp()
 		{
 			return pos;
+		}
+		inline int2** GetXYpp()
+		{
+			return &pos;
 		}
 		inline int* GetXp()
 		{
