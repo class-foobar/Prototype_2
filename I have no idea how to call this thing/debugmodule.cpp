@@ -3,9 +3,77 @@
 using namespace std;
 namespace debugging
 {
+	map<string, vector<string>> extendedcondef = {};
+	vector<string> getconfuncdata(string name)
+	{
+		string i = typeid(int).name();
+		string s = typeid(string).name();
+		string f = typeid(float).name();
+		map<string, vector<string>> def=
+		{
+			{"help",{s}},
+			{ "getentities",{ } },
+		};
+		auto tot = SumMaps(def, extendedcondef);
+		if (MapFind(tot, name))
+			return tot[name];
+		else
+			return { "error" };
+	}
+	int areconargscorrect(vector<boost::any> &args, string name)
+	{
+		vector<string> data = getconfuncdata(name);
+		if (data == vector<string>{"error"})
+			return CON_NULL;
+		if (args.size() < data.size())
+			return CON_SYNERROR;
+		int i = 0;
+		string _i = typeid(int).name();
+		string _s = typeid(string).name();
+		string _f = typeid(float).name();
+		while (i < data.size())
+		{
+			try
+			{
+				if (data[i] == _i)
+				{
+					boost::any_cast<int> (args[i]);
+				}
+				else if (data[i] == _f)
+				{
+					boost::any_cast<float>(args[i]);
+				}
+				else
+				{
+					boost::any_cast<string>(args[i]);
+				}
+			}
+			catch (boost::bad_any_cast)
+			{
+				return CON_EXCTHORWN;
+			}
+			i++;
+		}
+		return CON_OK;
+	}
 	namespace debugfunctions
 	{
-		map<string, void(*)(vector<boost::any >, void*)> defaultm;
+
+
+		void help(vector<boost::any>args, void*resptr)
+		{
+			auto resptr = *static_cast<debugconsole::result*>(resptr);
+			
+		}
+		void getentities(vector<boost::any>args, void*resptr)
+		{
+
+		}
+		map<string, void(*)(vector<boost::any >, void*)> defaultm =
+		{
+			{"help",&help},
+			{"getentities",&getentities}
+		};
 	}
 	extern debugmain *dbm;
 	string getstrfromtnv(string type, string name, boost::any val)

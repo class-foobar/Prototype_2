@@ -10,6 +10,7 @@
 #define CON_SYSTEMERROR 4
 #define CON_FNOTFOUND 5
 #define CON_EXIT 6
+#define CON_FUNCDEFERROR 7
 using namespace std;
 namespace debugging
 {
@@ -87,7 +88,7 @@ namespace debugging
 	{
 	private:
 		
-	protected:
+	public:
 		class result
 		{
 		private:
@@ -96,6 +97,7 @@ namespace debugging
 			string message = "";
 			ui ID = -1;
 		};
+	protected:
 		map<string, void(*)(vector<boost::any>, void*)>funcmap;
 		bool active = false;
 		bool isthalive = false;
