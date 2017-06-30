@@ -22,6 +22,7 @@ namespace DX2D
 		bool* identp = nullptr; //^
 		bool* render = nullptr; // if nullptr or true sprite will be rendered. 
 		bool deleteatdest = true;
+		bool breakonrender = false;
 		/*XMMATRIX matrix;*/
 		D2D1::Matrix3x2F matrix;
 		D2D_RECT_F lastloc = { 0,0,0,0 };
@@ -30,6 +31,8 @@ namespace DX2D
 		bool breakonlocchange = true;
 		bool isrendonscreen = false;
 		D2D1_SIZE_F size;
+		bool usecustompoint = false;
+		int2 customrpoint = { 0,0 };
 		void copypointers()
 		{
 			if (identp != nullptr)

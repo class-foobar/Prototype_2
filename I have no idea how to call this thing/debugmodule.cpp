@@ -1,79 +1,280 @@
 #include "hmain.h"
 #include "debugmodule.h"
+#include "hmain.h"
+#include "camera.h"
+#include "sprite.h"
+#include "physics.h"
+#include "text.hpp"
+#include "ships.h"
+#include "universe.h"
+#include "button.h"
+#include "text.hpp"
 using namespace std;
+namespace GAME
+{
+	extern vector<entity> entitylist;
+}
 namespace debugging
 {
-	map<string, vector<string>> extendedcondef = {};
-	vector<string> getconfuncdata(string name)
+	int2* debugpos = nullptr;
+	namespace sharedv
 	{
-		string i = typeid(int).name();
-		string s = typeid(string).name();
-		string f = typeid(float).name();
-		map<string, vector<string>> def=
-		{
-			{"help",{s}},
-			{ "getentities",{ } },
-		};
-		auto tot = SumMaps(def, extendedcondef);
-		if (MapFind(tot, name))
-			return tot[name];
-		else
-			return { "error" };
-	}
-	int areconargscorrect(vector<boost::any> &args, string name)
-	{
-		vector<string> data = getconfuncdata(name);
-		if (data == vector<string>{"error"})
-			return CON_NULL;
-		if (args.size() < data.size())
-			return CON_SYNERROR;
-		int i = 0;
-		string _i = typeid(int).name();
-		string _s = typeid(string).name();
-		string _f = typeid(float).name();
-		while (i < data.size())
-		{
-			try
-			{
-				if (data[i] == _i)
-				{
-					boost::any_cast<int> (args[i]);
-				}
-				else if (data[i] == _f)
-				{
-					boost::any_cast<float>(args[i]);
-				}
-				else
-				{
-					boost::any_cast<string>(args[i]);
-				}
-			}
-			catch (boost::bad_any_cast)
-			{
-				return CON_EXCTHORWN;
-			}
-			i++;
-		}
-		return CON_OK;
+		camera** maincam;
 	}
 	namespace debugfunctions
 	{
-
-
-		void help(vector<boost::any>args, void*resptr)
-		{
-			auto resptr = *static_cast<debugconsole::result*>(resptr);
-			
-		}
-		void getentities(vector<boost::any>args, void*resptr)
-		{
-
-		}
 		map<string, void(*)(vector<boost::any >, void*)> defaultm =
 		{
-			{"help",&help},
-			{"getentities",&getentities}
+			{ "help",&help },
+			{ "getentities",&getentities },
+			{ "campos",&gcampos},
+			{ "setdbpos",&setdbpos},
+			{ "setdbx",&setdbx },
+			{ "setdby",&setdby },
+			{ "setcampos",&setcampos },
+			{ "setcamx",&setcamx },
+			{ "setcamy",&setcamy },
+			{ "getdbpos",&getdbpos},
+			{"getdbhex",&getdbhex}
 		};
+		map<string, vector<string>> customdef = {};
+		vector<string> getconfuncdata(string name)
+		{
+			string i = typeid(int).name();
+			string s = typeid(string).name();
+			string f = typeid(float).name();
+			map<string, vector<string>> def =
+			{
+				{ "help",{ "!" + s } },
+				{ "getentities",{} },
+			};
+			auto tot = _SumMaps(def, customdef);
+			if (MapFind(tot, name))
+				return tot[name];
+			else
+				return { "error" };
+		}
+		int areconargscorrect(vector<boost::any> &args, string name)
+		{
+			int i = 0;
+			vector<string> data = getconfuncdata(name);
+			if (data.size() == 0)
+				return CON_OK;
+			if (data == vector<string>{"error"})
+				return CON_NULL;
+			int ii = data.size();
+			while (i < data.size())
+			{
+				if (data[i][0] == '!')
+					ii--;
+				i++;
+			}		
+			if (args.size() < ii)
+				return CON_SYNERROR;
+			i = 0;
+			string _i = typeid(int).name();
+			string _s = typeid(string).name();
+			string _f = typeid(float).name();
+			while (i < data.size())
+			{
+				bool isoptional = false;
+				if (data[i][0] == '!')
+				{
+					i++;
+					continue;
+				}
+				string str = data[i];
+				data[i].erase(0);
+				try
+				{
+					if (data[i] == _i)
+					{
+						boost::any_cast<int> (args[i]);
+					}
+					else if (data[i] == _f)
+					{
+						boost::any_cast<float>(args[i]);
+					}
+					else
+					{
+						boost::any_cast<string>(args[i]);
+					}
+				}
+				catch (boost::bad_any_cast)
+				{
+					if (!isoptional)
+						return CON_EXCTHORWN;
+				}
+				i++;
+			}
+			return CON_OK;
+		}
+		map<string, string> extendedcondef =
+		{
+			{ "help", "Displays either list of all functions or information about specific function\nArguments:\n(optional)[string]function name" },
+			{ "getentities", "Get list of all entities\nArguments:\n(none)" }
+		};
+		CONSOLEFUNCTION(getdbhex)
+		{
+			PREPCFUNC;
+			if (debugpos == nullptr)
+			{
+				result->ID = CON_NULL;
+				result->message = "No variable attached";
+			}
+			else
+			{
+				stringstream ss;
+				ss << debugpos;
+				result->message = ss.str();
+				result->ID = CON_OK;
+			}
+		}
+		CONSOLEFUNCTION(getdbpos)
+		{
+			PREPCFUNC;
+			if (debugpos == nullptr)
+			{
+				result->ID = CON_NULL;
+				result->message = "No variable attached";
+			}
+			else
+			{
+				result->message = debugpos->str();
+				result->ID = CON_OK;
+			}
+		}
+		CONSOLEFUNCTION(setdbpos)
+		{
+			PREPCFUNC;
+			if (debugpos == nullptr)
+			{
+				result->ID = CON_NULL;
+				result->message = "No variable attached";
+			}
+			else
+			{
+				result->message = "Position has been changed";
+				result->ID = CON_OK;
+				debugpos->x = boost::any_cast<int>(args[0]);
+				debugpos->y = boost::any_cast<int>(args[1]);
+			}
+		}
+		CONSOLEFUNCTION(setdbx)
+		{
+			PREPCFUNC;
+			if (debugpos == nullptr)
+			{
+				result->ID = CON_NULL;
+				result->message = "No variable attached";
+			}
+			else
+			{
+				result->message = "Position has been changed";
+				result->ID = CON_OK;
+				debugpos->x = boost::any_cast<int>(args[0]);
+			}
+		}
+		CONSOLEFUNCTION(setdby)
+		{
+			PREPCFUNC;
+			if (debugpos == nullptr)
+			{
+				result->ID = CON_NULL;
+				result->message = "No variable attached";
+			}
+			else
+			{
+				result->message = "Position has been changed";
+				result->ID = CON_OK;
+				debugpos->y = boost::any_cast<int>(args[0]);
+			}
+		}
+		CONSOLEFUNCTION(setcampos)
+		{
+			PREPCFUNC;
+			result->message = "Position has been changed";
+			result->ID = CON_OK;		
+			(*sharedv::maincam)->SetX(boost::any_cast<int>(args[0]));
+			(*sharedv::maincam)->SetY(boost::any_cast<int>(args[1]));
+		}
+		CONSOLEFUNCTION(setcamx)
+		{
+			PREPCFUNC;
+			result->message = "Position has been changed";
+			result->ID = CON_OK;
+			(*sharedv::maincam)->SetX(boost::any_cast<int>(args[0]));
+		}
+		CONSOLEFUNCTION(setcamy)
+		{
+			PREPCFUNC;
+			result->message = "Position has been changed";
+			result->ID = CON_OK;
+			(*sharedv::maincam)->SetY( boost::any_cast<int>(args[0]));
+		}
+		//void gcampos(vector<boost::any>args, void*resptr)
+		CONSOLEFUNCTION(gcampos)
+		{
+			auto result = static_cast<debugconsole::result*>(resptr);
+			result->ID = CON_OK;
+			result->message = (*(*sharedv::maincam)->GetXYp()).str();
+			return;
+		}
+		//void help(vector<boost::any>args, void*resptr)
+		CONSOLEFUNCTION(help)
+		{
+			auto result = static_cast<debugconsole::result*>(resptr);
+			string str = "";
+			if (args.size() == 0)
+			{
+				vector<string> data = MapFirsttoVec(defaultm);
+				int i = 0;
+				while (i < data.size())
+				{
+					if(data[i] != "help")
+						str += data[i] + '\n';
+					i++;
+				}
+				result->ID = CON_OK;
+			}
+			else
+			{
+				string name = tolower(boost::any_cast<string>(args[0]));
+				if (MapFind(extendedcondef, name))
+				{
+					str = extendedcondef[name];
+					result->ID = CON_OK;
+				}
+				else
+				{
+					str = "Function exists, but no definition found";
+					result->ID = CON_NULL;
+				}
+			}
+			result->message = str;
+		}
+		//void getentities(vector<boost::any>args, void*resptr)
+		CONSOLEFUNCTION(getentities)
+		{
+			auto result = static_cast<debugconsole::result*>(resptr);
+			string str;
+			int i = 0;
+			while (i < GAME::entitylist.size())
+			{
+				str += "name: " + GAME::entitylist[i].entname + ", pos: ";
+				if (GAME::entitylist[i].pos == nullptr)
+				{
+					str += "NULL\n";
+				}
+				else
+				{
+					str += GAME::entitylist[i].pos->str() + "\n";
+				}
+				i++;
+			}
+			result->message = str;
+			result->ID = CON_OK;
+		}
 	}
 	extern debugmain *dbm;
 	string getstrfromtnv(string type, string name, boost::any val)
@@ -426,6 +627,8 @@ namespace debugging
 			return;
 		else
 			wasinit = true;
+		if(console == nullptr )
+			console = new debugconsole;
 		const char* const myclass = "dbc";
 		WNDCLASSEXA wndclass = { sizeof(WNDCLASSEX),CS_DBLCLKS, NULL,
 			0, 0, GetModuleHandle(0), LoadIcon(0,IDI_APPLICATION),
@@ -493,7 +696,6 @@ namespace debugging
 	{
 		th = new thread(&debugmain::dmain, this);
 	}
-
 	void debugconsole::thread_loop()
 	{
 	lock:;
@@ -508,7 +710,7 @@ namespace debugging
 		while (active)
 		{
 			string message = read();
-			if (isblankstr(message))
+			if (imtoolazytodoitproperly::isblankstr(message))
 				continue;
 			auto result = processfunction(message);
 			if (result.ID == CON_EXIT)
@@ -543,7 +745,7 @@ namespace debugging
 		result res;
 		int i = 0;
 		res.ID = CON_NULL;
-		while (!isblankch(line[i]) && i < line.size())
+		while (!imtoolazytodoitproperly::isblankch(line[i]) && i < line.size())
 			fname += line[i++];
 		if ((i < line.size()))
 		{
@@ -552,9 +754,9 @@ namespace debugging
 			do
 			{
 				str = "";
-				while (isblankch(line[i]) && i < line.size())
+				while (imtoolazytodoitproperly::isblankch(line[i]) && i < line.size())
 					i++;
-				while (!isblankch(line[i]) && i < line.size())
+				while (!imtoolazytodoitproperly::isblankch(line[i]) && i < line.size())
 					str += line[i++];
 				if (str != "")
 					strarg.push_back(str);
@@ -582,19 +784,48 @@ namespace debugging
 					}
 					else
 					{
-						args.push_back(stoll(strarg[i]));
+						args.push_back(stoi(strarg[i]));
 					}
 				}
 				else
 				{
-					args.push_back(strarg[i])
+					args.push_back(strarg[i]);
 				}
 				i++;
 			}
 
 		}
+		fname = tolower(fname);
 		if (MapFind(funcmap, fname))
-			(funcmap[fname](args, (void*)&res));
+		{
+			if (checkargs)
+			{
+				if (debugfunctions::areconargscorrect(args, fname) < 1)
+				{
+					(funcmap[fname](args, (void*)&res));
+				}
+				else
+				{
+					res.ID = CON_SYNERROR;
+					res.message = "Error, wrong arguments\nThe correct arguments are:\n";
+					int i = 0;
+					vector<string> data = debugfunctions::getconfuncdata(fname);
+					while (i < data.size())
+					{
+						string str = data[i];
+						if (str[0] == '!')
+						{
+							str.erase(0);
+							str = "(optional)" + str;
+						}
+						res.message += str;
+						i++;
+					}
+				}
+			}
+			else 
+				(funcmap[fname](args, (void*)&res));
+		}
 		else
 		{
 			res.ID = 5;
@@ -628,7 +859,7 @@ namespace debugging
 		isthalive = true;
 		active = false;
 		killthread = false;
-		funcmap = SumMaps(deffuncmap, debugfunctions::defaultm);
+		funcmap = _SumMaps(deffuncmap, debugfunctions::defaultm);
 	}
 
 	void debugconsole::start()

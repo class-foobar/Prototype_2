@@ -1,4 +1,5 @@
 #include "hmain.h"
+#include "hmain.h"
 #include "camera.h"
 #include "sprite.h"
 #include "physics.h"
@@ -547,7 +548,7 @@ namespace GAME
 	void cammovesetref(int2& pos)
 	{
 		oldcampos = pos;
-		cout << "oldpos: " << oldcampos << endl;
+		//cout << "oldpos: " << oldcampos << endl;
 	}
 	void cammove(int2& pos)
 	{
@@ -559,10 +560,10 @@ namespace GAME
 		//npos = (int2{ -1,-1 }*npos);
 		npos = npos;
 		mcam->updatesecposof = false;
-		mcam->SetX(mcam->GetX() + npos.x);
-		mcam->SetY(mcam->GetY() + npos.y);
+		mcam->SetX(mcam->GetX() - npos.x);
+		mcam->SetY(mcam->GetY() - npos.y);
 		mcam->updatesecposof = true;
-		cout << "campos" << mcam->GetXY() << endl;
+		//cout << "campos" << mcam->GetXY() << endl;
 		oldcampos = pos;  
 	}
 	void mbmovestop(int2& pos)

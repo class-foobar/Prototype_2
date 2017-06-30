@@ -11,12 +11,39 @@
 #define CON_FNOTFOUND 5
 #define CON_EXIT 6
 #define CON_FUNCDEFERROR 7
+#define CONSOLEFUNCTION(name) void name(vector<boost::any>args, void*resptr)
+#define PREPCFUNC auto result = static_cast<debugconsole::result*>(resptr)
 using namespace std;
 namespace debugging
 {
+	namespace sharedv
+	{
+	}
+	namespace imtoolazytodoitproperly
+	{
+		inline bool isblankch(char ch)
+		{
+			if (ch == NULL || ch == ' ' || ch == '\t' || ch == '\n')
+				return true;
+			return false;
+		}
+		inline bool isblankstr(string str)
+		{
+			int i = 0;
+			if (str == "")
+				return true;
+			while (i < str.size())
+			{
+				if (!isblankch(str[i]))
+					return false;
+			}
+			return true;
+		}
+	}
 	class debugwindow;
 	class debugvar;
 	class debugmain;
+	class debugconsole;
 	class debugvar
 	{
 	public:
@@ -79,6 +106,7 @@ namespace debugging
 		int lastsubslottaken = 0;
 		vector<debugwindow*> subwindows;
 		bool endme = false;
+		debugconsole* console;
 		void init();
 		void startmt();
 		void addsw(debugwindow* sw, bool push = true);
@@ -89,6 +117,7 @@ namespace debugging
 	private:
 		
 	public:
+		bool checkargs = true;
 		class result
 		{
 		private:
@@ -109,10 +138,14 @@ namespace debugging
 		mutex m;
 		condition_variable mttw;
 		bool winconmode = false;
-		inline void write(string text)
+		inline void write(string text,bool forceenter = true)
 		{
-			if (isblankstr(text))
+			if (text.size() == 0)
 				return;
+			if (imtoolazytodoitproperly::isblankstr(text))
+				return;
+			if (text[text.size() - 1] != '\n' && forceenter)
+				text += '\n';
 			if (winconmode)
 			{
 				printf(text.c_str());
@@ -127,7 +160,8 @@ namespace debugging
 			if (winconmode)
 			{
 				string str;
-				cin >> str;
+				cout << '>';
+				getline(cin, str);
 				return str;
 			}
 			else
@@ -163,4 +197,21 @@ namespace debugging
 		void release(bool suicide=false);
 		void execute(string line);
 	};
+	namespace debugfunctions
+	{
+	/*	void help(vector<boost::any>args, void*resptr);
+		void getentities(vector<boost::any>args, void*resptr);*/
+		//void gcampos(vector<boost::any>args, void*resptr);
+		CONSOLEFUNCTION(help);
+		CONSOLEFUNCTION(gcampos);
+		CONSOLEFUNCTION(getentities);
+		CONSOLEFUNCTION(setdbpos);
+		CONSOLEFUNCTION(setdbx);
+		CONSOLEFUNCTION(setdby);
+		CONSOLEFUNCTION(setcampos);
+		CONSOLEFUNCTION(setcamy);
+		CONSOLEFUNCTION(setcamx);
+		CONSOLEFUNCTION(getdbpos);
+		CONSOLEFUNCTION(getdbhex);
+	}
 }

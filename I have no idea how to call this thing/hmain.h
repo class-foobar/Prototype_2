@@ -63,6 +63,11 @@ using namespace DirectX;
 #else 
 #pragma comment(lib, "X:\\PROJECTS\\AZfilelib\\x64\\Release\\AZfilelib\\AZfilelib.lib")
 #endif // DEBUG
+#ifdef _DEBUG
+#pragma comment(lib, "X:\\PROJECTS\\AM_uberlib\\x64\\Debug\\AM_uberlib.lib")
+#else 
+#pragma comment(lib, "X:\\PROJECTS\\AM_uberlib\\x64\\Release\\AM_uberlib.lib")
+#endif // DEBUG
 inline std::string INTtoSTR(int i)
 {
 	return std::to_string(i);
@@ -109,6 +114,10 @@ namespace classvariables
 		{
 			return{ x,y };
 		}
+		std::string str()
+		{
+			return "{ " + to_string(x) + ", " + to_string(y) + " }";
+		}
 		int2 operator/(int n)
 		{
 			return{ x / n,y / n };
@@ -134,7 +143,12 @@ namespace classvariables
 			//this->y += n.y;
 			return{ x + n.x,y + n.y };
 		}
-		
+		int2 operator+=(int2 &n)
+		{
+			//this->x += n.x;
+			//this->y += n.y;
+			return (*this = { x + n.x,y + n.y });
+		}
 		int2 operator*(int2 &n)
 		{
 			//this->x *= n.x;
@@ -888,6 +902,18 @@ inline void constraintoscope(univar &var, univar maxval, univar minval)// constr
 		var += maxval + minval;
 	}
 }
+template <typename univar,typename univar2>
+inline void constraintoscope(univar &var, univar2 maxval, univar2 minval)// constrains variable's maximal and minimal value
+{
+	while (var > maxval)
+	{
+		var -= maxval + minval;
+	}
+	while (var < minval)
+	{
+		var += maxval + minval;
+	}
+}
 template <typename univar>
 inline univar dwgbv(univar val, univar decreaseby, univar valtodecrease)//decrease without going below value
 {
@@ -977,6 +1003,17 @@ template<typename univar,typename univar2>
 map<univar, univar2>SumMaps(map<univar, univar2> m0, map<univar, univar2> m1)
 {
 	for (auto it = m1.begin(); it != m1.end(); ++it) m0[it->first] += it->second;
+	return m0;
+
+}
+template<typename univar, typename univar2>
+map<univar, univar2>_SumMaps(map<univar, univar2> m0, map<univar, univar2> m1) // slower, use when normal SumMaps throws an error
+{
+	pair<univar, univar2> p;
+	BOOST_FOREACH(p, m1)
+	{
+		m0.insert(p);
+	}
 	return m0;
 
 }
@@ -1101,21 +1138,21 @@ inline std::string RandomString(int len, ui seed = 0/*won't be used if 0*/)
 	}
 	return retval;
 }
-inline bool isblankch(char ch)
-{
-	if (ch == NULL || ch == ' ' || ch == '\t' || ch == '\n')
-		return true;
-	return false;
-}
-inline bool isblankstr(string str)
-{
-	int i = 0;
-	if (str == "")
-		return true;
-	while (i < str.size())
-	{
-		if (!isblankch(str[i]))
-			return false;
-	}
-	return true;
-}
+//inline bool isblankch(char ch)
+//{
+//	if (ch == NULL || ch == ' ' || ch == '\t' || ch == '\n')
+//		return true;
+//	return false;
+//}
+//inline bool isblankstr(string str)
+//{
+//	int i = 0;
+//	if (str == "")
+//		return true;
+//	while (i < str.size())
+//	{
+//		if (!isblankch(str[i]))
+//			return false;
+//	}
+//	return true;
+//}

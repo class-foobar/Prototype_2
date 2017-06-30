@@ -33,12 +33,18 @@ extern const float SCREEN_NEAR;
 RECT clientsize;
 namespace debugging
 {
+	namespace sharedv
+	{
+		extern	camera** maincam;
+	}
+	extern int2* debugpos;
 	debugmain* dbm = nullptr;
 	debugging::debugwindow* pdebugdata = nullptr;
 	debugwindow*  maincamdebg = nullptr;
 }
 namespace GAME
 {
+	vector<entity> entitylist;
 	extern int4 camrect;
 	extern universe* uniclass;
 	map<ui, void(*)(int2&)> funcidmap;
@@ -125,8 +131,6 @@ namespace DX2D
 		void Render(camera* cam)
 		{
 
-			//cam->SetX(cam->GetX() + cam->GetOffsetX());
-			//cam->SetY(cam->GetY() + cam->GetOffsetY());
 			/*ID2D1RenderTarget **//*RTp = *cam->GetRenderTargetP();*/
 			ID2D1BitmapRenderTarget *RT = *cam->GetRenderTargetP();
 			//RTp->CreateCompatibleRenderTarget(&RT);
@@ -141,7 +145,7 @@ namespace DX2D
 			D2D_MATRIX_3X2_F trans;
 			if (!cam->ignoreXYforrendering)
 			{
-				trans = Matrix3x2F::Translation(cam->GetX(), cam->GetY());
+				trans = Matrix3x2F::Translation(-cam->GetX(), -cam->GetY());
 			}
 			else
 				trans = Matrix3x2F::Translation(0, 0);
@@ -226,7 +230,7 @@ namespace DX2D
 				trans = Matrix3x2F::Translation(0, 0);
 			}
 			else 
-				trans = Matrix3x2F::Translation(cam->GetX(), cam->GetY());
+				trans = Matrix3x2F::Translation(-cam->GetX(), -cam->GetY());
 			RT->GetTransform(&oldtransform);
 			RT->SetTransform(trans);
 			D2D_SIZE_F SZ = RT->GetSize();
@@ -287,6 +291,8 @@ namespace DX2D
 						loc.left = (f[i]->sprites[ii].GetX() + f[i]->sprites[ii].GetOffSetp()->x+0);
 						loc.bottom = (f[i]->sprites[ii].GetY() + f[i]->sprites[ii].size.height + f[i]->sprites[ii].GetOffSetp()->y)/**cam->scale.y*/;
 						loc.right = (f[i]->sprites[ii].GetX() + f[i]->sprites[ii].size.width + f[i]->sprites[ii].GetOffSetp()->x)/**cam->scale.x*/;
+						if (f[i]->sprites[ii].breakonrender)
+							DebugBreak();
 						if (f[i]->sprites[ii].savelastloc)
 						{
 							if (f[i]->sprites[ii].lastlochaststarted)
@@ -310,8 +316,19 @@ namespace DX2D
 						D2D_POINT_2F p;
 						if (!cam->usecustomrenderrotpoint)
 						{
-							p = { cam->GetX()+(f[i]->sprites[ii].GetX() + f[i]->sprites[ii].GetOffSetp()->x + (f[i]->sprites[ii].size.width / 2))/**cam->scale.x*/,
-							cam->GetY()+(f[i]->sprites[ii].GetY() + f[i]->sprites[ii].GetOffSetp()->y + (f[i]->sprites[ii].size.height / 2))/**cam->scale.y*/ };
+							int2 rotpoint;
+							if (!f[i]->sprites[ii].usecustompoint)
+							{
+								rotpoint = int2((f[i]->sprites[ii].size.width / 2), (f[i]->sprites[ii].size.height / 2));
+							}
+							else
+							{
+								rotpoint = f[i]->sprites[ii].customrpoint;
+								//f[i]->sprites[ii].Rotate(0.5);
+							}
+							
+							p = { (-cam->GetX())+(f[i]->sprites[ii].GetX() + f[i]->sprites[ii].GetOffSetp()->x + rotpoint.x)/**cam->scale.x*/,
+							(-cam->GetY())+(f[i]->sprites[ii].GetY() + f[i]->sprites[ii].GetOffSetp()->y + rotpoint.y)/**cam->scale.y*/ };
 							RT->SetTransform(trans*/*Matrix3x2F::Translation(cam->GetX(), cam->GetY())**/Matrix3x2F::Rotation(f[i]->sprites[ii].GetRot(), p));
 						}
 						//else
@@ -615,6 +632,10 @@ namespace DX2D
 			dbmain.subwindows.push_back(camdata);
 			debugging::maincamdebg = camdata;
 			dbmain.startmt();
+			if (dbmain.console == nullptr)
+				dbmain.console = new debugging::debugconsole;
+			dbmain.console->init(true);
+			dbmain.console->start();
 		}
 		void Release()
 		{
@@ -786,10 +807,10 @@ namespace DX2D
 						rf.top += DXclass->cams[i]->GetY();
 						rf.bottom += DXclass->cams[i]->GetY();
 					//}
-					rf.left += DXclass->maincam->GetX() /*+ offsetmc.x + DXclass->maincam->GetOffsetX()*/;
-					rf.right += DXclass->maincam->GetX()/* + offsetmc.x + DXclass->maincam->GetOffsetX()*/;
-					rf.top += DXclass->maincam->GetY()/* + offsetmc.y + DXclass->maincam->GetOffsetY()*/;
-					rf.bottom += DXclass->maincam->GetY()/* + offsetmc.y + DXclass->maincam->GetOffsetY()*/;
+					rf.left += -DXclass->maincam->GetX() /*+ offsetmc.x + DXclass->maincam->GetOffsetX()*/;
+					rf.right += -DXclass->maincam->GetX()/* + offsetmc.x + DXclass->maincam->GetOffsetX()*/;
+					rf.top += -DXclass->maincam->GetY()/* + offsetmc.y + DXclass->maincam->GetOffsetY()*/;
+					rf.bottom += -DXclass->maincam->GetY()/* + offsetmc.y + DXclass->maincam->GetOffsetY()*/;
 					D2D1_SIZE_F _sz = bmcopy->GetSize();
 					Matrix3x2F ot;
 					D2D1_POINT_2F p2f;
@@ -799,8 +820,8 @@ namespace DX2D
 						p2f = DXclass->cams[i]->customrotpoint;
 						p2f.x += DXclass->cams[i]->GetX();
 						p2f.y += DXclass->cams[i]->GetY();
-						p2f.x += DXclass->maincam->GetX()/* + DXclass->maincam->GetOffsetX()*/;
-						p2f.y += DXclass->maincam->GetY()/* + DXclass->maincam->GetOffsetY()*/;
+						p2f.x += -DXclass->maincam->GetX()/* + DXclass->maincam->GetOffsetX()*/;
+						p2f.y += -DXclass->maincam->GetY()/* + DXclass->maincam->GetOffsetY()*/;
 					}
 					else
 						p2f = { rf.left + (_sz.width / 2) + DXclass->cams[i]->rotpointoffset.x,rf.top + (_sz.height / 2) + DXclass->cams[i]->rotpointoffset.y };
@@ -936,6 +957,7 @@ namespace DX2D
 		}
 		bslink += "bin\\";
 		camera* maincam = DXclass->maincam;
+		debugging::sharedv::maincam = &maincam;
 		frame* mf = maincam->scenes[0].objectsvec[0];
 		int2 a= maincam->GetBitmapSize();
 		camrect = int4{ 0,0,a.x,a.y };
@@ -1255,7 +1277,10 @@ namespace DX2D
 			player.crewphys.GetLastObj()->rectID = 666;
 			entity ent;
 			ent.selectf = nullptr;
+			ent.pos = cm->pos;
+			ent.entname = "crewman";
 			ent.datav.push_back(cm);
+			entitylist.push_back(ent);
 			player.crewphys.GetLastObj()->anyvars.push_back(ent);
 			player.fr->sprites.push_back(cs);
 			player.crewmap.insert(make_pair(cm->name, cm));
@@ -1292,6 +1317,9 @@ namespace DX2D
 		mainshipen.datav.push_back(conship);
 		conship->pobj->anyvars.push_back(mainshipen);
 		selecting::pcshipclick.objmap["playership"]->anyvars.push_back(mainshipen);
+		mainshipen.pos = conship->pos;
+		mainshipen.entname = "Ship";
+		entitylist.push_back(mainshipen);
 		c->isrendonscreen = true;
 		c->isonlyrectrendered = true;
 		c->renderRECT.left = 0;

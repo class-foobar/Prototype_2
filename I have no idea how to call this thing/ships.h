@@ -53,6 +53,8 @@ namespace GAME
 		void(*selectf)(int2&,entity&);
 		vector<boost::any> datav;
 		map<int, boost::any> datam;
+		string entname = "NULLENT";
+		int2* pos = nullptr;
 	};
 	extern 	ui movetype;
 }

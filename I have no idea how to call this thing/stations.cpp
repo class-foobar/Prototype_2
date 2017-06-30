@@ -1,6 +1,10 @@
 #include "universe.h"
-#include "hmain.h"
+//#include "hmain.h"
 #include "X:\PROJECTS\economy\economy\economy.h"
+namespace debugging
+{
+	extern int2* debugpos;
+}
 namespace DX2D
 {
 	extern map<string, stationmodtempIN>stattempINs;
@@ -10,6 +14,117 @@ namespace DX2D
 using namespace DX2D;
 namespace GAME
 {
+	template<typename univar>
+	void station::addtostorage(univar* mod)
+	{
+		STORAGE = SumMaps(STORAGE, mod->STORAGE);
+		storagelimitm = SumMaps(storagelimitm, mod->storagelimitm);
+		int i = 0;
+		while (i < mod->slotsin.size())
+		{
+			if (mod->slotsin[i]->mod != nullptr)
+				addtostorage(mod->slotsin[i]->mod);
+			i++;
+		}
+	}
+	template<>
+	void station::addtostorage(stationmodOUT* mod)
+	{
+		STORAGE = SumMaps(STORAGE, mod->STORAGE);
+		storagelimitm = SumMaps(storagelimitm, mod->storagelimitm);
+		int i = 0;
+		while (i < mod->slotsin.size())
+		{
+			if (mod->slotsin[i]->mod != nullptr)
+				addtostorage(mod->slotsin[i]->mod);
+			i++;
+		}
+	}
+	void station::createmods(AZfile& af, string datapos)
+	{
+		if (datapos[datapos.size() - 1] != '@')
+			datapos += '@';
+		name = af.GetVar<string>(datapos + "name");
+		core = new stationmodIN(coretemps[af.GetVar<string>(datapos + "core")], new int2(0, 0));
+		core->loadsubmods(af, datapos);
+		addtostorage(core);
+		int i = 0;
+		while (i < core->slotsin.size())
+		{
+			if (core->slotsin[i]->mod != nullptr)
+				addtostorage(core->slotsin[i]->mod);
+			i++;
+		}
+		i = 0;
+		while (i < core->slotsout.size())
+		{
+			if (core->slotsout[i]->mod != nullptr)
+				addtostorage(core->slotsout[i]->mod);
+			i++;
+		}
+		i = 0;
+		storagelimit = MaptoVec(storagelimitm);
+	}
+	void station::tick()
+	{
+		int i = 0;
+		while (i < sINv.size())
+		{
+			sINv[i]->tick();
+			i++;
+		}
+		i = 0;
+		while (i < sOUTv.size())
+		{
+			sOUTv[i]->tick();
+			i++;
+		}
+	}
+	void station::RenderInit(frame* mf, camera* cam)
+	{
+		if (f == nullptr)
+			f = new frame;
+		if (mf->wchiac == "")
+		{
+			mf->wchiac = "station" + RandomString(3);
+		}
+		mf->ischfact = true;
+		mf->f[mf->wchiac].push_back(f);
+		core->pos = pos;
+		f->ismactive = true;
+		f->ischfact = true;
+		auto fakeslot = new stationmodINslot;
+		fakeslot->slotrot = 0.0f;
+		fakeslot->pos = new int2(0, 0);
+		core->RenderInit(cam, f, name, fakeslot, this, true);
+		//debugging::debugpos = /*pos;*/ f->sprites[f->sprites.size() - 1].GetXYp();
+		int i = 0;
+		entity ent;
+		ent.pos = pos;
+		ent.entname = name;
+		ent.datav.push_back(this);
+		entitylist.push_back(ent);
+		int DONT_OPTIMISE_THIS_SHIT = abs(-1 * (rand() / 2));
+		delete fakeslot->pos;
+		delete fakeslot;
+		return;
+	}
+	void station::RenderEnd()
+	{
+		int i = 0;
+		while (i < core->slotsin.size())
+		{
+			core->slotsin[i]->mod->RenderRelease();
+			i++;
+		}
+		i = 0;
+		while (i < core->slotsout.size())
+		{
+			core->slotsout[i]->mod->RenderRelease();
+			i++;
+		}
+
+	}
 	//map<string, stationmodtempOUT*>smOUTtemplates;
 	//map<string, stationmodtempIN*>smINtemplates;
 	void stationmodIN::loadsubmods(AZfile& af, string lk)
@@ -313,7 +428,55 @@ namespace GAME
 			i = 0;
 		}
 	}
-	void stationmodOUT::RenderInit (camera* ncam, frame* nf, string nstationname, stationmodOUTslot* slot)
+	void stationmodOUT::RenderInit (camera* ncam, frame* nf, string nstationname, stationmodOUTslot* slot, station* stat, bool iscore)
+	{
+		stationname = "";
+		stationname = nstationname;
+		cam = ncam;
+		f = nf;
+		pos = slot->pos;
+		sprite tx;
+		tx.usecustompoint = true;
+		tx.customrpoint = { 0,sizet.y / 2 };
+		tx.SetBitmapFromFile(STRtoWSTR(textureloc).c_str(), *cam->GetRenderTargetP());
+		tx.size = (D2D_SIZE_F)(sizet/**stationsizemultip*/);
+		if (!iscore)
+			tx.SetOffsetXYp(stat->pos, true);
+		tx.SyncPos(pos, false);
+		tx.forceoverridepos = true;
+		tx.overridepos = pos;
+		slot->slotrot += 270;
+		constraintoscope(slot->slotrot, 360.0f, 0.0f);
+		tx.SetRot(slot->slotrot);
+		//tx.breakonrender = true;
+		renderp = new bool(true);
+		identp = new bool(true);
+		tx.render = renderp;
+		tx.identp = identp;
+		tx.useidentp = true;
+		/*tx.savelastloc = true;*/
+		//tx.breakonlocchange = true;
+		nf->sprites.push_back(tx);
+		debugging::debugpos = *tx.GetXYpp();
+		//random_shuffle(nf->sprites.begin(), nf->sprites.end());
+		auto sptr = nf->sprites[nf->sprites.size() - 1].GetXYpp();
+		int i = 0;
+		while (i < slotsin.size())
+		{
+			if (slotsin[i]->mod != nullptr)
+				slotsin[i]->mod->RenderInit(ncam, nf, nstationname, slotsin[i],stat);
+			i++;
+		}
+		i = 0;
+		while (i < slotsout.size())
+		{
+			if (slotsout[i]->mod != nullptr)
+				slotsout[i]->mod->RenderInit(ncam, nf, nstationname, slotsout[i],stat);
+			i++;
+		}
+		return;
+	}
+	void stationmodIN::RenderInit(camera* ncam, frame* nf, string nstationname, stationmodINslot* slot, GAME::station* stat, bool iscore )
 	{
 		stationname = "";
 		stationname = nstationname;
@@ -322,33 +485,30 @@ namespace GAME
 		sprite tx;
 		tx.SetBitmapFromFile(STRtoWSTR(textureloc).c_str(), *cam->GetRenderTargetP());
 		tx.size = (D2D_SIZE_F)(sizet*stationsizemultip);
-		tx.SetOffsetXYp(new int2(int2{ 0,0 }-postm), true);
+		if(!iscore)
+			tx.SetOffsetXYp(stat->pos, true);
 		tx.SyncPos(pos, false);
-		tx.forceoverridepos = true;
-		tx.overridepos = pos;
+		constraintoscope(slot->slotrot, 360.0f, 0.0f);
 		tx.SetRot(slot->slotrot);
 		renderp = new bool(true);
 		identp = new bool(true);
 		tx.render = renderp;
 		tx.identp = identp;
 		tx.useidentp = true;
-		tx.savelastloc = true;
-		tx.breakonlocchange = true;
+		//tx.breakonrender = true;
 		nf->sprites.push_back(tx);
-		random_shuffle(nf->sprites.begin(), nf->sprites.end());
-		auto sptr = nf->sprites[nf->sprites.size() - 1].GetXYpp();
 		int i = 0;
 		while (i < slotsin.size())
 		{
 			if (slotsin[i]->mod != nullptr)
-				slotsin[i]->mod->RenderInit(ncam, nf, nstationname, slotsin[i]);
+				slotsin[i]->mod->RenderInit(ncam, nf, nstationname, slotsin[i], stat);
 			i++;
 		}
 		i = 0;
 		while (i < slotsout.size())
 		{
 			if (slotsout[i]->mod != nullptr)
-				slotsout[i]->mod->RenderInit(ncam, nf, nstationname, slotsout[i]);
+				slotsout[i]->mod->RenderInit(ncam, nf, nstationname, slotsout[i], stat);
 			i++;
 		}
 		return;

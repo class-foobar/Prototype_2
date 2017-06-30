@@ -16,6 +16,7 @@ namespace DX2D
 }
 namespace GAME
 {
+	extern vector<entity> entitylist;
 	extern universe* uniclass;
 	string apploc;
 	string GetLinkToElSTR(string elemloc)
@@ -526,9 +527,9 @@ namespace GAME
 			if (spos == pos)
 			{
 				int2 actualpos = (uni2<float>(fpos - spos.touni2<float>()) * sectorsize).toint2();
-				*sysptr->statvec[i]->pos = actualpos = { 100 ,100};
+				*sysptr->statvec[i]->pos = actualpos /*= { 100 ,100}*/;
 				sysptr->statvec[i]->RenderInit(primaryf,cam);
-				*player.pos = actualpos +int2 {-100, -100};
+				*player.pos = /*-*/(actualpos +int2 {-100, -100});
 				debugging::debugwindow* dw = new debugging::debugwindow;
 				dw->dvarrect = int4{ 0,0,300,240 };
 				dw->subwindowsrect = int4(0, 240, 300, 300);
