@@ -37,7 +37,7 @@ namespace debugging
 	{
 		extern	camera** maincam;
 	}
-	extern int2* debugpos;
+	extern int2** debugpos;
 	debugmain* dbm = nullptr;
 	debugging::debugwindow* pdebugdata = nullptr;
 	debugwindow*  maincamdebg = nullptr;

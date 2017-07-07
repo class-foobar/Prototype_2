@@ -249,7 +249,7 @@ namespace DX2D
 				if (mr > sh.mrsenr)
 					sh.mrsenr = mr;
 				slvl = getinfolvlfromstr(file.GetVar<string>("infolvl"));
-				slvlm = getinfolvlfromstr(file.GetVar<string>("infolvlmanned"));
+				slvlm = getinfolvlfromstr(file.GetVar<string>("infolvlmanned")); 
 				sh.slvl = slvl;
 				sh.slvlm = slvlm;
 			}
@@ -286,6 +286,7 @@ namespace DX2D
 			sp.SetBitmapFromFile(STRtoWSTR(reverseSTR((copyfromchtoend(reverseSTR(loc), '\\', true))) + mpngstr + ".png").c_str(), *cam->GetRenderTargetP());
 			rb = new bool(true);
 			sp.render = rb;
+			sp.size = size;
 			f->sprites.push_back(sp);
 			/*f->sprites[f->sprites.size() - 1].size = { (float)size.x,(float)size.y };*/
 		}

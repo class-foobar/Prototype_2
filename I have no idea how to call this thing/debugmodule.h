@@ -208,6 +208,8 @@ namespace debugging
 		CONSOLEFUNCTION(setdbpos);
 		CONSOLEFUNCTION(setdbx);
 		CONSOLEFUNCTION(setdby);
+		CONSOLEFUNCTION(mdbx);
+		CONSOLEFUNCTION(mdby);
 		CONSOLEFUNCTION(setcampos);
 		CONSOLEFUNCTION(setcamy);
 		CONSOLEFUNCTION(setcamx);

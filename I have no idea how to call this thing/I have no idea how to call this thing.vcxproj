@@ -117,6 +117,7 @@
     <ClCompile Include="DX_main.cpp" />
     <ClCompile Include="factions.cpp" />
     <ClCompile Include="game.cpp" />
+    <ClCompile Include="GUI.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pathfinding.cpp" />
     <ClCompile Include="stations.cpp" />
@@ -130,6 +131,7 @@
     <ClInclude Include="debugmodule.h" />
     <ClInclude Include="eco.h" />
     <ClInclude Include="frame.h" />
+    <ClInclude Include="GUI.h" />
     <ClInclude Include="mainclass.h" />
     <ClInclude Include="pathfinding.h" />
     <ClInclude Include="ships.h" />

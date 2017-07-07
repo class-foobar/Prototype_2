@@ -3,7 +3,7 @@
 #include "X:\PROJECTS\economy\economy\economy.h"
 namespace debugging
 {
-	extern int2* debugpos;
+	extern int2** debugpos;
 }
 namespace DX2D
 {
@@ -82,6 +82,7 @@ namespace GAME
 	}
 	void station::RenderInit(frame* mf, camera* cam)
 	{
+		int i = 0;
 		if (f == nullptr)
 			f = new frame;
 		if (mf->wchiac == "")
@@ -96,9 +97,22 @@ namespace GAME
 		auto fakeslot = new stationmodINslot;
 		fakeslot->slotrot = 0.0f;
 		fakeslot->pos = new int2(0, 0);
+		while (i < core->slotsout.size())
+		{
+			*core->slotsout[i]->pos = *core->slotsout[i]->pos * stationsizemultip;
+			core->slotsout[i]->pos->y -= core->slotsout[i]->mod->size.y/2;
+			i++;
+		}
+		i = 0;
+		while (i < core->slotsin.size())
+		{
+			*core->slotsin[i]->pos = *core->slotsin[i]->pos * stationsizemultip;
+			//core->slotsout[i]->pos->y -= core->slotsout[i]->mod->size.y / 2;
+			i++;
+		}
 		core->RenderInit(cam, f, name, fakeslot, this, true);
 		//debugging::debugpos = /*pos;*/ f->sprites[f->sprites.size() - 1].GetXYp();
-		int i = 0;
+		i = 0;
 		entity ent;
 		ent.pos = pos;
 		ent.entname = name;
@@ -457,7 +471,8 @@ namespace GAME
 		/*tx.savelastloc = true;*/
 		//tx.breakonlocchange = true;
 		nf->sprites.push_back(tx);
-		debugging::debugpos = *tx.GetXYpp();
+		debugging::debugpos = nf->sprites[nf->sprites.size()-1].GetXYpp();
+		cout << pos->str() << endl;
 		//random_shuffle(nf->sprites.begin(), nf->sprites.end());
 		auto sptr = nf->sprites[nf->sprites.size() - 1].GetXYpp();
 		int i = 0;

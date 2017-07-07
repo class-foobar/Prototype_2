@@ -16,7 +16,7 @@ namespace GAME
 }
 namespace debugging
 {
-	int2* debugpos = nullptr;
+	int2** debugpos = nullptr;
 	namespace sharedv
 	{
 		camera** maincam;
@@ -35,7 +35,9 @@ namespace debugging
 			{ "setcamx",&setcamx },
 			{ "setcamy",&setcamy },
 			{ "getdbpos",&getdbpos},
-			{"getdbhex",&getdbhex}
+			{ "getdbhex",&getdbhex},
+			{ "mdbx",&mdbx },
+			{ "mdby",&mdby }
 		};
 		map<string, vector<string>> customdef = {};
 		vector<string> getconfuncdata(string name)
@@ -114,10 +116,40 @@ namespace debugging
 			{ "help", "Displays either list of all functions or information about specific function\nArguments:\n(optional)[string]function name" },
 			{ "getentities", "Get list of all entities\nArguments:\n(none)" }
 		};
+		CONSOLEFUNCTION(mdbx)
+		{
+			PREPCFUNC;
+			if (debugpos == nullptr || *debugpos == nullptr)
+			{
+				result->ID = CON_NULL;
+				result->message = "No variable attached";
+			}
+			else
+			{
+				result->message = "Position has been changed";
+				result->ID = CON_OK;
+				(*debugpos)->x += boost::any_cast<int>(args[0]);
+			}
+		}
+		CONSOLEFUNCTION(mdby)
+		{
+			PREPCFUNC;
+			if (debugpos == nullptr || *debugpos == nullptr)
+			{
+				result->ID = CON_NULL;
+				result->message = "No variable attached";
+			}
+			else
+			{
+				result->message = "Position has been changed";
+				result->ID = CON_OK;
+				(*debugpos)->y += boost::any_cast<int>(args[0]);
+			}
+		}
 		CONSOLEFUNCTION(getdbhex)
 		{
 			PREPCFUNC;
-			if (debugpos == nullptr)
+			if (debugpos == nullptr || *debugpos == nullptr)
 			{
 				result->ID = CON_NULL;
 				result->message = "No variable attached";
@@ -125,7 +157,7 @@ namespace debugging
 			else
 			{
 				stringstream ss;
-				ss << debugpos;
+				ss << *debugpos;
 				result->message = ss.str();
 				result->ID = CON_OK;
 			}
@@ -133,21 +165,21 @@ namespace debugging
 		CONSOLEFUNCTION(getdbpos)
 		{
 			PREPCFUNC;
-			if (debugpos == nullptr)
+			if (debugpos == nullptr || *debugpos == nullptr)
 			{
 				result->ID = CON_NULL;
 				result->message = "No variable attached";
 			}
 			else
 			{
-				result->message = debugpos->str();
+				result->message = (*debugpos)->str();
 				result->ID = CON_OK;
 			}
 		}
 		CONSOLEFUNCTION(setdbpos)
 		{
 			PREPCFUNC;
-			if (debugpos == nullptr)
+			if (debugpos == nullptr || *debugpos == nullptr)
 			{
 				result->ID = CON_NULL;
 				result->message = "No variable attached";
@@ -156,14 +188,14 @@ namespace debugging
 			{
 				result->message = "Position has been changed";
 				result->ID = CON_OK;
-				debugpos->x = boost::any_cast<int>(args[0]);
-				debugpos->y = boost::any_cast<int>(args[1]);
+				(*debugpos)->x = boost::any_cast<int>(args[0]);
+				(*debugpos)->y = boost::any_cast<int>(args[1]);
 			}
 		}
 		CONSOLEFUNCTION(setdbx)
 		{
 			PREPCFUNC;
-			if (debugpos == nullptr)
+			if (debugpos == nullptr || *debugpos == nullptr)
 			{
 				result->ID = CON_NULL;
 				result->message = "No variable attached";
@@ -172,13 +204,13 @@ namespace debugging
 			{
 				result->message = "Position has been changed";
 				result->ID = CON_OK;
-				debugpos->x = boost::any_cast<int>(args[0]);
+				(*debugpos)->x = boost::any_cast<int>(args[0]);
 			}
 		}
 		CONSOLEFUNCTION(setdby)
 		{
 			PREPCFUNC;
-			if (debugpos == nullptr)
+			if (debugpos == nullptr || *debugpos == nullptr)
 			{
 				result->ID = CON_NULL;
 				result->message = "No variable attached";
@@ -187,7 +219,7 @@ namespace debugging
 			{
 				result->message = "Position has been changed";
 				result->ID = CON_OK;
-				debugpos->y = boost::any_cast<int>(args[0]);
+				(*debugpos)->y = boost::any_cast<int>(args[0]);
 			}
 		}
 		CONSOLEFUNCTION(setcampos)

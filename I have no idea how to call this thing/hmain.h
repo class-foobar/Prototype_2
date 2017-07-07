@@ -43,6 +43,7 @@
 #include <windowsx.h>
 #include <Wincodec.h>
 #include <d2d1effecthelpers.h>
+#include <Mmsystem.h>
 #ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC
 #define _CRTDBG_MAPALLOC
@@ -608,6 +609,23 @@ namespace classvariables
 #define defaultinterpolationmode D2D1_BITMAP_INTERPOLATION_MODE_LINEAR  //D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR
 #define advancedinterpolatonmode D2D1_INTERPOLATION_MODE::D2D1_INTERPOLATION_MODE_ANISOTROPIC
 #define stationsizemultip 2.0f
+namespace common
+{
+	struct RGBA
+	{
+		int3 r;
+		int3 g;
+		int3 b;
+		float a;
+		RGBA(int3 nr, int3 ng, int3 nb,float na = 1.0f)
+		{
+			r = nr;
+			g = ng;
+			b = nb;
+			a = na;
+		}
+	};
+}
 inline bool operator>(float2 f0, float2 f1)
 {
 	return(f0.x > f1.x && f0.y > f1.y);

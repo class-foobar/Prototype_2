@@ -499,7 +499,7 @@ namespace GAME
 						while (ii < copiesX)
 						{
 							int2 npos = toadd[0].first;
-							npos.x += msize.x + rowsize;
+							npos.x += msize.x + rowsize*(ii + 1);
 							toadd.push_back(pair<int2, int>(npos, toadd[ii].second));
 							toaddrot.push_back(f.GetVar<float>(str + "angle"));
 							ii++;
@@ -512,7 +512,7 @@ namespace GAME
 						while (ii < copiesY)
 						{
 							int2 npos = toadd[0].first;
-							npos.y += (msize.y + rowsize)*ii;
+							npos.y += (msize.y + rowsize)*(ii+1);
 							toadd.push_back(pair<int2, int>(npos, toadd[ii].second));
 							toaddrot.push_back(f.GetVar<float>(str + "angle"));
 							ii++;
@@ -526,9 +526,9 @@ namespace GAME
 						ii = 0;
 						while (ii < toadd.size())
 						{
-							int dist = msize.x - toadd[ii].first.x;
+							int dist = tsize.x - toadd[ii].first.x*stationsizemultip;
 							int2 npos = { toadd[ii].first };
-							npos.x += dist * 2;
+							npos.x += dist;
 							tddX.push_back(npos);
 							float nrot = f.GetVar<float>(str + "angle") + 180;
 							constraintoscope(nrot, 360.0f, 0.0f);
@@ -541,9 +541,9 @@ namespace GAME
 						ii = 0;
 						while (ii < toadd.size())
 						{
-							int dist = msize.y - toadd[ii].first.y;
+							int dist = tsize.y - toadd[ii].first.y*stationsizemultip;
 							int2 npos = { toadd[ii].first };
-							npos.y += dist * 2;
+							npos.y += dist;
 							float nrot = f.GetVar<float>(str + "angle") + 180;
 							constraintoscope(nrot, 360.0f, 0.0f);
 							toaddrot.push_back(nrot);
