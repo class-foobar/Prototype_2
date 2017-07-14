@@ -613,11 +613,18 @@ namespace common
 {
 	struct RGBA
 	{
-		int3 r;
-		int3 g;
-		int3 b;
+		int r;
+		int g;
+		int b;
 		float a;
-		RGBA(int3 nr, int3 ng, int3 nb,float na = 1.0f)
+		RGBA()
+		{
+			r = 0;
+			g = 0;
+			b = 0;
+			a = 0.0f;
+		}
+		RGBA(int nr, int ng, int nb,float na = 1.0f)
 		{
 			r = nr;
 			g = ng;
@@ -625,6 +632,24 @@ namespace common
 			a = na;
 		}
 	};
+	string findoneoffiles(vector<string>locations)
+	{
+		int i = 0;
+		string ret = "NULL";
+		while (i < locations.size() && ret == "NULL")
+		{
+			WIN32_FIND_DATA FindFileData;
+			if (SUCCEEDED(FindFirstFileA(locations[i].c_str(), &FindFileData)))
+			{
+				ret = locations[i];
+			}
+		}
+		return ret;
+	}
+	inline std::string INTtoSTR(int i)
+	{
+		return std::to_string(i);
+	}
 }
 inline bool operator>(float2 f0, float2 f1)
 {

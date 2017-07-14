@@ -3,6 +3,7 @@
 #include "sprite.h"
 #include "physics.h"
 #include "text.hpp"
+#include "GUI.h"
 #include "ships.h"
 #include "universe.h"
 #include "button.h"
@@ -59,6 +60,7 @@ namespace GAME
 	{
 		extern	physics pcshipclick;
 	}
+	GUI::core* UI;
 }
 namespace DX2D
 {
@@ -1355,7 +1357,11 @@ namespace DX2D
 		conship->resdwnd = shipresdbd;
 		loadsector(maincam,mf,*player.universepos,uniclass,uniclass->eco,player.sys,player.sys->s,player);
 		maincam->SetXY(*player.pos + int2(-100,-100));
-		
+		GAME::UI = new GUI::core;
+		f = new frame;
+		mf->f[mf->wchiac].push_back(f);
+		GAME::UI->init(&DXclass->con, maincam, f);
+		loadGUIdata(bslink, GAME::UI);
 	}
 	bool isdbbshown = false;
 	bool isscrdwnon = false; // if true - scrolling will call scrollfunc and will not scale
