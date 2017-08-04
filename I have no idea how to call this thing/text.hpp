@@ -64,11 +64,15 @@ namespace DX2D
 				wasreleased = true;
 			}
 		}
+		textpiece()
+		{
+
+		}
 	};
 	class textclass
 	{
 	protected:
-		IDWriteFactory* idwfac;
+		IDWriteFactory1* idwfac;
 	public:
 		D2D_COLOR_F defcol;
 		std::map<camera*, std::vector <textpiece*>> TMAP;

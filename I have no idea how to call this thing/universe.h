@@ -21,14 +21,15 @@ namespace DX2D
 	extern main* DXclass;
 	//extern GAME::universe* uniclass;
 	void loadsavebts(int2& pos);
-	extern map<string, stationmodtempIN>stattempINs;
-	extern map<string, stationmodtempOUT>stattempOUTs;
-	extern map<string, stationmodtempIN>coretemps;
+	//extern map<string, stationmodtempIN>stattempINs;
+	//extern map<string, stationmodtempOUT>stattempOUTs;
+	//extern map<string, stationmodtempIN>coretemps;
 }
 namespace GAME
 {
-	void loadsector(camera* cam, frame* mf, int2 pos, GAME::universe* uniptr, GAME::economy* ecoptr, GAME::system* sysptr, GAME::space* spptr, DX2D::ship& player);
+	extern	vector<entity> entitylist;
 	class universe;
+	void loadsector(camera* cam, frame* mf, int2 pos, GAME::universe* uniptr, GAME::economy* ecoptr, GAME::system* sysptr, GAME::space* spptr, DX2D::ship& player);
 	class starcol
 	{
 	public:
@@ -136,6 +137,26 @@ namespace GAME
 		int2 size;
 		void tick(stationmodOUT* base);
 	};
+
+	class stationmodOUTslot
+	{
+	public:
+		int2* pos;
+		stationmodOUT* mod = nullptr;
+		int slotnum;
+		float slotrot = 0;
+		int slotsize;
+	};
+	class stationmodINslot
+	{
+	public:
+		int2* pos;
+		stationmodIN* mod = nullptr;
+		int slotnum;
+		float slotrot = 0;
+		int slotsize;
+	};
+	extern int dbxyz; // if you remove this line the compiler will... well... http://i.imgur.com/snFoWUG.png
 	class stationmodtempOUT
 	{
 		friend class stationmodOUT;
@@ -478,7 +499,7 @@ namespace GAME
 						while (ii < copiesX)
 						{
 							int2 npos = toadd[0].first;
-							npos.x += msize.x + rowsize;
+							npos.x += msize.x + rowsize*(ii + 1);
 							toadd.push_back(pair<int2, int>(npos, toadd[ii].second));
 							toaddrot.push_back(f.GetVar<float>(str + "angle"));
 							ii++;
@@ -491,7 +512,7 @@ namespace GAME
 						while (ii < copiesY)
 						{
 							int2 npos = toadd[0].first;
-							npos.y += (msize.y + rowsize)*ii;
+							npos.y += (msize.y + rowsize)*(ii+1);
 							toadd.push_back(pair<int2, int>(npos, toadd[ii].second));
 							toaddrot.push_back(f.GetVar<float>(str + "angle"));
 							ii++;
@@ -505,11 +526,13 @@ namespace GAME
 						ii = 0;
 						while (ii < toadd.size())
 						{
-							int dist = msize.x - toadd[ii].first.x;
+							int dist = tsize.x - toadd[ii].first.x*stationsizemultip;
 							int2 npos = { toadd[ii].first };
-							npos.x += dist * 2;
+							npos.x += dist;
 							tddX.push_back(npos);
-							toaddrot.push_back(f.GetVar<float>(str + "angle")+180);
+							float nrot = f.GetVar<float>(str + "angle") + 180;
+							constraintoscope(nrot, 360.0f, 0.0f);
+							toaddrot.push_back(nrot);
 							ii++;
 						}
 					}
@@ -518,10 +541,12 @@ namespace GAME
 						ii = 0;
 						while (ii < toadd.size())
 						{
-							int dist = msize.y - toadd[ii].first.y;
+							int dist = tsize.y - toadd[ii].first.y*stationsizemultip;
 							int2 npos = { toadd[ii].first };
-							npos.y += dist * 2;
-							toaddrot.push_back(f.GetVar<float>(str + "angle") + 180);
+							npos.y += dist;
+							float nrot = f.GetVar<float>(str + "angle") + 180;
+							constraintoscope(nrot, 360.0f, 0.0f);
+							toaddrot.push_back(nrot);
 							tddY.push_back(npos);
 							ii++;
 						}
@@ -598,26 +623,8 @@ namespace GAME
 		int2 sizet;
 		int2 size;
 		void loadsubmods(AZfile& af, string lk);
-		class stationmodOUTslot
-		{
-		public:
-			int2* pos;
-			stationmodOUT* mod = nullptr;
-			int slotnum;
-			float slotrot = 0;
-			int slotsize;
-		};
 		vector<sub> subs;
 		float hpd = -1;
-		class stationmodINslot
-		{
-		public:
-			int2* pos;
-			stationmodIN* mod = nullptr;
-			int slotnum;
-			float slotrot = 0;
-			int slotsize;
-		};
 		vector<stationmodINslot*>slotsin;
 		vector<stationmodOUTslot*>slotsout;
 		stationmodOUT()
@@ -685,7 +692,7 @@ namespace GAME
 			}
 			i = 0;
 		}
-		void RenderInit(camera* ncam, frame* nf, string nstationname);
+		void RenderInit(camera* ncam, frame* nf, string nstationname,stationmodOUTslot* slot,station* stat,bool iscore=false);
 		void  RenderRelease();
 	};
 	class stationmodIN
@@ -714,24 +721,6 @@ namespace GAME
 		int2 posin;
 		int2 sizet;
 		int2 size;
-		class stationmodINslot
-		{
-		public:
-			int2* pos;
-			stationmodIN* mod = nullptr;
-			int slotnum;
-			int slotsize;
-			float slotrot = 0;
-		};
-		class stationmodOUTslot
-		{
-		public:
-			int2* pos;
-			stationmodOUT* mod = nullptr;
-			int slotnum;
-			float slotrot;
-			int slotsize;
-		};
 		vector<stationmodINslot*>slotsin;
 		vector<stationmodOUTslot*>slotsout;
 		int slotsize;
@@ -804,40 +793,7 @@ namespace GAME
 		bool hpdstatel = false;
 
 		void tick();
-		void RenderInit(camera* ncam, frame* nf, string nstationname)
-		{
-			stationname = "";
-			stationname = nstationname;
-			cam = ncam;
-			f = nf;
-			sprite tx;
-			tx.SetBitmapFromFile(STRtoWSTR(textureloc).c_str(), *cam->GetRenderTargetP());
-			tx.size = (D2D_SIZE_F)(sizet*stationsizemultip);
-			tx.SetOffsetXYp(new int2(int2{ 0,0 }-postm), true);
-			tx.SyncPos(pos,false);
-			tx.SetRot(INangle);
-			renderp = new bool(true);
-			identp = new bool(true);
-			tx.render = renderp;
-			tx.identp = identp;
-			tx.useidentp = true;
-			nf->sprites.push_back(tx);
-			int i = 0;
-			while (i < slotsin.size())
-			{
-				if(slotsin[i]->mod != nullptr )
-					slotsin[i]->mod->RenderInit(ncam, nf, nstationname);
-				i++;
-			}
-			i = 0;
-			while (i < slotsout.size())
-			{
-				if (slotsout[i]->mod != nullptr)
-					slotsout[i]->mod->RenderInit(ncam, nf, nstationname);
-				i++;
-			}
-			return;
-		}
+		void RenderInit(camera* ncam, frame* nf, string nstationname, stationmodINslot* slot, GAME::station* stat, bool iscore = false);
 		void  RenderRelease()
 		{
 			*identp = false;
@@ -862,31 +818,9 @@ namespace GAME
 	{
 	protected:
 		template<typename univar>
-		void addtostorage(univar* mod)
-		{
-			STORAGE = SumMaps(STORAGE, mod->STORAGE);
-			storagelimitm = SumMaps(storagelimitm, mod->storagelimitm);
-			int i = 0;
-			while (i < mod->slotsin.size())
-			{
-				if (mod->slotsin[i]->mod != nullptr)
-					addtostorage(mod->slotsin[i]->mod);
-				i++;
-			}
-		}
+		void addtostorage(univar* mod);
 		template<>
-		void addtostorage(stationmodOUT* mod)
-		{
-			STORAGE = SumMaps(STORAGE, mod->STORAGE);
-			storagelimitm = SumMaps(storagelimitm, mod->storagelimitm);
-			int i = 0;
-			while (i < mod->slotsin.size())
-			{
-				if (mod->slotsin[i]->mod != nullptr)
-					addtostorage(mod->slotsin[i]->mod);
-				i++;
-			}
-		}
+		void addtostorage(stationmodOUT* mod);
 	public:
 		string datal;
 		vector<stationmodIN*> sINv;
@@ -903,79 +837,11 @@ namespace GAME
 		int128 orbrad;
 		void* orbobj;
 		stationmodIN* core;
-		void createmods(AZfile& af, string datapos)
-		{
-			if (datapos[datapos.size() - 1] != '@')
-				datapos += '@';
-			name = af.GetVar<string>(datapos + "name");
-			core = new stationmodIN(coretemps[ af.GetVar<string>(datapos + "core")], new int2(0, 0));
-			core->loadsubmods(af, datapos);
-			addtostorage(core);
-			int i = 0;
-			while (i < core->slotsin.size())
-			{
-				if(core->slotsin[i]->mod != nullptr )
-					addtostorage(core->slotsin[i]->mod);
-				i++;
-			}
-			i = 0;
-			while (i < core->slotsout.size())
-			{
-				if (core->slotsout[i]->mod != nullptr)
-					addtostorage(core->slotsout[i]->mod);
-				i++;
-			}
-			i = 0;
-			storagelimit = MaptoVec(storagelimitm);
-		}
+		void createmods(AZfile& af, string datapos);
 		frame* f = nullptr;
-		void RenderInit( frame* mf , camera* cam)
-		{
-			if(f == nullptr )
-				f = new frame;
-			if (mf->wchiac == "")
-			{
-				mf->wchiac = "station" + RandomString(3);
-			}
-			mf->ischfact = true;
-			mf->f[mf->wchiac].push_back(f);
-			core->pos = pos;
-			f->ismactive = true;
-			f->ischfact = true;
-			core->RenderInit(cam,f,name);
-			int i = 0;
-			while (i < core->slotsin.size())
-			{
-				if (core->slotsin[i]->mod != nullptr)
-					core->slotsin[i]->mod->RenderInit(cam, f, name);
-				i++;
-			}
-			i = 0;
-			while (i < core->slotsout.size())
-			{
-				if (core->slotsout[i]->mod != nullptr)
-					core->slotsout[i]->mod->RenderInit(cam, f, name);
-				i++;
-			}
-			int DONT_OPTIMISE_THIS_SHIT = abs(-1);
-			return;
-		}
-		void RenderEnd()
-		{
-			int i = 0;
-			while (i < core->slotsin.size())
-			{
-				core->slotsin[i]->mod->RenderRelease();
-				i++;
-			}
-			i = 0;
-			while (i < core->slotsout.size())
-			{
-				core->slotsout[i]->mod->RenderRelease();
-				i++;
-			}
-
-		}
+		void tick();
+		void RenderInit(frame* mf, camera* cam);
+		void RenderEnd();
 		//ID2D1Bitmap* bm;
 	};
 	class star

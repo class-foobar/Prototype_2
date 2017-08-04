@@ -27,8 +27,8 @@ inline std::string _RandomString(int len, ui seed = 0/*won't be used if 0*/)
 #define RandomString _RandomString
 namespace DX2D
 {
-	extern ID2D1HwndRenderTarget *hwndRT;
-	extern ID2D1Factory* pD2DFactory;
+	extern ID2D1DeviceContext *hwndRT;
+	extern ID2D1Factory1* pD2DFactory;
 	extern main* DXclass;
 	class controls;
 	class button;
@@ -170,6 +170,10 @@ namespace DX2D
 		float defaultbutton_secpt = 0.2f;
 		map<string, void*> textnames;
 	public:
+		inline physics* GetPhysP()
+		{
+			return &pclass;
+		}
 		void(*lmousemovefunc)(int2&) = nullptr;
 		void(*rmousemovefunc)(int2&) = nullptr;
 		void(*mmousemovefunc)(int2&) = nullptr;

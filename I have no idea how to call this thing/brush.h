@@ -29,10 +29,12 @@ namespace DX2D
 		bool createrectfrompossize = false;
 		int2* pos;
 		int2* size;
+		int2* offset;
 		float* rot;
 		bool useidentp = false;
 		bool* identp = nullptr;
 		bool* renderp = nullptr;
+		bool breakonrender = false;
 		void copypointers()
 		{
 			if (identp != nullptr)
@@ -45,6 +47,7 @@ namespace DX2D
 			}
 			pos = new int2(*pos);
 			size = new int2(*size);
+			offset = new int2(*offset);
 			rot = new float(*rot);
 		}
 		void SetType(brushtypes bt)
@@ -96,12 +99,14 @@ namespace DX2D
 			pos = nullptr;
 			size = nullptr;
 			rot = nullptr;
+			offset = new int2(0, 0);
 		}
 		brush(bool updaterectfrompossize, int2 npos, int2 nsize, float nrot)
 		{
 			createrectfrompossize = updaterectfrompossize;
 			pos = new int2(npos);
 			size = new int2(nsize);
+			offset = new int2(0, 0);
 			rot = new float(nrot);
 			rect.top = pos->y;
 			rect.bottom = pos->y + size->y;
@@ -113,6 +118,7 @@ namespace DX2D
 			createrectfrompossize = updaterectfrompossize;
 			pos = npos;
 			size = nsize;
+			offset = new int2(0, 0);
 			rot = nrot;
 			rect.top = pos->y;
 			rect.bottom = pos->y + size->y;
@@ -124,6 +130,7 @@ namespace DX2D
 			rot = new float(nrot);
 			size = nullptr;
 			pos = nullptr;
+			offset = new int2(0, 0);
 			rect = nrect;
 		}
 		brush(D2D1_ELLIPSE nelipse, float nrot)
@@ -131,6 +138,7 @@ namespace DX2D
 			rot = new float(nrot);
 			size = nullptr;
 			pos = nullptr;
+			offset = new int2(0, 0);
 			elipse = nelipse;
 		}
 	};

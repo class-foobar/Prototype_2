@@ -17,6 +17,7 @@ namespace GAME
 	string version = "null";
 	ui build = 0;
 	universe* uniclass = nullptr;
+	int dbxyz = 0;
 }
 inline std::string __INTtoSTR(int i)
 {
@@ -46,11 +47,23 @@ bool isfullscreened = false;
 LRESULT CALLBACK MainWinProc(HWND hwndwin, UINT msg, WPARAM wParam, LPARAM lParam);
 int main(int argc, char *argv[])
 {
+	wchar_t *program = Py_DecodeLocale(argv[0], NULL);
+	if (program == NULL) {
+		fprintf(stderr, "Fatal error: cannot decode argv[0]\n");
+		exit(1);
+	}
+	Py_SetProgramName(program);  /* optional but recommended */
+	Py_Initialize();
+	PyRun_SimpleString("from time import time,ctime\n"
+		"print('Today is', ctime(time()))\n");
+	if (Py_FinalizeEx() < 0) {
+		exit(120);
+	}
 	bool ispoped = true;
 	bool isfullscreendefault = false;
 	style.programloc = argv[0];
 	style.programloc = reverseSTR(copyfromchtoend(reverseSTR(style.programloc), '\\', true));
-	int i = 0;
+	int i = 0; 
 	AZfile vfile(style.programloc+"bin\\version.file");
 	GAME::version = vfile.GetVar<string>("version");
 	GAME::build = vfile.GetVar<ui>("build");
@@ -172,6 +185,7 @@ int main(int argc, char *argv[])
 		}
 	} while (msg.message != WM_QUIT);
 	DX2D::Release();
+	PyMem_RawFree(program);
 	DebugSetProcessKillOnExit(true);
 	return 0;
 }

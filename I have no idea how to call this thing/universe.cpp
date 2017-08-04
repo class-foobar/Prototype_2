@@ -16,6 +16,7 @@ namespace DX2D
 }
 namespace GAME
 {
+	extern vector<entity> entitylist;
 	extern universe* uniclass;
 	string apploc;
 	string GetLinkToElSTR(string elemloc)
@@ -100,18 +101,21 @@ namespace GAME
 			while (ii < stars.size())
 			{
 				AZstruct* ss = unitemp.GetStruct(sysnames[i] + "@" + stars[ii]);
-				star *s = new star;
-				s->pos = new int2( ss->getvar<int>("mapposX"), ss->getvar<int>("mapposY") );
-				s->radius = ss->getvar<int128>("radius");
-				s->typechar = ss->getvar<char>("typeletter");
-				s->hotness = ss->getvar<ui>("hotness");
-				s->luminosity = ss->getvar<ui>("luminosity");
-				s->luminosity = ss->getvar<int>("probability");
-				s->displayedtemp = ss->getvar<ulli>("displayedtemp");
-				if (s->seed == 0)
-					s->seed = sys->seed;
-				starmap.insert(make_pair(stars[ii], s));
-				starvec.push_back(s);
+				if (ss->type == "STAR")
+				{
+					star *s = new star;
+					s->pos = new int2(ss->getvar<int>("mapposX"), ss->getvar<int>("mapposY"));
+					s->radius = ss->getvar<int128>("radius");
+					s->typechar = ss->getvar<char>("typeletter");
+					s->hotness = ss->getvar<ui>("hotness");
+					s->luminosity = ss->getvar<ui>("luminosity");
+					s->luminosity = ss->getvar<int>("probability");
+					s->displayedtemp = ss->getvar<ulli>("displayedtemp");
+					if (s->seed == 0)
+						s->seed = sys->seed;
+					starmap.insert(make_pair(stars[ii], s));
+					starvec.push_back(s);
+				}
 				ii++;
 			}
 			ii = 0;
@@ -120,178 +124,187 @@ namespace GAME
 			while (ii < planets.size())
 			{
 				AZstruct* ss = unitemp.GetStruct(sysnames[i] + "@" + planets[ii]);
-				int iii = 0;
-				token* t = nullptr;
-				currency* pc = nullptr;
-				while (unitemp.findvar(sysnames[i] + "@" + planets[ii] + "@cur" + INTtoSTR(iii)))
+				if (ss->type == "PLANET")
 				{
-					if (ss->getvar<string>("cur" + INTtoSTR(iii)) == "NULL")
+					int iii = 0;
+					token* t = nullptr;
+					currency* pc = nullptr;
+					while (unitemp.findvar(sysnames[i] + "@" + planets[ii] + "@cur" + INTtoSTR(iii)))
 					{
-						iii++;
-						continue;
-					}
-					ulli cura = ss->getvar<ulli>("cura" + INTtoSTR(iii));
-					string cname = ss->getvar<string>("cur" + INTtoSTR(iii));
-					if (MapFind(curmap, "cur" + INTtoSTR(iii)))
-					{
-						if (t == nullptr)
+						if (ss->getvar<string>("cur" + INTtoSTR(iii)) == "NULL")
 						{
-							t = CreateToken({ curmap[cname] ,cura });
+							iii++;
+							continue;
+						}
+						ulli cura = ss->getvar<ulli>("cura" + INTtoSTR(iii));
+						string cname = ss->getvar<string>("cur" + INTtoSTR(iii));
+						if (MapFind(curmap, "cur" + INTtoSTR(iii)))
+						{
+							if (t == nullptr)
+							{
+								t = CreateToken({ curmap[cname] ,cura });
+							}
+							else
+								curmap[cname]->print(t, cura);
 						}
 						else
-							curmap[cname]->print(t, cura);
+						{
+							currency* cur = new currency;
+							curmap.insert(make_pair(cname, cur));
+							t = CreateToken({ curmap[cname] ,cura });
+
+						}
+						iii++;
 					}
-					else
+					iii = 0;
+					pc/*mr*/ = curmap[ss->getvar<string>("maincur")];
+					token* pt = t;
+					planet* plan = new planet;
+					ui popi = ss->getvar<ui>("pop");
+					float mfoc = ss->getvar<float>("miningfocus");
+					float ifoc = ss->getvar<float>("industfocus");
+					float ffoc = ss->getvar<float>("farmfocus");
+					vector<GAME::pop*> pp; // pEOpLE
+					ui mpop = popi*mfoc;
+					ui fpop = popi*ffoc;
+					ui ipop = popi* ifoc;
+					company* c = new company();
+					c->name = planets[ii] + " incorporated";
+					mcompvec.push_back(c);
+					c->isgovcomp = false;
+					while (iii < 10)
 					{
-						currency* cur = new currency;
-						curmap.insert(make_pair(cname, cur));
-						t = CreateToken({ curmap[cname] ,cura });
-
+						pop* p = new pop;
+						c->workersvec.push_back(p);
+						p->education = work::construction;
+						p->t = CreateToken({ pc,2000 });
+						pp.push_back(p);
+						iii++;
 					}
-					iii++;
-				}
-				iii = 0;
-				pc/*mr*/ = curmap[ss->getvar<string>("maincur")];
-				token* pt = t;
-				planet* plan = new planet;
-				ui popi = ss->getvar<ui>("pop");
-				float mfoc = ss->getvar<float>("miningfocus");
-				float ifoc = ss->getvar<float>("industfocus");
-				float ffoc = ss->getvar<float>("farmfocus");
-				vector<GAME::pop*> pp; // pEOpLE
-				ui mpop = popi*mfoc;
-				ui fpop = popi*ffoc;
-				ui ipop = popi* ifoc;
-				company* c = new company();
-				c->name = planets[ii]+" incorporated";
-				mcompvec.push_back(c);
-				c->isgovcomp = false;
-				while (iii < 10)
-				{
-					pop* p = new pop;
-					c->workersvec.push_back(p);
-					p->education = work::construction;
-					p->t = CreateToken({ pc,2000 });
-					pp.push_back(p);
-					iii++;
-				}
-				iii = 0;
-				while (iii < popi)
-				{
-					pop* p = new pop;
-					if (iii > mpop + fpop)
-						p->education = work::industrialprod;
-					else if (iii > mpop)
-						p->education = work::foodprod;
-					else
-						p->education = work::mining;
-					p->t = CreateToken({ pc,1000 });
-					pp.push_back(p);
-					iii++;
-				}
-				//plan->pos = new int2({ ss->getvar<int>("mapposX"), ss->getvar<int>("mapposY") });
-#undef std
-#undef min
-#undef max
-				int128 r = plan->orbrad = ss->getvar<int128>("orbradius");
-				float *fp = plan->rot = new float(ss->getvar<float>("rot"));
-				float f = *fp;
-				float cxf = cos(f);
-				int128 i128x = (int)cxf;
-				i128x *= r;
-				i128x /= 100;
-				float syf = sin(f);
-				int128 i128y = (int)syf;
-				i128y *= r;
-				i128y /= 100;
-				plan->pos = new int2((int)i128x, (int)i128y);
-				plan->orbrad = ss->getvar<int128>("orbradius");
-				plan->atmospheresize = ss->getvar<lli>("atmospheresize");
-				plan->type = ss->getvar<ui>("type");
-				plan->mass = ss->getvar<int>("mass");
-				//long double surface;
-				//long double rad = (double)plan->radius;
-				//surface = 4 * M_PIl * powl(rad, 2);
-				//surface /= 1000000;
-				//surface = roundl(surface);
-				int128 sur = plan->radius*plan->radius;
-				sur *= 4;
-				sur = sur* (int) (M_PIl*100);
-				sur /= 100;
-#ifdef _DEBUG
-				ulli i64sur1 = (ulli)sur;
-#endif // _DEBUG
+					iii = 0;
+					while (iii < popi)
+					{
+						pop* p = new pop;
+						if (iii > mpop + fpop)
+							p->education = work::industrialprod;
+						else if (iii > mpop)
+							p->education = work::foodprod;
+						else
+							p->education = work::mining;
+						p->t = CreateToken({ pc,1000 });
+						pp.push_back(p);
+						iii++;
+					}
+					//plan->pos = new int2({ ss->getvar<int>("mapposX"), ss->getvar<int>("mapposY") });
+	#undef std
+	#undef min
+	#undef max
+					int128 r = plan->orbrad = ss->getvar<int128>("orbradius");
+					float *fp = plan->rot = new float(ss->getvar<float>("rot"));
+					float f = *fp;
+					float cxf = cos(f);
+					int128 i128x = (int)cxf;
+					i128x *= r;
+					i128x /= 100;
+					float syf = sin(f);
+					int128 i128y = (int)syf;
+					i128y *= r;
+					i128y /= 100;
+					plan->pos = new int2((int)i128x, (int)i128y);
+					plan->orbrad = ss->getvar<int128>("orbradius");
+					plan->atmospheresize = ss->getvar<lli>("atmospheresize");
+					plan->type = ss->getvar<ui>("type");
+					plan->mass = ss->getvar<int>("mass");
+					//long double surface;
+					//long double rad = (double)plan->radius;
+					//surface = 4 * M_PIl * powl(rad, 2);
+					//surface /= 1000000;
+					//surface = roundl(surface);
+					int128 sur = plan->radius*plan->radius;
+					sur *= 4;
+					sur = sur* (int)(M_PIl * 100);
+					sur /= 100;
+	#ifdef _DEBUG
+					ulli i64sur1 = (ulli)sur;
+	#endif // _DEBUG
 
-				iii = 0;
-				float landc = (float)ss->getvar<float>("landcoverage");
-				sur *= (int)(landc * 100);
-				sur /= 100;
-				sur /= 1000000;
-#ifdef _DEBUG
-				ulli i64sur2 = (ulli)sur;
-#endif // _DEBUG
-				vector<land*> lvec;
-				land* lconst = new land;
-				lconst->lvl = 1;
-				lconst->maxpop = 6;
-				lconst->t = pt;
-				lconst->payment = 4000 / GetCurrencyValue(pc);
-				lconst->u = usage::construction;
-				lvec.push_back(lconst);
-				lconst = new land(*lconst);
-				lvec.push_back(lconst);
-				int tiles = (int)sur;
-				int totaltiles = (int)sur;
-				tiles -= popi / 5;
-				int mtiles = tiles*mfoc;
-				int ftiles = tiles*ffoc;
-				int itiles = tiles* ifoc;
-				float cv = GetCurrencyValue(pc);
-				while (iii < tiles)
-				{
-					land* l = new land;
-					if (iii > mtiles + ftiles)
-						l->u = usage::industrialprod;
-					else if (iii > mtiles)
-						l->u = usage::foodprod;
-					else
-						l->u = usage::mine;
-					l->maxpop = 5;
-					l->payment = 2000 / cv;
-					lvec.push_back(l);
-					iii++;
+					iii = 0;
+					float landc = (float)ss->getvar<float>("landcoverage");
+					sur *= (int)(landc * 100);
+					sur /= 100;
+					sur /= 1000000;
+	#ifdef _DEBUG
+					ulli i64sur2 = (ulli)sur;
+	#endif // _DEBUG
+					vector<land*> lvec;
+					land* lconst = new land;
+					lconst->lvl = 1;
+					lconst->maxpop = 6;
+					lconst->t = pt;
+					lconst->payment = 4000 / GetCurrencyValue(pc);
+					lconst->u = usage::construction;
+					lvec.push_back(lconst);
+					lconst = new land(*lconst);
+					lvec.push_back(lconst);
+					int tiles = (int)sur;
+					int totaltiles = (int)sur;
+					tiles -= popi / 5;
+					int mtiles = tiles*mfoc;
+					int ftiles = tiles*ffoc;
+					int itiles = tiles* ifoc;
+					float cv = GetCurrencyValue(pc);
+					while (iii < tiles)
+					{
+						land* l = new land;
+						if (iii > mtiles + ftiles)
+							l->u = usage::industrialprod;
+						else if (iii > mtiles)
+							l->u = usage::foodprod;
+						else
+							l->u = usage::mine;
+						l->maxpop = 5;
+						l->payment = 2000 / cv;
+						lvec.push_back(l);
+						iii++;
+					}
+					iii = 0;
+					while (iii < popi / 5)
+					{
+						land* l = new land;
+						l->u = usage::home;
+						l->maxpop = 6;
+						l->payment = 1000 / GetCurrencyValue(pc);
+						iii++;
+					}
+					iii = 0;
+					exchangepoint* ex = new exchangepoint(plan->pos, "bsexpoint");
+					map<string, exchangepoint*> fuckcpp;
+					fuckcpp.insert(pair<string, exchangepoint*>("bsexpoint", ex));
+					plan->n = new node(ss->getvar<float>("taxrate") * 100, pt, s, planets[ii], pp, totaltiles, lvec, vector<exchangepoint*>{ ex }, fuckcpp, plan->pos);
+					c->HQnode = plan->n;
+					if (plan->seed == 0)
+						plan->seed = sys->seed;
+					planetmap.insert(make_pair(planets[ii], plan));
+					planetvec.push_back(plan);
+					s->nodvec.push_back(plan->n);
+					s->nodmap.insert(make_pair(planets[ii], plan->n));
+					nodesmainvec.push_back(plan->n);
+					plan->n->officialcur = pc;
 				}
-				iii = 0;
-				while (iii < popi / 5)
-				{
-					land* l = new land;
-					l->u = usage::home;
-					l->maxpop = 6;
-					l->payment = 1000 / GetCurrencyValue(pc);
-					iii++;
-				}
-				iii = 0;
-				exchangepoint* ex = new exchangepoint(plan->pos, "bsexpoint");
-				map<string, exchangepoint*> fuckcpp;
-				fuckcpp.insert(pair<string, exchangepoint*>("bsexpoint", ex));
-				plan->n = new node(ss->getvar<float>("taxrate") * 100, pt, s, planets[ii], pp, totaltiles, lvec, vector<exchangepoint*>{ ex },fuckcpp, plan->pos);
-				c->HQnode = plan->n;
-				if (plan->seed == 0)
-					plan->seed = sys->seed;
-				planetmap.insert(make_pair(planets[ii], plan));
-				planetvec.push_back(plan);
-				s->nodvec.push_back(plan->n);
-				s->nodmap.insert(make_pair(planets[ii], plan->n));
-				nodesmainvec.push_back(plan->n);
-				plan->n->officialcur = pc;
 				ii++;
 			}
 			ii = 0;
 			while (ii < stations.size())
 			{
+				AZstruct* ss = unitemp.GetStruct(sysnames[i] + "@" + stations[ii]);
+				if (ss->type != "STATION")
+				{
+					ii++;
+					continue;
+				}
 				station* stat = new station;
 				stat->pos = new int2(0, 0);
-				string str = sysnames[i] + '@' + stations[i] + '@';
+				string str = sysnames[i] + '@' + stations[ii] + '@';
 				string exof = unitemp.GetVar<string>(str+"exchangepointof");
 				int exi = unitemp.GetVar<int>(str+"exchangepointi");
 				stat->orbitedbody = unitemp.GetVar<string>(str+"orbitedbody");
@@ -526,9 +539,9 @@ namespace GAME
 			if (spos == pos)
 			{
 				int2 actualpos = (uni2<float>(fpos - spos.touni2<float>()) * sectorsize).toint2();
-				*sysptr->statvec[i]->pos = actualpos = { 100 ,100};
+				*sysptr->statvec[i]->pos = actualpos /*= { 100 ,100}*/;
 				sysptr->statvec[i]->RenderInit(primaryf,cam);
-				*player.pos = actualpos +int2 {-100, -100};
+				*player.pos = /*-*/(actualpos +int2 {-100, -100});
 				debugging::debugwindow* dw = new debugging::debugwindow;
 				dw->dvarrect = int4{ 0,0,300,240 };
 				dw->subwindowsrect = int4(0, 240, 300, 300);

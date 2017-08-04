@@ -1,10 +1,17 @@
 #pragma once
 #define _AFXDLL
 //#undef INTtoSTR
+#ifdef _DEBUG
+#undef _DEBUG
+#include "X:\PROJECTS\I have no idea how to call this thing\packages\python.3.6.2\tools\include\Python.h"
+#define _DEBUG
+#else
+#include "X:\PROJECTS\I have no idea how to call this thing\packages\python.3.6.2\tools\include\Python.h"
+#endif
 #include <afxwin.h>
 #include <algorithm>
 #include <AM_uber.h>
-#include <dwrite.h>
+#include <dwrite_1.h>
 #include <boost\any.hpp>
 #include <boost\algorithm\\clamp.hpp>
 #include <afxrendertarget.h>
@@ -15,12 +22,14 @@
 #include <conio.h>
 #include <cstring>
 #include <cstdint>
-#include <d2d1.h>
+#include <d2d1_1.h>
+#include <d2d1_1helper.h>
 #include <d3d11_1.h>
 #include <d3dcompiler.h>
 #include <direct.h>
 #include <directxcolors.h>
 #include <DirectXMath.h>
+#include <stdarg.h>
 #include <directxmath.h>
 #include <fstream>
 #include <iomanip>
@@ -40,7 +49,8 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <Wincodec.h>
-
+#include <d2d1effecthelpers.h>
+#include <Mmsystem.h>
 #ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC
 #define _CRTDBG_MAPALLOC
@@ -60,6 +70,11 @@ using namespace DirectX;
 #pragma comment(lib, "X:\\PROJECTS\\AZfilelib\\x64\\Debug\\AZfilelib\\AZfilelib.lib")
 #else 
 #pragma comment(lib, "X:\\PROJECTS\\AZfilelib\\x64\\Release\\AZfilelib\\AZfilelib.lib")
+#endif // DEBUG
+#ifdef _DEBUG
+#pragma comment(lib, "X:\\PROJECTS\\AM_uberlib\\x64\\Debug\\AM_uberlib.lib")
+#else 
+#pragma comment(lib, "X:\\PROJECTS\\AM_uberlib\\x64\\Release\\AM_uberlib.lib")
 #endif // DEBUG
 inline std::string INTtoSTR(int i)
 {
@@ -107,6 +122,10 @@ namespace classvariables
 		{
 			return{ x,y };
 		}
+		std::string str()
+		{
+			return "{ " + to_string(x) + ", " + to_string(y) + " }";
+		}
 		int2 operator/(int n)
 		{
 			return{ x / n,y / n };
@@ -114,6 +133,11 @@ namespace classvariables
 		int2 operator*(int n)
 		{
 			return{ x*n,y*n };
+		}
+		int2 operator-()const
+		{
+			int2 nv = { -x,-y };
+			return nv;
 		}
 		int2 operator-(int2 &n)
 		{
@@ -127,7 +151,12 @@ namespace classvariables
 			//this->y += n.y;
 			return{ x + n.x,y + n.y };
 		}
-		
+		int2 operator+=(int2 &n)
+		{
+			//this->x += n.x;
+			//this->y += n.y;
+			return (*this = { x + n.x,y + n.y });
+		}
 		int2 operator*(int2 &n)
 		{
 			//this->x *= n.x;
@@ -224,6 +253,11 @@ namespace classvariables
 		int x;
 		int y;
 		int z;
+		int3 operator-()const
+		{
+			int3 nv = { -x,-y,-z };
+			return nv;
+		}
 		int3 operator-(int3 n)
 		{
 			return int3(x - n.x, y - n.y, z - n.z);
@@ -287,6 +321,11 @@ namespace classvariables
 		{
 			return{(ui) x,(ui)y,(ui)z,(ui)w };
 		}
+		int4 operator-()const
+		{
+			int4 nv = { -x,-y,-z,-w };
+			return nv;
+		}
 		int4 operator-(int4 n)
 		{
 			return int4(x - n.x, y - n.y, z - n.z, w - n.w);
@@ -343,6 +382,13 @@ namespace classvariables
 			z = n1.x;
 			w = n1.y;
 		}
+		inline int4(D2D_RECT_F r)
+		{
+			x = r.left;
+			y = r.top;
+			z = r.right;
+			w = r.bottom;
+		}
 		int4()
 		{
 
@@ -393,8 +439,11 @@ namespace classvariables
 		}
 		int2 toint2low()
 		{
-			int i = floor(x);
 			return{ (int)floor(x),(int)floor(y) };
+		}
+		int2 toint2high()
+		{
+			return{ (int)ceil(x),(int)ceil (y) };
 		}
 		operator std::vector<univar>() const
 		{
@@ -412,6 +461,11 @@ namespace classvariables
 		std::vector<univar> vec2()
 		{
 			return{ x,y };
+		}
+		uni2 operator-()const
+		{
+			uni2 nv = { -x,-y };
+			return nv;
 		}
 		uni2 operator/(univar n)
 		{
@@ -563,7 +617,55 @@ namespace classvariables
 #define catchleaks				0
 #define sectorsize				299792
 #define defaultinterpolationmode D2D1_BITMAP_INTERPOLATION_MODE_LINEAR  //D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR
+#define advancedinterpolatonmode D2D1_INTERPOLATION_MODE::D2D1_INTERPOLATION_MODE_ANISOTROPIC
 #define stationsizemultip 2.0f
+namespace common
+{
+	struct RGBA
+	{
+		int r;
+		int g;
+		int b;
+		float a;
+		RGBA()
+		{
+			r = 0;
+			g = 0;
+			b = 0;
+			a = 1.0f;
+		}
+		RGBA(int nr, int ng, int nb,float na = 1.0f)
+		{
+			r = nr;
+			g = ng;
+			b = nb;
+			a = na;
+		}
+		D2D1::ColorF toColorF()
+		{
+			this;
+			return D2D1::ColorF(((float)r) / 255.0f, ((float)g) / 255.0f, ((float)b) / 255.0f, a);
+		}
+	};
+	inline string findoneoffiles(vector<string>locations)
+	{
+		int i = 0;
+		string ret = "NULL";
+		while (i < locations.size() && ret == "NULL")
+		{
+			WIN32_FIND_DATA FindFileData;
+			if (SUCCEEDED(FindFirstFileA(locations[i].c_str(), &FindFileData)))
+			{
+				ret = locations[i];
+			}
+		}
+		return ret;
+	}
+	inline std::string INTtoSTR(int i)
+	{
+		return std::to_string(i);
+	}
+}
 inline bool operator>(float2 f0, float2 f1)
 {
 	return(f0.x > f1.x && f0.y > f1.y);
@@ -741,7 +843,7 @@ namespace GAME
 }
 namespace DX2D
 {
-	extern ID2D1HwndRenderTarget *hwndRT;
+	extern ID2D1DeviceContext *hwndRT;
 	class main;
 	void init(mainwins style);
 	void Release();
@@ -775,6 +877,40 @@ inline int2 percentageofresi(int2 res, float xperc, float yperc)
 inline uni2<float> percentageofresf(int2 res, uni2<float> perc)
 {
 	return uni2<float>(res.x, res.y)* perc;
+}
+inline void displayHRerrors(HRESULT hr, HWND hwnd, int line = -1, bool fstop = false, string errormessage = "", string name = "error", vector<string>adinfonames = {}, ...)
+{
+	if (SUCCEEDED(hr))
+		return;
+	va_list vl;
+	int i = 0;
+	string adstr = "";
+	if (adinfonames.size() > 0)
+	{
+		va_start(vl, adinfonames);
+		while (i < adinfonames.size())
+		{
+			adstr += adinfonames[i] + " " + va_arg(vl, string) + ", ";
+			i++;
+		}
+		adstr.erase(adstr.length() - 1);
+		adstr.erase(adstr.length() - 1);
+		va_end(vl);
+	}
+	string text = "An error has occurred";
+	if (line != -1)
+		text += " at line " + to_string(line);
+	if (errormessage != "")
+		text += ": " + errormessage;
+	if (adstr != "")
+		text += "\nAdditional info:\n" + adstr;
+	text += "\nAttemnpt to continue?";
+	int res = MessageBox(hwnd,text.c_str(),name.c_str(), MB_YESNO| MB_ICONERROR);
+	if (res == IDNO)
+		DebugBreak();
+	if (fstop)
+		DebugBreak();
+	i = 0;
 }
 #define poresi percentageofresi
 #define poresf percentageofresf
@@ -814,6 +950,18 @@ inline vector<univar*> copyvecofptrs(vector<univar*> univec,univar*(univar::*cop
 }
 template <typename univar>
 inline void constraintoscope(univar &var, univar maxval, univar minval)// constrains variable's maximal and minimal value
+{
+	while (var > maxval)
+	{
+		var -= maxval + minval;
+	}
+	while (var < minval)
+	{
+		var += maxval + minval;
+	}
+}
+template <typename univar,typename univar2>
+inline void constraintoscope(univar &var, univar2 maxval, univar2 minval)// constrains variable's maximal and minimal value
 {
 	while (var > maxval)
 	{
@@ -913,6 +1061,17 @@ template<typename univar,typename univar2>
 map<univar, univar2>SumMaps(map<univar, univar2> m0, map<univar, univar2> m1)
 {
 	for (auto it = m1.begin(); it != m1.end(); ++it) m0[it->first] += it->second;
+	return m0;
+
+}
+template<typename univar, typename univar2>
+map<univar, univar2>_SumMaps(map<univar, univar2> m0, map<univar, univar2> m1) // slower, use when normal SumMaps throws an error
+{
+	pair<univar, univar2> p;
+	BOOST_FOREACH(p, m1)
+	{
+		m0.insert(p);
+	}
 	return m0;
 
 }
@@ -1018,10 +1177,28 @@ template <typename univar>
 inline void VecProceedBy(int& i, int by, vector<univar> vec)
 {
 	i += by;
-	if ( >= vec.size())
+	if ( i >= vec.size())
 	{
 		constraintoval(i, (int)vec.size() - 1);
 		return;
+	}
+}
+template <typename univar>
+inline vector<univar> SumVecs(vector<univar> v0, vector<univar> v1)
+{
+	int i = 0;
+	vector<univar> v;
+	while (i < v0.size())
+	{
+		v.push_back(v0);
+		i++;
+	}
+	i = 0;
+	while (i < v1.size())
+	{
+		v.push_back(v1);
+		i++;
+
 	}
 }
 inline std::string RandomString(int len, ui seed = 0/*won't be used if 0*/)
@@ -1037,3 +1214,21 @@ inline std::string RandomString(int len, ui seed = 0/*won't be used if 0*/)
 	}
 	return retval;
 }
+//inline bool isblankch(char ch)
+//{
+//	if (ch == NULL || ch == ' ' || ch == '\t' || ch == '\n')
+//		return true;
+//	return false;
+//}
+//inline bool isblankstr(string str)
+//{
+//	int i = 0;
+//	if (str == "")
+//		return true;
+//	while (i < str.size())
+//	{
+//		if (!isblankch(str[i]))
+//			return false;
+//	}
+//	return true;
+//}

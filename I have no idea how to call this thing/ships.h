@@ -53,6 +53,8 @@ namespace GAME
 		void(*selectf)(int2&,entity&);
 		vector<boost::any> datav;
 		map<int, boost::any> datam;
+		string entname = "NULLENT";
+		int2* pos = nullptr;
 	};
 	extern 	ui movetype;
 }
@@ -81,12 +83,12 @@ namespace DX2D
 			HRESULT hr = 1;
 			// Create a decoder
 			IWICBitmapDecoder *pDecoder = NULL;
-			IWICImagingFactory*  fac;
+			IWICImagingFactory2*  fac;
 			CoCreateInstance(
 				CLSID_WICImagingFactory,
 				NULL,
 				CLSCTX_INPROC_SERVER,
-				IID_IWICImagingFactory,
+				IID_IWICImagingFactory2,
 				(LPVOID*)&fac
 			);
 			hr = fac->CreateDecoderFromFilename(
@@ -958,12 +960,12 @@ namespace DX2D
 			HRESULT hr = 1;
 			// Create a decoder
 			IWICBitmapDecoder *pDecoder = NULL;
-			IWICImagingFactory*  fac;
+			IWICImagingFactory2*  fac;
 			CoCreateInstance(
 				CLSID_WICImagingFactory,
 				NULL,
 				CLSCTX_INPROC_SERVER,
-				IID_IWICImagingFactory,
+				IID_IWICImagingFactory2,
 				(LPVOID*)&fac
 			);
 			hr = fac->CreateDecoderFromFilename(
