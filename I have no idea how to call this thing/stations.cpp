@@ -468,8 +468,6 @@ namespace GAME
 		tx.render = renderp;
 		tx.identp = identp;
 		tx.useidentp = true;
-		/*tx.savelastloc = true;*/
-		//tx.breakonlocchange = true;
 		nf->sprites.push_back(tx);
 		debugging::debugpos = nf->sprites[nf->sprites.size()-1].GetXYpp();
 		cout << pos->str() << endl;

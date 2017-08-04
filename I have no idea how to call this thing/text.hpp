@@ -64,6 +64,10 @@ namespace DX2D
 				wasreleased = true;
 			}
 		}
+		textpiece()
+		{
+
+		}
 	};
 	class textclass
 	{

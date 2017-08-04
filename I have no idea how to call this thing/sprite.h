@@ -28,7 +28,7 @@ namespace DX2D
 		D2D_RECT_F lastloc = { 0,0,0,0 };
 		bool savelastloc = false;
 		bool lastlochaststarted = false;
-		bool breakonlocchange = true;
+		bool breakonlocchange = false;
 		bool isrendonscreen = false;
 		D2D1_SIZE_F size;
 		bool usecustompoint = false;

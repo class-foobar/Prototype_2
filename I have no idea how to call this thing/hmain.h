@@ -1,6 +1,13 @@
 #pragma once
 #define _AFXDLL
 //#undef INTtoSTR
+#ifdef _DEBUG
+#undef _DEBUG
+#include "X:\PROJECTS\I have no idea how to call this thing\packages\python.3.6.2\tools\include\Python.h"
+#define _DEBUG
+#else
+#include "X:\PROJECTS\I have no idea how to call this thing\packages\python.3.6.2\tools\include\Python.h"
+#endif
 #include <afxwin.h>
 #include <algorithm>
 #include <AM_uber.h>
@@ -432,8 +439,11 @@ namespace classvariables
 		}
 		int2 toint2low()
 		{
-			int i = floor(x);
 			return{ (int)floor(x),(int)floor(y) };
+		}
+		int2 toint2high()
+		{
+			return{ (int)ceil(x),(int)ceil (y) };
 		}
 		operator std::vector<univar>() const
 		{
@@ -622,7 +632,7 @@ namespace common
 			r = 0;
 			g = 0;
 			b = 0;
-			a = 0.0f;
+			a = 1.0f;
 		}
 		RGBA(int nr, int ng, int nb,float na = 1.0f)
 		{
@@ -631,8 +641,13 @@ namespace common
 			b = nb;
 			a = na;
 		}
+		D2D1::ColorF toColorF()
+		{
+			this;
+			return D2D1::ColorF(((float)r) / 255.0f, ((float)g) / 255.0f, ((float)b) / 255.0f, a);
+		}
 	};
-	string findoneoffiles(vector<string>locations)
+	inline string findoneoffiles(vector<string>locations)
 	{
 		int i = 0;
 		string ret = "NULL";
@@ -1162,10 +1177,28 @@ template <typename univar>
 inline void VecProceedBy(int& i, int by, vector<univar> vec)
 {
 	i += by;
-	if ( >= vec.size())
+	if ( i >= vec.size())
 	{
 		constraintoval(i, (int)vec.size() - 1);
 		return;
+	}
+}
+template <typename univar>
+inline vector<univar> SumVecs(vector<univar> v0, vector<univar> v1)
+{
+	int i = 0;
+	vector<univar> v;
+	while (i < v0.size())
+	{
+		v.push_back(v0);
+		i++;
+	}
+	i = 0;
+	while (i < v1.size())
+	{
+		v.push_back(v1);
+		i++;
+
 	}
 }
 inline std::string RandomString(int len, ui seed = 0/*won't be used if 0*/)

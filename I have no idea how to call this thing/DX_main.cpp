@@ -384,6 +384,8 @@ namespace DX2D
 								continue;
 							}
 						}
+						if (f[i]->brushes[ii].breakonrender)
+							DebugBreak();
 						if (f[i]->brushes[ii].createrectfrompossize)
 						{
 							f[i]->brushes[ii].rect.left = f[i]->brushes[ii].pos->x;
@@ -505,45 +507,6 @@ namespace DX2D
 
 			hr = hwndRT->CreateBitmapFromDxgiSurface(dxgiBackBuffer, &bitmapProperties, &Direct2DBackBuffer);
 			hwndRT->SetTarget(Direct2DBackBuffer);
-
-//#if defined(DEBUG) || defined(_DEBUG)
-//			D2D1_FACTORY_OPTIONS options;
-//			options.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
-//
-//			HRESULT hr = D2D1CreateFactory(
-//				D2D1_FACTORY_TYPE_SINGLE_THREADED,
-//				options,
-//				&pD2DFactory
-//			);
-//#else
-//			HRESULT hr = D2D1CreateFactory(
-//				D2D1_FACTORY_TYPE_SINGLE_THREADED,
-//				&pD2DFactory
-//			);
-//#endif
-//
-//			// Create a Direct2D render target	
-//			hr = pD2DFactory->CreateHwndRenderTarget(
-//				D2D1::RenderTargetProperties(),
-//				D2D1::HwndRenderTargetProperties(
-//					hwnd,
-//					D2D1::SizeU(
-//						rc.right - rc.left,
-//						rc.bottom - rc.top)
-//				),
-//				&RenderTarget
-//			);
-//			D2D1_RENDER_TARGET_PROPERTIES rtpnc = D2D1::RenderTargetProperties(
-//				D2D1_RENDER_TARGET_TYPE_DEFAULT,
-//				D2D1::PixelFormat(
-//					DXGI_FORMAT_UNKNOWN,
-//					D2D1_ALPHA_MODE_IGNORE),
-//				0,
-//				0,
-//				D2D1_RENDER_TARGET_USAGE_NONE,
-//				D2D1_FEATURE_LEVEL_DEFAULT
-//			);
-//			const D2D1_RENDER_TARGET_PROPERTIES rtp = rtpnc;
 			maincam = new camera;
 			DXclass->RenderTarget = hwndRT;
 			if (!SUCCEEDED(hr))
@@ -839,7 +802,9 @@ namespace DX2D
 					bmcopy->Release();
 				}
 				else
-					BRT->DrawBitmap(bm, DXclass->cams[i]->loc, 1.0, defaultinterpolationmode);
+				{
+					BRT->DrawBitmap(bm, d2r, 1.0, defaultinterpolationmode);
+				}
 				wasBRTenddrawc = true;
 				BRT->EndDraw();
 				bm->Release();
@@ -1359,9 +1324,20 @@ namespace DX2D
 		maincam->SetXY(*player.pos + int2(-100,-100));
 		GAME::UI = new GUI::core;
 		f = new frame;
-		mf->f[mf->wchiac].push_back(f);
-		GAME::UI->init(&DXclass->con, maincam, f);
-		loadGUIdata(bslink, GAME::UI);
+		//mf->f[mf->wchiac].push_back(f);
+		camera* uicam = new camera;
+		uicam->loc = maincam->loc;
+		DXclass->cams.push_back(uicam);
+		f->ismactive = true;
+		uicam->reconstruct();
+		scene uis;
+		uis.objectsmap.insert(make_pair("ui", f));
+		uis.objectsvec.push_back(f);
+		uicam->scenes.push_back(uis);
+		uicam->isrendonscreen = true;
+		GAME::UI->init(&DXclass->con, uicam, f);
+		GAME::GUI::loadGUIdata(bslink, GAME::UI);
+		GAME::GUI::loadui(bslink, GAME::UI);
 	}
 	bool isdbbshown = false;
 	bool isscrdwnon = false; // if true - scrolling will call scrollfunc and will not scale

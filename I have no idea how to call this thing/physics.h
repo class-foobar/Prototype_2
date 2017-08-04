@@ -164,6 +164,7 @@ namespace DX2D
 		bool ismultithreated = false;
 		bool istickinp = false;
 	public:
+		int2* offsetp = nullptr;
 		bool RECTvsRECT(int2* sa, int2* pa, int2* sb, int2* pb)
 		{
 			int2 bmin = *pb + *sb;
@@ -221,15 +222,65 @@ namespace DX2D
 			if (Distance<float>(pa->x, pa->y, pb->x, pb->y) <= radb + rada)
 				return true;
 			return false;
-			//float r = rada + radb;
-			//r *= r;
-			//int2 pa2 = *pa;
-			//pa2.x += rada;
-			//pa2.y + rada;
-			//int2 pb2 = *pb;
-			//pb2.x = radb;
-			//pb2.y = radb;
-			//return r < (pa2.x + pb2.x) ^ 2 + (pa2.y + pb2.y) ^ 2;
+		}
+		bool RECTvsRECT(int2 sa, int2 pa, int2 sb, int2 pb)
+		{
+			int2 bmin = pb + sb;
+			int2 amin = pa + sa;
+			//bool b1 = (pa.x < bmin.x && amin.x > pb.x);
+			//bool b2 = (pa.y < bmin.y && amin.y > pb.y);
+			if ((pa.x < bmin.x && amin.x > pb.x) && (pa.y < bmin.y && amin.y > pb.y))
+				return true;
+			return false;
+		}
+		bool RECTvsCIRCLE(int2 nsa, int2 npa, float radb, int2 npb)
+		{
+			int2* pa = &npa;
+			int2* sa = &nsa;
+			int2* pb = &npb;
+			int2 amin = *pa + *sa;
+			int2 sb(radb * 2, radb * 2);
+			if (radb > 2.0f)
+			{
+				if (!RECTvsRECT(sa, pa, &sb, pb))
+				{
+					return false;
+				}
+			}
+			else
+				if (RECTvsRECT(sa, pa, &sb, pb))
+					return true;
+			if (Distance<float>(pa->x + (sa->x / 2), pa->y + (sa->y / 2), pb->x, pb->y) < radb/* + (sa->x / 2)*/)
+			{
+				return true;
+			}
+			if (Distance<float>(pa->x + (sa->x / 2), pa->y + (sa->y / 2), pb->x, pb->y) < radb /*+ (sa->y / 2)*/)
+			{
+				return true;
+			}
+			if (Distance<float>(amin.x, amin.y, pb->x, pb->y) <= radb)
+			{
+				return true;
+			}
+			if (Distance<float>(pa->x, pa->y, pb->x, pb->y) <= radb)
+			{
+				return true;
+			}
+			if (Distance<float>(pa->x + sa->x, pa->y, pb->x, pb->y) <= radb)
+			{
+				return true;
+			}
+			if (Distance<float>(pa->x, pa->y + sa->y, pb->x, pb->y) <= radb)
+			{
+				return true;
+			}
+			return false;
+		}
+		bool CIRCLEvsCIRCLE(float rada, int2 pa, float radb, int2 pb)
+		{
+			if (Distance<float>(pa.x, pa.y, pb.x, pb.y) <= radb + rada)
+				return true;
+			return false;
 		}
 	protected:
 		void phreactexe(physobj* obj1, physobj* obj2, physreact ph)
@@ -301,7 +352,7 @@ namespace DX2D
 			{
 				if (obj2->type == photype::rect)
 				{
-					if (RECTvsRECT(obj1->size, obj1->pos, obj2->size, obj2->pos))
+					if (RECTvsRECT(*obj1->size, (offsetp == nullptr)?*obj1->pos:*obj1->pos+*offsetp, *obj2->size, (offsetp == nullptr) ? *obj2->pos : *obj2->pos + *offsetp))
 					{
 						if (resolve)
 						{
@@ -354,7 +405,7 @@ namespace DX2D
 				}
 				else if (obj2->type == photype::circle)
 				{
-					if (RECTvsCIRCLE(obj1->size, obj1->pos, *obj2->radius, obj2->pos))
+					if (RECTvsCIRCLE(*obj1->size, (offsetp == nullptr) ? *obj1->pos : *obj1->pos + *offsetp, *obj2->radius, (offsetp == nullptr) ? *obj2->pos : *obj2->pos + *offsetp))
 					{
 						if (resolve)
 						{
@@ -410,7 +461,7 @@ namespace DX2D
 			{
 				if (obj2->type == photype::rect)
 				{
-					if (RECTvsCIRCLE(obj2->size, obj2->pos, *obj1->radius, obj1->pos))
+					if (RECTvsCIRCLE(*obj2->size, (offsetp == nullptr) ? *obj2->pos : *obj2->pos + *offsetp, *obj1->radius, (offsetp == nullptr) ? *obj1->pos : *obj1->pos + *offsetp))
 					{
 						if (resolve)
 						{
@@ -463,7 +514,7 @@ namespace DX2D
 				}
 				else if (obj2->type == photype::circle)
 				{
-					if (CIRCLEvsCIRCLE(*obj1->radius, obj1->pos, *obj2->radius, obj2->pos))
+					if (CIRCLEvsCIRCLE(*obj1->radius, (offsetp == nullptr) ? *obj1->pos : *obj1->pos, *obj2->radius, (offsetp == nullptr) ? *obj2->pos : *obj2->pos))
 					{
 
 						if (resolve)

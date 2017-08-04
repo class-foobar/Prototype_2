@@ -17,6 +17,21 @@
 #define UI_UNKNOWN 3
 #define UI_UNKNWONERROR 4
 #define UI_NULLPTR 5
+#define WF_NULL					(0 << 0)
+#define WF_SHOW					(1 << 0)
+#define WF_HIDE					(1 << 1)
+#define WF_SCALETO_VH			(1 << 2)
+#define WF_SCALETO_V			(1 << 3)
+#define WF_SCALETO_H			(1 << 4)
+#define WF_PROPORTIONALPOS		(1 << 5)
+#define WF_SAMEPOS				(1 << 6)
+#define WF_NOVINIT				(1 << 7)
+#define AT_NULL					(0 << 0)
+#define AT_VINIT				(1 << 0)
+#define AT_STYLEPROPPOS			(1 << 1)
+#define AT_PROPPOS				(1 << 2)
+#define AT_SAMEPOS				(1 << 3)
+
 using namespace std;
 namespace GAME
 {
@@ -24,8 +39,7 @@ namespace GAME
 	{
 		namespace deffunc
 		{
-
-			map<string, void (*)(int2&)> list = {};
+			extern map<string, void (*)(int2&)> list;
 		}
 		class UImain;
 		class window;
@@ -35,11 +49,11 @@ namespace GAME
 		class core;
 		struct simpleshape;
 		struct UIresult;
+		void loadui(string binloc, core*c);
 		void loadGUIdata(string binloc, core* c);
 		struct subwindow
 		{
-			int2 pos;
-			simpleshape sh;
+			uni2<float> pos;
 			uni2<float> sizemp;
 			bool sharedid = false;
 			unsigned long int defaultflags;
@@ -48,11 +62,16 @@ namespace GAME
 		{
 		private:
 		protected:
+			bool hidden = false;
 		public:
+			void updatenesting();
+			void updatepos(int2 oldpos);
 			void(*buttonpressfunc)(int2&) = nullptr;
 			void(*rbuttonpressfunc)(int2&) = nullptr;
 			void(*mbuttonpressfunc)(int2&) = nullptr;
 			button* bt;
+			vector<button*> btts;
+			controls con;
 			map<ui, window*> children;
 			ui ID;
 			int nestingc = 0;
@@ -60,8 +79,23 @@ namespace GAME
 			core* coreptr;
 			ui customdetID = 0;
 			bool usecustomdetID = false;
+			ui styleid;
 			unsigned long int flags;
+			uni2<float> proppos;
+			uni2<float> defpos;
+			uni2<float>size;
+			bool* identp = nullptr;
+			int2* pos;
+			int2 nooffpos;
+			vector<pair<int2*,int2>> posvec;
+			vector<int2> cufoffsets;
+			frame* f = nullptr;
+			vector<bool*> shaperb;
+			UIresult initvis(style& s, uni2<float> npos, uni2<float> screenmultip);
 			UIresult scale(int2 nsize);
+			UIresult show();
+			UIresult hide();
+			UIresult switchvis();
 		};
 		struct simpleshape
 		{
@@ -97,7 +131,7 @@ namespace GAME
 				vector<pair<string, string>> changes; // name-newval
 				void save(AZfile &file, string root, string act)
 				{
-					auto v = file.GetVarNamesInNode(root);
+					auto v = file.GetVarNamesInNode(root+'@');
 					int i = 0;
 					while (i < v.size())
 					{
@@ -131,23 +165,26 @@ namespace GAME
 		private:
 		protected:
 		public:
+			ui id;
 			AZfile file;
 			string name;
 			map<string, common::RGBA*> colnodemap;
 			void(*buttonpressfunc)(int2&) = nullptr;
 			void(*rbuttonpressfunc)(int2&) = nullptr;
 			void(*mbuttonpressfunc)(int2&) = nullptr;
-			uni2<float> size;
+			uni2<float> size = {1.0f,1.0f};
 			unsigned long int defaultflags;
 			vector<simpleshape> shapes;
 			vector<subwindow> subs;
 			vector<box> boxes;
+			vector<textpiece*> textboxes;
 		};
 		struct UIresult
 		{
 			vector<boost::any> retval;
 			ui code = 0;
 			string strret;
+
 			ui specificcode = 0;
 		};
 		class core
@@ -163,12 +200,15 @@ namespace GAME
 			window* root;
 			ui scenenum;
 			map<ui, window*> wnds;
+			map<string, ui> wndnamemap;
 			map<ui, style> styles;
 			map<string, sprite> icons;
 			map<string, ui> styleids;
-			UIresult AttachTo(window* parent, window* child);
-			UIresult NewWindow(window*parent, int2 pos, int2 size, ui styleid, unsigned long int flags = 0x00000000L);
-			UIresult NewWindow(window*parent, int2 pos, int2 size, string stylename, unsigned long int flags = 0x00000000L);
+			UIresult AttachTo(window* parent, window* child, unsigned long int flags = AT_NULL);
+			//UIresult NewWindow(window*parent, int2 pos, int2 size, ui styleid, unsigned long int flags = 0x00000000L);
+			//UIresult NewWindow(window*parent, int2 pos, int2 size, string stylename, unsigned long int flags = 0x00000000L);
+			UIresult NewWindow(window*parent, uni2<float> pos, uni2<float> size, ui styleid, unsigned long int flags = 0x00000000L);
+			UIresult NewWindow(window*parent, uni2<float> pos, uni2<float> size, string stylename, unsigned long int flags = 0x00000000L);
 			UIresult init(controls* con, camera* ncam, frame* mf = nullptr, ui scenen = 0);
 			UIresult addstyle(style st);
 			UIresult createstyles(AZfile& f, string binloc,bool add=true);

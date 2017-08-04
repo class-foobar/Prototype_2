@@ -170,6 +170,10 @@ namespace DX2D
 		float defaultbutton_secpt = 0.2f;
 		map<string, void*> textnames;
 	public:
+		inline physics* GetPhysP()
+		{
+			return &pclass;
+		}
 		void(*lmousemovefunc)(int2&) = nullptr;
 		void(*rmousemovefunc)(int2&) = nullptr;
 		void(*mmousemovefunc)(int2&) = nullptr;
