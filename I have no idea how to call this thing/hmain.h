@@ -618,6 +618,32 @@ namespace classvariables
 #define sectorsize				299792
 #define defaultinterpolationmode D2D1_BITMAP_INTERPOLATION_MODE_LINEAR  //D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR
 #define advancedinterpolatonmode D2D1_INTERPOLATION_MODE::D2D1_INTERPOLATION_MODE_ANISOTROPIC
+#define PYFUNCD(name) static  PyObject* name(PyObject *self, PyObject *args)
+#define PYFUNC(name) static PyObject* name(PyObject *self, PyObject *args); vecbreaker<PyObject*(*)(PyObject*,PyObject*)> name ## generic_vbreaker(vb,name,#name); PYFUNCD(name)
+#define BS(name) void name (string s); vecbreaker<void(*)(string s)> name ## vbreaker = vb + &name
+#define PYMETH(name) {#name,name,METH_VARARGS, "If I'd tell you I'd have to kill you"}
+template<typename univar>
+class vecbreaker
+{
+public:
+	vector<univar> vec;
+	vector<string> names;
+	vecbreaker& operator+(univar v1)
+	{
+		vec.push_back(v1);
+		return *this;
+	}
+	vecbreaker()
+	{
+
+	}
+	vecbreaker(vecbreaker vbr,univar uv,string str)
+	{
+		vbr.vec.push_back(uv);
+		vbr.names.push_back(str);
+	}
+};
+
 #define stationsizemultip 2.0f
 namespace common
 {
@@ -641,6 +667,7 @@ namespace common
 			b = nb;
 			a = na;
 		}
+		//RGBA(RGBA& n) = default;
 		D2D1::ColorF toColorF()
 		{
 			this;
@@ -654,16 +681,64 @@ namespace common
 		while (i < locations.size() && ret == "NULL")
 		{
 			WIN32_FIND_DATA FindFileData;
-			if (SUCCEEDED(FindFirstFileA(locations[i].c_str(), &FindFileData)))
+			if ((FindFirstFileA(locations[i].c_str(), &FindFileData)!= INVALID_HANDLE_VALUE))
 			{
 				ret = locations[i];
 			}
+			i++;
 		}
 		return ret;
 	}
 	inline std::string INTtoSTR(int i)
 	{
 		return std::to_string(i);
+	}
+}
+namespace Python
+{
+	inline PyObject* VecToPyobj(vector<ui> v)
+	{
+		int i = 0;
+		PyObject* ret = PyList_New(0);
+		while (i < v.size())
+		{
+			PyList_Append(ret, PyLong_FromUnsignedLong(v[i]));
+			i++;
+		}
+		return ret;
+	}
+	inline PyObject* VecToPyobj(vector<int> v)
+	{
+		int i = 0;
+		PyObject* ret = PyList_New(0);
+		while (i < v.size())
+		{
+			PyList_Append(ret, PyLong_FromLong(v[i]));
+			i++;
+		}
+		return ret;
+	}
+	inline PyObject* VecToPyobj(vector<ulli> v)
+	{
+		int i = 0;
+		PyObject* ret = PyList_New(0);
+		while (i < v.size())
+		{
+			PyList_Append(ret, PyLong_FromUnsignedLongLong(v[i]));
+			i++;
+		}
+		return ret;
+	}
+	inline PyObject* VecToPyobj(vector<string> v)
+	{
+		int i = 0;
+		PyObject* ret = PyList_New(0);
+		while (i < v.size())
+		{
+			PyList_Append(ret, PyUnicode_FromString(v[i].c_str()));
+			i++;
+		}
+		return ret;
 	}
 }
 inline bool operator>(float2 f0, float2 f1)
@@ -926,6 +1001,32 @@ inline void constraintoval(univar &var, univar val) // constrains variable's max
 		var += val;
 	}
 }
+template <typename univar0,typename univar1>
+inline univar0 findkeybyvalue(map<univar0, univar1> m, univar1 val)
+{
+	//pair<univar0, univar1> it;
+	/*for (auto it = m.begin(); it != m.end(); ++it)
+		if (it->second == univar1)
+			return it->first;*/
+	//const int prevToFind = 10;
+	//auto findResult = std::find_if(std::begin(val), std::end(val), [&](const std::pair<int, struct_t*> &pair)
+	//{
+	//	return pair.second->prev == prevToFind;
+	//});
+	//struct_t *foundValue = nullptr
+	//	if (findResult != std::end(val))
+	//	{
+	//		foundKey = findResult->first;
+	//		foundValue = findResult->second;
+
+	//		// Now do something with the key or value!
+	//	}
+	BOOST_FOREACH(auto it, m)
+	{
+		if (it.second == val)
+			return it.first;
+	}
+}
 template <typename univar>
 inline vector<univar*> copyvecofptrs(vector<univar*> univec)
 {
@@ -1047,6 +1148,15 @@ pair<univar, univar2>& operator+=(pair<univar, univar2>&p, pair<univar, univar2>
 	p.first += p2.first;
 	p.second += p2.second;
 	return p;
+}
+template<typename univar, typename univar2>
+void MapSet(map<univar, univar2> &m, pair<univar, univar2> val)
+{
+	if (MapFind(m, val.first))
+		m[val.first] = val.second;
+	else
+		m.insert(val);
+	return;
 }
 template<typename univar, typename univar2>
 void AddToMap(map<univar, univar2> &m, pair<univar, univar2> add)

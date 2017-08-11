@@ -89,7 +89,7 @@
       <AdditionalDependencies>X:\PROJECTS\I have no idea how to call this thing\packages\python.3.6.2\tools\libs\python36.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(ProjectDir)*.py" "$(SolutionDir)x64\debug\bin\scripts\"</Command>
+      <Command>xcopy /i /Y "$(ProjectDir)*.py" "$(SolutionDir)x64\debug\bin\scripts\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -151,6 +151,8 @@
     <ClInclude Include="universe.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="button_flagproc.py" />
+    <None Include="button_msg_main.py" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

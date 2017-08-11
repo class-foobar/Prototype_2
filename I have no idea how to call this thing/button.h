@@ -8,6 +8,10 @@
 #include "universe.h"
 #include "text.hpp"
 #include "X:\PROJECTS\economy\economy\economy.h"
+namespace GAME
+{
+	//extern GUI::core* UI;
+}
 using namespace GAME;
 using namespace D2D1;
 using namespace std;
@@ -68,10 +72,12 @@ namespace DX2D
 		}
 		etime lt;
 		int targetstate = 0;
+		//bool notonmmove = false;
 		bool hassubbtns = false; // if true: the int2& value passed to buttonpressfunc will be pointer to this
 		void(*buttonpressfunc)(int2&) = nullptr;
 		void(*rbuttonpressfunc)(int2&) = nullptr;
 		void(*mbuttonpressfunc)(int2&) = nullptr;
+		bool callpyscript = false;
 		bool backgroundbutton = false; // if true button will only be pressed if no other button is 
 		bool callpfunc = true;
 		int2* pos = nullptr;
@@ -194,6 +200,7 @@ namespace DX2D
 		map < ui,button*> buttonsIDmap;
 		int2 lastmousepos = {0,0};
 		map <string, button*> buttonSTRmap;
+		void callpy(button* bt, UINT msg, int2 pos);
 		void clearbuttons(textclass& tc)
 		{
 			int i = 0;
@@ -538,186 +545,7 @@ namespace DX2D
 					b->rbuttonpressfunc(pos);
 			}
 		}
-		inline void MouseEvent(WPARAM wParam, LPARAM lParam, UINT msg,int2* forcedpos = nullptr)
-		{
-			if (!wasinit)
-				return;
-			int2 pos =(forcedpos == nullptr) ?int2(GET_X_LPARAM((lParam)), GET_Y_LPARAM((lParam))):*forcedpos;
-			switch (msg)
-			{
-			case WM_MOUSEMOVE:
-			{
-				lastmousepos = pos;
-				break;
-			}
-			case WM_LBUTTONDOWN:
-			{
-				if (lbdownfunc != nullptr)
-					lbdownfunc(pos);
-				break;
-			}
-			case WM_RBUTTONDOWN:
-			{
-				if (rbdownfunc != nullptr)
-					rbdownfunc(pos);
-				break;
-			}
-			case WM_MBUTTONDOWN:
-			{
-				if (mbdownfunc != nullptr)
-					mbdownfunc(pos);
-				break;
-			}
-			case WM_LBUTTONUP:
-			{
-				if (lbupfunc != nullptr)
-					lbdownfunc(pos);
-				break;
-			}
-			case WM_RBUTTONUP:
-			{
-				if (rbupfunc != nullptr)
-					rbupfunc(pos);
-				break;
-			}
-			case WM_MBUTTONUP:
-			{
-				if (mbupfunc != nullptr)
-					mbupfunc(pos);
-				break;
-			}
-			}
-			if (buttons.size() == 0)
-				return;
-			*pobjpos = pos;
-			currentlycheckingc = this;
-			pclass.tick();
-			vector<button*> bac = btnspr;
-			btnspr.clear();
-			currentlycheckingc = nullptr;
-			int i = 0;
-			while (i < buttons.size())
-			{
-				if (buttons[i] == NULL)
-				{
-					buttons.erase(buttons.begin() + i);
-					continue;
-				}
-				if (buttons[i]->targetstate != buttons[i]->idlen && buttons[i]->targetstate == buttons[i]->state)
-				{
-					if (bac.size() == 0)
-					{
-						buttons[i]->targetstate = buttons[i]->idlen;
-						buttons[i]->state = buttons[i]->idlen;
-					}
-					else if (!FindInVec(bac, buttons[i]))
-					{
-						buttons[i]->targetstate = buttons[i]->idlen;
-						buttons[i]->state = buttons[i]->idlen;
-					}
-				}
-				i++;
-			}
-			i = 0;
-			while (i < bac.size())
-			{
-				if (bac[i] == NULL)
-					bac.erase(bac.begin() + i);
-				i++;
-			}
-			if (bac.size() == 0)
-				return;
-			i = 0;
-			switch (msg)
-			{
-			case WM_MOUSEMOVE:
-			{
-				if(rmousemovefunc != nullptr)
-					if (rbuttondown)
-						rmousemovefunc(pos);
-				if (lmousemovefunc != nullptr)
-					if (lbuttondown)
-						lmousemovefunc(pos);
-				if (mmousemovefunc != nullptr)
-					if (mbuttondown)
-						mmousemovefunc(pos);
-				while (i < bac.size())
-				{
-					if (bac.size() != 1 && bac[i]->backgroundbutton)
-						break;
-					MouseMove(bac[i], pos);
-					i++;
-				}
-				break;
-			}
-			case WM_MBUTTONDOWN:
-			{
-				while (i < bac.size())
-				{
-					if (bac.size() != 1 && bac[i]->backgroundbutton)
-						break;
-					MouseMMB(bac[i], pos);
-					i++;
-				}
-				break;
-			}
-			case WM_MBUTTONUP:
-			{
-				while (i < bac.size())
-				{
-					if (bac.size() != 1 && bac[i]->backgroundbutton)
-						break;
-					MouseMMBup(bac[i], pos);
-					i++;
-				}
-				break;
-			}
-			case WM_RBUTTONDOWN:
-			{
-				while (i < bac.size())
-				{
-					if (bac.size() != 1 && bac[i]->backgroundbutton)
-						break;
-					MouseRMB(bac[i], pos);
-					i++;
-				}
-				break;
-			}
-			case WM_RBUTTONUP:
-			{
-				while (i < bac.size())
-				{
-					if (bac.size() != 1 && bac[i]->backgroundbutton)
-						break;
-					MouseRMBup(bac[i], pos);
-					i++;
-				}
-				break;
-			}
-			case WM_LBUTTONDOWN:
-			{
-				while (i < bac.size())
-				{
-					if (bac.size() != 1 && bac[i]->backgroundbutton)
-						break;
-					MouseLMB(bac[i], pos);
-					i++;
-				}
-				break;
-			}
-			case WM_LBUTTONUP:
-			{
-				while (i < bac.size())
-				{
-					if (bac.size() != 1 && bac[i]->backgroundbutton)
-						break;
-					MouseLMBup(bac[i], pos);
-					i++;
-				}
-				break;
-			}
-			}
-		}
+		void MouseEvent(WPARAM wParam, LPARAM lParam, UINT msg, int2* forcedpos = nullptr);
 		void tick()
 		{
 			if (!wasinit)

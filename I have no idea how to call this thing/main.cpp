@@ -53,12 +53,6 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	Py_SetProgramName(program);  /* optional but recommended */
-	Py_Initialize();
-	PyRun_SimpleString("from time import time,ctime\n"
-		"print('Today is', ctime(time()))\n");
-	if (Py_FinalizeEx() < 0) {
-		exit(120);
-	}
 	bool ispoped = true;
 	bool isfullscreendefault = false;
 	style.programloc = argv[0];
@@ -185,6 +179,9 @@ int main(int argc, char *argv[])
 		}
 	} while (msg.message != WM_QUIT);
 	DX2D::Release();
+	if (Py_FinalizeEx() < 0) {
+		exit(120);
+	}
 	PyMem_RawFree(program);
 	DebugSetProcessKillOnExit(true);
 	return 0;

@@ -7,9 +7,15 @@
 #include "universe.h"
 #include "button.h"
 #include "text.hpp"
+#include "GUI.h"
 using namespace GAME;
 using namespace D2D1;
 using namespace std;
+using namespace GAME::GUI;
+namespace GAME
+{
+	extern core* UI;
+}
 namespace DX2D
 {
 	vector<button*> btnspr;
@@ -24,4 +30,248 @@ namespace DX2D
 		if (obj != nullptr)
 			btnspr.push_back(currentlycheckingc->buttonSTRmap[obj->nameindex]);
 	}
+	void controls::callpy(button* bt, UINT msg, int2 pos)
+	{
+		string strid;
+		do
+		{
+			strid = to_string(rand());
+		} while (UI->args.find(strid) != UI->args.end());
+		vector<boost::any> v;
+/*		window* wnd = boost::any_cast<window*>(bt->anyvars[0]);
+		auto m = boost::any_cast<>bt->anyvars[2]*/;
+		v.push_back(bt->anyvars[0]);
+		v.push_back(bt->anyvars[1]);
+		v.push_back(msg);
+		auto m = boost::any_cast<map<string, string>>(bt->anyvars[2]);
+		map<string,ui>inputs = { {"LBUTTONUP",WM_LBUTTONUP},{"RBUTTONUP",WM_RBUTTONUP },{"LBUTTONDOWN",WM_LBUTTONDOWN },{"RBUTTONDOWN",WM_RBUTTONDOWN },
+		{"MBUTTONUP" ,WM_MBUTTONUP },{"MBUTTONDOWN",WM_MBUTTONDOWN},{"MOUSEMOVE",WM_MOUSEMOVE } };
+		//vector<ui> inpotsuint = { };
+		int i = 0;
+		string inputstr;
+		BOOST_FOREACH(auto it, inputs)
+		{
+			if (it.second == msg)
+			{
+				inputstr = it.first;
+				goto feachdone;
+			}
+		}
+	feachdone:;
+		auto wnd = boost::any_cast<window*>(bt->anyvars[0]);
+		string msgf = inputstr;
+		v.push_back(msgf);
+		if (m[inputstr] != "")
+		{
+			v.push_back(bt->anyvars[3]);
+			auto pairptr = new pair<button*, controls*>(bt, this);
+			v.push_back((void*)pairptr);
+			v.push_back(pos.x);
+			v.push_back(pos.y);
+			UI->args.insert(make_pair(strid, v));
+			const wchar_t * ch = STRtoWSTR(strid).c_str();
+			wchar_t* args[] = { const_cast<wchar_t*>(ch) };
+			PySys_SetArgv(1, args);
+			string subloc = boost::any_cast<string>(bt->anyvars[3]);
+			int ii = 0;
+			string loc = subloc + "scripts\\" + m[inputstr];
+			FILE* file = _Py_fopen(loc.c_str(), "r+");
+			auto ret = PyRun_AnyFile(file, m[inputstr].c_str());
+		}
+
+	}
+	void controls::MouseEvent(WPARAM wParam, LPARAM lParam, UINT msg, int2* forcedpos)
+	{
+		if (!wasinit)
+			return;
+		int2 pos = (forcedpos == nullptr) ? int2(GET_X_LPARAM((lParam)), GET_Y_LPARAM((lParam))) : *forcedpos;
+		switch (msg)
+		{
+		case WM_MOUSEMOVE:
+		{
+			lastmousepos = pos;
+			break;
+		}
+		case WM_LBUTTONDOWN:
+		{
+			if (lbdownfunc != nullptr)
+				lbdownfunc(pos);
+			break;
+		}
+		case WM_RBUTTONDOWN:
+		{
+			if (rbdownfunc != nullptr)
+				rbdownfunc(pos);
+			break;
+		}
+		case WM_MBUTTONDOWN:
+		{
+			if (mbdownfunc != nullptr)
+				mbdownfunc(pos);
+			break;
+		}
+		case WM_LBUTTONUP:
+		{
+			if (lbupfunc != nullptr)
+				lbdownfunc(pos);
+			break;
+		}
+		case WM_RBUTTONUP:
+		{
+			if (rbupfunc != nullptr)
+				rbupfunc(pos);
+			break;
+		}
+		case WM_MBUTTONUP:
+		{
+			if (mbupfunc != nullptr)
+				mbupfunc(pos);
+			break;
+		}
+		}
+		if (buttons.size() == 0)
+			return;
+		*pobjpos = pos;
+		currentlycheckingc = this;
+		pclass.tick();
+		vector<button*> bac = btnspr;
+		btnspr.clear();
+		currentlycheckingc = nullptr;
+		int i = 0;
+		while (i < buttons.size())
+		{
+			if (buttons[i] == NULL)
+			{
+				buttons.erase(buttons.begin() + i);
+				continue;
+			}
+			if (buttons[i]->targetstate != buttons[i]->idlen && buttons[i]->targetstate == buttons[i]->state)
+			{
+				if (bac.size() == 0)
+				{
+					buttons[i]->targetstate = buttons[i]->idlen;
+					buttons[i]->state = buttons[i]->idlen;
+				}
+				else if (!FindInVec(bac, buttons[i]))
+				{
+					buttons[i]->targetstate = buttons[i]->idlen;
+					buttons[i]->state = buttons[i]->idlen;
+				}
+			}
+			i++;
+		}
+		i = 0;
+		while (i < bac.size())
+		{
+			if (bac[i] == NULL)
+				bac.erase(bac.begin() + i);
+			i++;
+		}
+		if (bac.size() == 0)
+			return;
+		i = 0;
+		while (i < bac.size())
+		{
+			if (bac.size() != 1 && bac[i]->backgroundbutton)
+			{
+				i++;
+				continue;
+			}
+			GUI::core* UIptr = GAME::UI;
+			if (bac[i]->callpyscript)
+				callpy(bac[i], msg, pos);
+			i++;
+		}
+		i = 0;
+		switch (msg)
+		{
+		case WM_MOUSEMOVE:
+		{
+			if (rmousemovefunc != nullptr)
+				if (rbuttondown)
+					rmousemovefunc(pos);
+			if (lmousemovefunc != nullptr)
+				if (lbuttondown)
+					lmousemovefunc(pos);
+			if (mmousemovefunc != nullptr)
+				if (mbuttondown)
+					mmousemovefunc(pos);
+			while (i < bac.size())
+			{
+				if (bac.size() != 1 && bac[i]->backgroundbutton)
+					break;
+				MouseMove(bac[i], pos);
+				i++;
+			}
+			break;
+		}
+		case WM_MBUTTONDOWN:
+		{
+			while (i < bac.size())
+			{
+				if (bac.size() != 1 && bac[i]->backgroundbutton)
+					break;
+				MouseMMB(bac[i], pos);
+				i++;
+			}
+			break;
+		}
+		case WM_MBUTTONUP:
+		{
+			while (i < bac.size())
+			{
+				if (bac.size() != 1 && bac[i]->backgroundbutton)
+					break;
+				MouseMMBup(bac[i], pos);
+				i++;
+			}
+			break;
+		}
+		case WM_RBUTTONDOWN:
+		{
+			while (i < bac.size())
+			{
+				if (bac.size() != 1 && bac[i]->backgroundbutton)
+					break;
+				MouseRMB(bac[i], pos);
+				i++;
+			}
+			break;
+		}
+		case WM_RBUTTONUP:
+		{
+			while (i < bac.size())
+			{
+				if (bac.size() != 1 && bac[i]->backgroundbutton)
+					break;
+				MouseRMBup(bac[i], pos);
+				i++;
+			}
+			break;
+		}
+		case WM_LBUTTONDOWN:
+		{
+			while (i < bac.size())
+			{
+				if (bac.size() != 1 && bac[i]->backgroundbutton)
+					break;
+				MouseLMB(bac[i], pos);
+				i++;
+			}
+			break;
+		}
+		case WM_LBUTTONUP:
+		{
+			while (i < bac.size())
+			{
+				if (bac.size() != 1 && bac[i]->backgroundbutton)
+					break;
+				MouseLMBup(bac[i], pos);
+				i++;
+			}
+			break;
+		}
+		}
+	}
+
 }
