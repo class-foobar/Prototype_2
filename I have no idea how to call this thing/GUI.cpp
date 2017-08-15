@@ -1,4 +1,5 @@
 #include "GUI.h"
+#define corruptioncheck 1
 namespace GAME
 {
 	extern int4 camrect;
@@ -17,6 +18,10 @@ namespace GAME
 				string stylename = chstylename;
 				string thisname = chthisname;
 				auto res = UI->NewWindow(UI->wnds[parentid], pos, size, stylename, (ui)flags);
+#if corruptioncheck == 1
+				auto _heap = malloc(sizeof(int));
+				free(_heap);
+#endif
 				return PyBool_FromLong(0);
 			}
 			PYFUNC(HideWindow)
@@ -132,6 +137,10 @@ namespace GAME
 				auto ptr = UI->wnds[ID]->colnodes[node] = UI->wnds[ID]->colnodes[nnode];
 				if (switcharound == true)
 					UI->wnds[ID]->colnodes[nnode] = oldptr;
+#if corruptioncheck == 1
+				auto _heap = malloc(sizeof(int));
+				free(_heap);
+#endif
 				return PyBool_FromLong(0);
 			}
 			PYFUNC(GetCol)
@@ -141,6 +150,10 @@ namespace GAME
 				ui ID;
 				PyArg_ParseTuple(args, "I|s", &ID,&ch0);
 				name = ch0;
+#if corruptioncheck == 1
+				auto _heap = malloc(sizeof(int));
+				free(_heap);
+#endif
 				return PyLong_FromVoidPtr(UI->wnds[ID]->colnodes[name]);
 			}
 			PYFUNC(AddColPtr)
@@ -255,16 +268,26 @@ namespace GAME
 				char*ch = NULL;
 				PyArg_ParseTuple(args, "s", &ch);
 				strid = ch;
+				while (UI->isargbmodified)
+					Sleep(0);
+				UI->isargbmodified = true;
 				UI->args.erase(strid);
+				UI->isargbmodified = false;
+#if corruptioncheck == 1
+				auto _heap = malloc(sizeof(int));
+				free(_heap);
+#endif
 				return PyLong_FromLong(0);
 			}
-			//PYFUNC(NotifyEveryMouseMove)
-			//{
-			//	ulli ptr;
-			//	PyArg_ParseTuple(args, "K", &ptr);
-			//	auto bcptr = static_cast<pair<button*, controls*>*>((void*)ptr);
-			//	bcptr->first->notonmmove = true;
-			//}
+			PYFUNC(MouseMoveDetB)
+			{
+				ulli ptr;
+				bool b;
+				PyArg_ParseTuple(args, "K|b", &ptr,&b);
+				auto bcptr = static_cast<pair<button*, controls*>*>((void*)ptr);
+				bcptr->first->callpyonanymmove = b;
+				return Py_True;
+			}
 			PYFUNC(Memory_Set)
 			{
 				string type, name, dummytype, dummyname;
@@ -300,6 +323,10 @@ namespace GAME
 					//PyArg_ParseTuple(args, string("I|s|s|" + 'f').c_str(), &ID, &ch0, &ch1, &val);
 					MapSet(wnd->memory, make_pair(name, make_pair(type, (boost::any) val)));
 				}
+#if corruptioncheck == 1
+				auto _heap = malloc(sizeof(int));
+				free(_heap);
+#endif
 				return Py_True;
 
 			}
@@ -417,6 +444,10 @@ namespace GAME
 				else if (filename == "styles")
 					file = &UI->stylef;
 				auto var = *file->GetFromNodes(varname);
+#if corruptioncheck == 1
+				auto _heap = malloc(sizeof(int));
+				free(_heap);
+#endif
 				if (type == "STR")
 				{
 					auto val = boost::any_cast<string>(var);
@@ -468,8 +499,12 @@ namespace GAME
 				sp.size = (s.shapes[i].size * wnd->defmultip).toint2();
 				int2* i2sp;
 				sp.SyncPos(i2sp = new int2((s.shapes[i].pos * wnd->defmultip).toint2()), false);
-				wnd->f->sprites.push_back(sp);
+				wnd->sf->sprites.push_back(sp);
 				wnd->posvec.push_back(make_pair(i2sp, *i2sp));
+#if corruptioncheck == 1
+				auto _heap = malloc(sizeof(int));
+				free(_heap);
+#endif
 				return PyLong_FromLong(0);
 			}
 			PYFUNC(GetName)
@@ -509,6 +544,7 @@ namespace GAME
 				PYMETH(UpdatePos),
 				PYMETH(GetArg),
 				PYMETH(Exit),
+				PYMETH(MouseMoveDetB),
 				PYMETH(Memory_Set),
 				PYMETH(Memory_GetType),
 				PYMETH(Memory_Get),
@@ -610,6 +646,15 @@ namespace GAME
 			UIresult ret;
 			ret.code = UI_OK;
 			return ret;
+		}
+		void core::MouseEvent(WPARAM wParam, LPARAM lParam, UINT msg)
+		{
+			int i = 0;
+			BOOST_FOREACH(auto& it, wnds)
+			{
+				if(it.second != nullptr )
+					it.second->con.MouseEvent(wParam, lParam, msg);
+			}
 		}
 		UIresult core::AttachTo(window * parent, window * child, unsigned long int flags)
 		{
@@ -757,6 +802,9 @@ namespace GAME
 				identp = new bool(true);
 			}
 			*identp = true;
+			ui start = f->brushes.size();
+			//if (start == -1)
+			//	start = 0;
 			while (i < s.shapes.size())
 			{
 				brush b;
@@ -774,7 +822,7 @@ namespace GAME
 					sp.size = (s.shapes[i].size * screenmultip).toint2();
 					int2* i2sp;
 					sp.SyncPos(i2sp=new int2((s.shapes[i].pos * screenmultip).toint2()), false);
-					f->sprites.push_back(sp);
+					sf->sprites.push_back(sp);
 					posvec.push_back(make_pair(i2sp,*i2sp));
 				}
 				b.useidentp = true;
@@ -797,11 +845,21 @@ namespace GAME
 					(*coreptr->cam->GetRenderTargetP())->CreateSolidColorBrush(s.shapes[i].seccol->toColorF(), &b.b.solidbrush.second);
 				else
 					(*coreptr->cam->GetRenderTargetP())->CreateSolidColorBrush(s.shapes[i].col->toColorF(), &b.b.solidbrush.second);
-				auto pir = make_pair(findkeybyvalue(s.colnodemap, s.shapes[i].col), &b.b.solidbrush);
-				colnodes.insert(pir);
 				b.renderp = rb;
 				f->brushes.push_back(b);
 				i++;
+			}
+			i = start;
+			{
+				int ii = 0;
+				while (i < f->brushes.size())
+				{
+					//auto pir = make_pair(findkeybyvalue(s.colnodemap, s.shapes[i].col), f->brushes.size()-1);
+					auto pir = make_pair(findkeybyvalue(s.colnodemap, s.shapes[ii].col), &f->brushes[i].b.solidbrush);
+					colnodes.insert(pir);
+					ii++;
+					i++;
+				}
 			}
 			i = 0;
 			con.init();
@@ -825,10 +883,12 @@ namespace GAME
 				butt->callpfunc = true;
 				butt->callpyscript = true;
 				btts.push_back(butt);
+				//con.addbutton(butt);
 				i++;
 			}
 			if(s.boxes.size()  > 0)
 				bt = btts[0];
+		//	con.buttons = btts;
 			i = 0;
 			while (i < s.subs.size())
 			{
@@ -900,6 +960,13 @@ namespace GAME
 			mainframe->f["main"].push_back(w->f);
 			mainframe->wchiac = "main";
 			mainframe->ischfact = true;
+			w->f->ismactive = true;
+			w->f->ischfact = true;
+			frame* f2 = new frame;
+			w->f->f.insert(make_pair("spriteframe", vector<frame*>{f2}));
+			w->f->wchiac = "spriteframe";
+			w->sf = f2;
+			f2->ismactive = true;
 			uni2<float> mf;
 			int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
 			w->defpos = pos;
@@ -910,7 +977,7 @@ namespace GAME
 			}
 			else if (flags & WF_SCALETO_V)
 			{
-				mf.x = ((float)wsize.x)*size.x;
+				mf.x = ((float)wsize.x)*size.y;
 				mf.y = ((float)wsize.y)*size.y;
 			}
 			else if (flags & WF_SCALETO_H)
@@ -944,7 +1011,11 @@ namespace GAME
 			string inputstr;
 		feachdone:;
 			string msgf = inputstr;
+			while (UI->isargbmodified)
+				Sleep(0);
+			UI->isargbmodified = true;
 			UI->args.insert(make_pair(strid, v));
+			UI->isargbmodified = false;
 			wstring wstr = STRtoWSTR(strid);
 			auto cch = wstr.c_str();
 			wchar_t* args[] = { const_cast<wchar_t*>(cch) };
@@ -1137,6 +1208,7 @@ namespace GAME
 					vector<string>inputs = {"LBUTTONUP","RBUTTONUP","LBUTTONDOWN","RBUTTONDOWN","MBUTTONUP","MBUTTONDOWN","MOUSEMOVE"};
 					int iii = 0;
 					str2 = str + "BOX" + common::INTtoSTR(ii) + "@";
+					b.message = f.GetVar<string>(str + "BOX" + common::INTtoSTR(ii) + "@MSG");
 					while (iii < inputs.size())
 					{
 						string str10000;

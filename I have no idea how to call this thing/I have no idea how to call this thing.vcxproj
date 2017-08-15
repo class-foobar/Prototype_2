@@ -89,8 +89,15 @@
       <AdditionalDependencies>X:\PROJECTS\I have no idea how to call this thing\packages\python.3.6.2\tools\libs\python36.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /i /Y "$(ProjectDir)*.py" "$(SolutionDir)x64\debug\bin\scripts\"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
+    <CustomBuildStep>
+      <Command>xcopy /i /Y "$(ProjectDir)*.py" "$(SolutionDir)x64\debug\bin\scripts\"</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Outputs>nonexistentfile.404</Outputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

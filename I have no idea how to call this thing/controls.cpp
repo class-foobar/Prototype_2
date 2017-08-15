@@ -15,6 +15,7 @@ using namespace GAME::GUI;
 namespace GAME
 {
 	extern core* UI;
+	vector<thread*>scriptthreads;
 }
 namespace DX2D
 {
@@ -40,7 +41,8 @@ namespace DX2D
 		vector<boost::any> v;
 /*		window* wnd = boost::any_cast<window*>(bt->anyvars[0]);
 		auto m = boost::any_cast<>bt->anyvars[2]*/;
-		v.push_back(bt->anyvars[0]);
+		auto wnd = boost::any_cast<window*>(bt->anyvars[0]);
+		v.push_back(wnd->ID);
 		v.push_back(bt->anyvars[1]);
 		v.push_back(msg);
 		auto m = boost::any_cast<map<string, string>>(bt->anyvars[2]);
@@ -58,10 +60,19 @@ namespace DX2D
 			}
 		}
 	feachdone:;
-		auto wnd = boost::any_cast<window*>(bt->anyvars[0]);
 		string msgf = inputstr;
+		//ui bn = 0;
 		v.push_back(msgf);
-		if (m[inputstr] != "")
+		//try // lazynessTM
+		//{
+		//	bn = boost::any_cast<ui>(bt->anyvars[1]);
+		//}
+		//catch (boost::bad_any_cast)
+		//{
+			int bn = boost::any_cast<int>(bt->anyvars[1]);
+		//}
+		string scriptname = UI->styles[wnd->styleid].msgproc[UI->styles[wnd->styleid].boxes[bn].message];
+		if (scriptname != "")
 		{
 			v.push_back(bt->anyvars[3]);
 			auto pairptr = new pair<button*, controls*>(bt, this);
@@ -69,14 +80,27 @@ namespace DX2D
 			v.push_back(pos.x);
 			v.push_back(pos.y);
 			UI->args.insert(make_pair(strid, v));
-			const wchar_t * ch = STRtoWSTR(strid).c_str();
+			wstring wstr = STRtoWSTR(strid);
+			const wchar_t * ch = wstr.c_str();
 			wchar_t* args[] = { const_cast<wchar_t*>(ch) };
 			PySys_SetArgv(1, args);
 			string subloc = boost::any_cast<string>(bt->anyvars[3]);
 			int ii = 0;
-			string loc = subloc + "scripts\\" + m[inputstr];
-			FILE* file = _Py_fopen(loc.c_str(), "r+");
-			auto ret = PyRun_AnyFile(file, m[inputstr].c_str());
+			string loc = subloc + "scripts\\" + scriptname;
+			_callpyloc = _Py_fopen(loc.c_str(), "r+");
+			try
+			{
+				_pyscriptname = scriptname;
+				scriptthreads.push_back( new thread (&controls::callpyscript,this));
+			}
+			catch (...)
+			{
+				cout << "\b";
+				cout << "Critical Error has occured..." << endl << ">";
+			}
+			//if (MapFind(UI->args, strid))
+			//	DebugBreak();
+			loc = "";
 		}
 
 	}
@@ -132,6 +156,8 @@ namespace DX2D
 		if (buttons.size() == 0)
 			return;
 		*pobjpos = pos;
+		while (currentlycheckingc != nullptr)
+			Sleep(0);
 		currentlycheckingc = this;
 		pclass.tick();
 		vector<button*> bac = btnspr;
@@ -158,6 +184,16 @@ namespace DX2D
 					buttons[i]->state = buttons[i]->idlen;
 				}
 			}
+			GUI::core* UIptr = GAME::UI;
+			if (buttons[i]->callpyscript)
+				if(buttons[i]->callpyonanymmove)
+					callpy(buttons[i], msg, pos);
+				else
+				{
+					int4 rec(*buttons[i]->pos, *buttons[i]->pos + buttons[i]->size);
+					if(classvariables::isinside(rec,pos))
+						callpy(buttons[i], msg, pos);
+				}
 			i++;
 		}
 		i = 0;
@@ -177,9 +213,6 @@ namespace DX2D
 				i++;
 				continue;
 			}
-			GUI::core* UIptr = GAME::UI;
-			if (bac[i]->callpyscript)
-				callpy(bac[i], msg, pos);
 			i++;
 		}
 		i = 0;

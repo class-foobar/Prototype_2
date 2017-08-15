@@ -45,6 +45,7 @@ namespace debugging
 }
 namespace GAME
 {
+	extern vector<thread*>scriptthreads;
 	vector<entity> entitylist;
 	extern int4 camrect;
 	extern universe* uniclass;
@@ -1521,6 +1522,9 @@ namespace DX2D
 			else
 				movetype = mt_mov;
 			DXclass->con.MouseEvent(wParam, lParam, msg);
+			int i = 0;
+			if(UI != nullptr)
+				UI->MouseEvent(wParam, lParam, msg);
 			if (DXclass->programdata != nullptr)
 			{
 				int2 pos(GET_X_LPARAM((lParam)), GET_Y_LPARAM((lParam)));
@@ -1529,6 +1533,21 @@ namespace DX2D
 				posf2 =  posf2+ (uni2<float>)DXclass->maincam->GetOffset();
 				posf2 = posf2* (uni2<float>)DXclass->maincam->scale;
 				DXclass->programdata->setvar((int2)posf2.toint2(),"mouseposrelative",true,"INT2");
+			}
+			i = 0;
+			while (i < scriptthreads.size())
+			{
+				try
+				{
+					scriptthreads[i]->join();
+				}
+				catch (...)
+				{
+
+				}
+				delete scriptthreads[i];
+				scriptthreads.erase(scriptthreads.begin()+i);
+				i++;
 			}
 			break;
 		}

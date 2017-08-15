@@ -64,6 +64,7 @@ namespace GAME
 		protected:
 			bool hidden = false;
 		public:
+			list<pair<string, string>> activescripts;
 			string strname = "NULL"; // optional
 			void updatenesting();
 			void updatepos(int2 oldpos);
@@ -93,6 +94,7 @@ namespace GAME
 			vector<pair<int2*,int2>> posvec;
 			vector<int2> cufoffsets;
 			frame* f = nullptr;
+			frame* sf = nullptr;
 			vector<bool*> shaperb;
 			UIresult initvis(style& s, uni2<float> npos, uni2<float> screenmultip);
 			UIresult scale(int2 nsize);
@@ -216,11 +218,13 @@ namespace GAME
 			frame* mainframe = nullptr;
 			window* root;
 			ui scenenum;
+			bool isargbmodified = false;
 			map<ui, window*> wnds;
 			map<string, ui> wndnamemap;
 			map<ui, style> styles;
 			map<string, sprite> icons;
 			map<string, ui> styleids;
+			void MouseEvent(WPARAM wParam, LPARAM lParam, UINT msg);
 			UIresult AttachTo(window* parent, window* child, unsigned long int flags = AT_NULL);
 			//UIresult NewWindow(window*parent, int2 pos, int2 size, ui styleid, unsigned long int flags = 0x00000000L);
 			//UIresult NewWindow(window*parent, int2 pos, int2 size, string stylename, unsigned long int flags = 0x00000000L);

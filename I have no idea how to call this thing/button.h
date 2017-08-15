@@ -80,6 +80,7 @@ namespace DX2D
 		bool callpyscript = false;
 		bool backgroundbutton = false; // if true button will only be pressed if no other button is 
 		bool callpfunc = true;
+		bool callpyonanymmove = false;
 		int2* pos = nullptr;
 		int2 size;
 		//vector<vector<sprite>> s; 
@@ -175,6 +176,24 @@ namespace DX2D
 		int defaultbutton_pressi = 2;
 		float defaultbutton_secpt = 0.2f;
 		map<string, void*> textnames;
+		FILE* _callpyloc;
+		string _pyscriptname;
+		int _testi = 0;
+		void callpyscript()
+		{
+			try
+			{
+				while (_testi == 51)
+					break;
+				PyRun_SimpleFile(_callpyloc, _pyscriptname.c_str());
+				_testi++;
+			}
+			catch (...)
+			{
+				cout << "\b";
+				cout << "Critical Error has occured..." << endl << ">";
+			}
+		}
 	public:
 		inline physics* GetPhysP()
 		{
@@ -435,6 +454,45 @@ namespace DX2D
 			latestcreation = butt;
 			butt->pos = pos;
 			butt->size = size;
+			return true;
+		}
+		bool addbutton(button* butt)
+		{
+			//main->wchiac = ifmp[idlei];
+			//butt->textnh = tnstr;
+			/*if (butt == nullptr)
+			{
+				delete bp;
+				return false;
+			}*/
+			//butt->mainframe = main;
+			//butt->render = bp;
+			int i = 0;
+			ui ID = 0;
+			if (ID == 0 || buttonsIDmap.find(ID) != buttonsIDmap.end())
+			{
+				do
+				{
+					i++;
+					ID = rand();
+					if (i > 1000000)
+						return false;
+				} while (buttonsIDmap.find(ID) != buttonsIDmap.end());
+			}
+			butt->c = this;
+			string name = to_string(ID) + "b";
+			buttonsIDmap.insert(make_pair(butt->ID, butt));
+			buttonSTRmap.insert(make_pair(name, butt));
+			buttons.push_back(butt);
+			pclass.addobj(name, new int2(butt->size), butt->pos, false, false);
+			pclass.objmap[name]->rectID = 666;
+			physreact pr;
+			pr.noclip = true;
+			pclass.objmap[name]->IDreactionmap.insert(make_pair(777, pr));
+			pclass.objmap[name]->isron = true; 
+			latestcreation = butt;
+			//butt->pos = pos;
+			//butt->size = size;
 			return true;
 		}
 		inline bool addbutton(string buttontext, int2* pos, int2 size, void(*buttonpressfunc)(int2&), frame* main, camera* cam, bool callonrelease,

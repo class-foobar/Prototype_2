@@ -51,13 +51,18 @@
 #include <Wincodec.h>
 #include <d2d1effecthelpers.h>
 #include <Mmsystem.h>
+#define DETECTMEMORYLEAKS 0
 #ifdef _DEBUG
+#if DETECTMEMORYLEAKS == 1
 #define _CRTDBG_MAP_ALLOC
 #define _CRTDBG_MAPALLOC
 #endif
+#endif
 #include <stdlib.h>
 #ifdef _DEBUG
+#if DETECTMEMORYLEAKS == 1
 #include <crtdbg.h>
+#endif
 #endif
 #include "X:\PROJECTS\AZfilelib\AZfilelib\AZfilelib.h"
 using namespace DirectX;
