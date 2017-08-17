@@ -1,5 +1,5 @@
 #include "GUI.h"
-#define corruptioncheck 1
+#define corruptioncheck 0
 namespace GAME
 {
 	extern int4 camrect;
@@ -9,6 +9,8 @@ namespace GAME
 		namespace Python
 		{
 			vecbreaker <PyObject*(*)(PyObject*, PyObject*)> vb;
+			//----------------------------------------------------------------------------------------------------------------------------
+			//MODULE: GUI 
 			PYFUNC(NewWindow)
 			{
 				ui flags, parentid;
@@ -18,6 +20,8 @@ namespace GAME
 				string stylename = chstylename;
 				string thisname = chthisname;
 				auto res = UI->NewWindow(UI->wnds[parentid], pos, size, stylename, (ui)flags);
+				auto wnd = boost::any_cast<window*>(res.retval[0]);
+				wnd->strname = thisname;
 #if corruptioncheck == 1
 				auto _heap = malloc(sizeof(int));
 				free(_heap);
@@ -129,14 +133,14 @@ namespace GAME
 				string node, nnode;
 				char *ch0 = NULL, *ch1 = NULL;
 				bool switcharound = false;
-				PyArg_ParseTuple(args, "I|s|s|b", &ID,&ch0,&ch1,&switcharound);
+				PyArg_ParseTuple(args, "I|s|s|b", &ID, &ch0, &ch1, &switcharound);
 				node = ch0;
 				nnode = ch1;
 				style s = UI->styles[UI->wnds[ID]->styleid];
-				auto oldptr = UI->wnds[ID]->colnodes[node];
-				auto ptr = UI->wnds[ID]->colnodes[node] = UI->wnds[ID]->colnodes[nnode];
+				auto oldptr = *UI->wnds[ID]->colnodes[node];
+				auto ptr = *UI->wnds[ID]->colnodes[node] = *UI->wnds[ID]->colnodes[nnode];
 				if (switcharound == true)
-					UI->wnds[ID]->colnodes[nnode] = oldptr;
+					*UI->wnds[ID]->colnodes[nnode] = oldptr;
 #if corruptioncheck == 1
 				auto _heap = malloc(sizeof(int));
 				free(_heap);
@@ -162,10 +166,10 @@ namespace GAME
 				ulli ptr0, ptr1;
 				string name;
 				char* ch0 = NULL;
-				PyArg_ParseTuple(args, "I|K|K|s", &ID,&ptr0,&ptr1,&ch0);
+				PyArg_ParseTuple(args, "I|K|s", &ID,&ptr0,&ch0);
 				name = ch0;
 				auto c0 = static_cast<pair<ID2D1SolidColorBrush*, ID2D1SolidColorBrush*>*>((void*)ptr0);
-				UI->wnds[ID]->colnodes.insert(make_pair(name, c0));
+				UI->wnds[ID]->colnodes.insert(make_pair(name, new pair<ID2D1SolidColorBrush*, ID2D1SolidColorBrush*>(*c0)));
 				return PyLong_FromLong(0);
 			}
 			PYFUNC(CreateColFromRGB)
@@ -298,35 +302,42 @@ namespace GAME
 				PyArg_ParseTuple(args, "I|s|s|O", &ID,&ch0,&ch1,&obj);
 				name = ch0;
 				type = ch1;
+				int pid = getpid();
 				window* wnd = UI->wnds[ID];
+				if (!MapFind(wnd->memory, pid))
+				{
+					wnd->memory[pid];
+				}
 				if (type == "STR")
 				{
 					string val = PyBytes_AsString(obj);
-					MapSet(wnd->memory, make_pair(name, make_pair(type, (boost::any) val)));
+					MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
 				}
 				else if (type == "INT")
 				{
 					int val = PyLong_AsLong(obj);
 					//PyArg_ParseTuple(args, string("I|s|s|" + 'i').c_str(), &ID, &dummyname, &dummytype, &val);
-					MapSet(wnd->memory, make_pair(name, make_pair(type, (boost::any) val)));
+					MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
 				}
 				else if (type == "BOOL")
 				{
 					bool val;
 					//PyArg_ParseTuple(args, string("I|s|s|" + 'p').c_str(), &ID, &ch0, &ch1, &val);
-					val = PyBool_Check(obj);
-					MapSet(wnd->memory, make_pair(name, make_pair(type, (boost::any) val)));
+					val = PyObject_IsTrue(obj);
+					::getpid();
+					MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
 				}
 				else if (type == "FLOAT")
 				{
 					float val = PyFloat_AsDouble(obj);
 					//PyArg_ParseTuple(args, string("I|s|s|" + 'f').c_str(), &ID, &ch0, &ch1, &val);
-					MapSet(wnd->memory, make_pair(name, make_pair(type, (boost::any) val)));
+					MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
 				}
 #if corruptioncheck == 1
 				auto _heap = malloc(sizeof(int));
 				free(_heap);
 #endif
+				Py_CLEAR(obj);
 				return Py_True;
 
 			}
@@ -338,7 +349,7 @@ namespace GAME
 				PyArg_ParseTuple(args, "I|s", &ID, &ch0);
 				name = ch0;
 				window* wnd = UI->wnds[ID];
-				type = wnd->memory[name].first;
+				type = wnd->memory[getpid()][name].first;
 				return PyUnicode_FromStringAndSize(type.c_str(), type.size());
 			}
 			PYFUNC(Memory_Get)
@@ -349,8 +360,8 @@ namespace GAME
 				PyArg_ParseTuple(args, "I|s", &ID, &ch0);
 				name = ch0;
 				window* wnd = UI->wnds[ID];
-				auto var = wnd->memory[name].second;
-				type = wnd->memory[name].first;
+				auto var = wnd->memory[getpid()][name].second;
+				type = wnd->memory[getpid()][name].first;
 				if (type == "STR")
 				{
 					auto val = boost::any_cast<string>(var);
@@ -377,7 +388,7 @@ namespace GAME
 				char* ch0 = NULL;
 				PyArg_ParseTuple(args, "I|s", &ID, &ch0);
 				name = ch0;
-				return PyBool_FromLong((long) MapFind(UI->wnds[ID]->memory, name));
+				return PyBool_FromLong((long) MapFind(UI->wnds[ID]->memory[getpid()], name));
 			}
 			PYFUNC(GetRealPosX)
 			{
@@ -560,7 +571,7 @@ namespace GAME
 				PYMETH(File_Find),
 				PYMETH(AddSpriteToShape),
 				PYMETH(GetName),
-				{ NULL, NULL, 0, NULL }
+				{ NULL, NULL, 0, NULL } // note to self: NEVER DELETE THIS
 			};
 			static struct PyModuleDef GUImodule = {
 				PyModuleDef_HEAD_INIT,
@@ -574,19 +585,105 @@ namespace GAME
 			//{
 			//	return nullptr;
 			//}
-			
 			PyMODINIT_FUNC PyInit_GUI(void)
 			{
 				PyObject *m;
 				m = PyModule_Create(&GUImodule);
 				if (m == NULL)
 					return NULL;
-
-				//auto therror = PyErr_NewException("GUI.error", NULL, NULL);
-				//Py_INCREF(therror);
-				//PyModule_AddObject(m, "error", therror);
 				return m;
 			}
+			//----------------------------------------------------------------------------------------------------------------------------
+			//MODULE: AZflib
+			PYFUNC(Open)
+			{
+				char *ch0, *ch1;
+				string strid, name;
+				PyArg_ParseTuple(args, "s", &ch0);
+				//strid = ch0;
+				name = ch0;
+				auto ptr = new AZfile(name);
+				return PyLong_FromVoidPtr(ptr);
+			}
+			PYFUNC(Release)
+			{
+				ulli ptr;
+				PyArg_ParseTuple(args, "K", &ptr);
+				auto file =  static_cast<AZfile*>((void*)ptr);
+				delete file;
+				return Py_True;
+			}
+			PYFUNC(GetVar)
+			{
+				ulli ptr; 
+				char *ch0,*ch1;
+				string type, name;
+				PyArg_ParseTuple(args, "K|s|s", &ptr,&ch0,&ch1);
+				name = ch1;
+				type = ch0;
+				auto file = static_cast<AZfile*>((void*)ptr);
+				return common::Python::CastPyObj(file->GetVarAny(name),type);
+			}
+			PYFUNC(SetVar)
+			{
+				ulli ptr;
+				char *ch0, *ch1;
+				string type, name;
+				PyObject* val;
+				PyArg_ParseTuple(args, "K|s|s|O", &ptr, &ch0, &ch1, &val);
+				name = ch1;
+				type = ch0;
+				auto file = static_cast<AZfile*>((void*)ptr);
+				file->SetVar(type, new boost::any( common::Python::AnyFromPyObj(val,type)), name);
+				return Py_True;
+			}
+			PYFUNC(SaveFile)
+			{
+				ulli ptr;
+				char *ch0;
+				PyArg_ParseTuple(args, "K|s", &ptr,&ch0);
+				string dir = ch0;
+				auto file = static_cast<AZfile*>((void*)ptr);
+				file->SaveToFile(dir);
+				return Py_True;
+			}
+			PYFUNC(FindVar)
+			{
+				ulli ptr;
+				char *ch0;
+				string name;
+				PyArg_ParseTuple(args, "K|s", &ptr,&ch0);
+				name = ch0;
+				auto file = static_cast<AZfile*>((void*)ptr);
+				return PyBool_FromLong(file->findvar(name));
+			}
+			static PyMethodDef AZMethods[] =
+			{
+				PYMETH(Open),
+				PYMETH(Release),
+				PYMETH(GetVar),
+				PYMETH(SetVar),
+				PYMETH(SaveFile),
+				PYMETH(FindVar),
+				{ NULL, NULL, 0, NULL }
+			};
+			static struct PyModuleDef AZflibmodule = {
+				PyModuleDef_HEAD_INIT,
+				"AZflib",   /* name of module */
+				NULL, /* module documentation, may be NULL */
+				-1,       /* size of per-interpreter state of the module,
+						  or -1 if the module keeps state in global variables. */
+				AZMethods
+			};
+			PyMODINIT_FUNC PyInit_AZflib(void)
+			{
+				PyObject *m;
+				m = PyModule_Create(&AZflibmodule);
+				if (m == NULL)
+					return NULL;
+				return m;
+			}
+
 		}
 		namespace deffunc
 		{
@@ -840,11 +937,19 @@ namespace GAME
 				//b.breakonrender = true;
 				b.SetType(solidbrush);
 				auto mcol = s.shapes[i].col->toColorF();
-				(*coreptr->cam->GetRenderTargetP())->CreateSolidColorBrush(s.shapes[i].col->toColorF(), &b.b.solidbrush.first);
-				if(s.shapes[i].seccol != nullptr)
-					(*coreptr->cam->GetRenderTargetP())->CreateSolidColorBrush(s.shapes[i].seccol->toColorF(), &b.b.solidbrush.second);
+				if (s.shapes[i].col->in)
+					(*coreptr->cam->GetRenderTargetP())->CreateSolidColorBrush(s.shapes[i].col->toColorF(), &b.b.solidbrush->first);
 				else
-					(*coreptr->cam->GetRenderTargetP())->CreateSolidColorBrush(s.shapes[i].col->toColorF(), &b.b.solidbrush.second);
+					b.b.solidbrush->first = nullptr;
+				if ((s.shapes[i].seccol != nullptr)?s.shapes[i].seccol->out : s.shapes[i].col->out)
+				{
+					if (s.shapes[i].seccol != nullptr)
+						(*coreptr->cam->GetRenderTargetP())->CreateSolidColorBrush(s.shapes[i].seccol->toColorF(), &b.b.solidbrush->second);
+					else
+						(*coreptr->cam->GetRenderTargetP())->CreateSolidColorBrush(s.shapes[i].col->toColorF(), &b.b.solidbrush->second);
+				}
+				else
+					b.b.solidbrush->second = nullptr;
 				b.renderp = rb;
 				f->brushes.push_back(b);
 				i++;
@@ -855,7 +960,7 @@ namespace GAME
 				while (i < f->brushes.size())
 				{
 					//auto pir = make_pair(findkeybyvalue(s.colnodemap, s.shapes[i].col), f->brushes.size()-1);
-					auto pir = make_pair(findkeybyvalue(s.colnodemap, s.shapes[ii].col), &f->brushes[i].b.solidbrush);
+					auto pir = make_pair(findkeybyvalue(s.colnodemap, s.shapes[ii].col), f->brushes[i].b.solidbrush);
 					colnodes.insert(pir);
 					ii++;
 					i++;
@@ -977,13 +1082,13 @@ namespace GAME
 			}
 			else if (flags & WF_SCALETO_V)
 			{
-				mf.x = ((float)wsize.x)*size.y;
+				mf.x = ((float)wsize.y)*size.x;
 				mf.y = ((float)wsize.y)*size.y;
 			}
 			else if (flags & WF_SCALETO_H)
 			{
 				mf.x = ((float)wsize.x)*size.x;
-				mf.y = ((float)wsize.y)*size.x;
+				mf.y = ((float)wsize.x)*size.y;
 			}
 			if (!(flags & WF_NOVINIT))
 			{
@@ -1018,14 +1123,16 @@ namespace GAME
 			UI->isargbmodified = false;
 			wstring wstr = STRtoWSTR(strid);
 			auto cch = wstr.c_str();
-			wchar_t* args[] = { const_cast<wchar_t*>(cch) };
-			PySys_SetArgv(1, args);
+			wstring wstr2 = STRtoWSTR(bslink);
+			auto cch2 = wstr2.c_str();
+			wchar_t* args[] = { const_cast<wchar_t*>(cch),const_cast<wchar_t*>(cch2) };
+			PySys_SetArgv(2, args);
 			int ii = 0;
 			if (s.flagproc != "")
 			{
 				string loc = bslink + "scripts\\" + s.flagproc;
 				FILE* file = _Py_fopen(loc.c_str(), "r+");
-				auto pyret = PyRun_SimpleFile(file, s.flagproc.c_str());
+				auto pyret = PyRun_AnyFileEx(file, s.flagproc.c_str(),true);
 			}
 			return ret;
 		}
@@ -1039,6 +1146,7 @@ namespace GAME
 			PyImport_AppendInittab("GUI", Python::PyInit_GUI);
 			Py_Initialize();
 			PyImport_ImportModule("GUI");
+			PyImport_ImportModule("AZflib");
 			conptr = con;
 			mainframe = mf;
 			scenenum = scenen;
@@ -1046,6 +1154,15 @@ namespace GAME
 			result.code = UI_OK;
 			cam = ncam;
 			return result;
+		}
+		void core::reinit()
+		{
+			Py_FinalizeEx();
+			PyImport_AppendInittab("GUI", Python::PyInit_GUI);
+			PyImport_AppendInittab("AZflib", Python::PyInit_AZflib);
+			Py_Initialize();
+			PyImport_ImportModule("GUI");
+			PyImport_ImportModule("AZflib");
 		}
 		UIresult core::addstyle(style st)
 		{
@@ -1145,6 +1262,8 @@ namespace GAME
 						cn->b = pn->getvar<float>("B")*255.0f;
 						cn->g = pn->getvar<float>("G")*255.0f;
 						cn->a = pn->getvar<float>("A");
+						cn->in = pn->getvar<bool>("IN");
+						cn->out = pn->getvar<bool>("OUT");
 						cnodemap.insert(make_pair(structs[ii], cn));
 					}
 					ii++;

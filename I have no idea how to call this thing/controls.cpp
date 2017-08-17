@@ -31,6 +31,10 @@ namespace DX2D
 		if (obj != nullptr)
 			btnspr.push_back(currentlycheckingc->buttonSTRmap[obj->nameindex]);
 	}
+	void controls::callreinit()
+	{
+		UI->reinit();
+	}
 	void controls::callpy(button* bt, UINT msg, int2 pos)
 	{
 		string strid;
@@ -80,18 +84,25 @@ namespace DX2D
 			v.push_back(pos.x);
 			v.push_back(pos.y);
 			UI->args.insert(make_pair(strid, v));
+			string subloc = boost::any_cast<string>(bt->anyvars[3]);
 			wstring wstr = STRtoWSTR(strid);
 			const wchar_t * ch = wstr.c_str();
-			wchar_t* args[] = { const_cast<wchar_t*>(ch) };
-			PySys_SetArgv(1, args);
-			string subloc = boost::any_cast<string>(bt->anyvars[3]);
+			wstring wstr2 = STRtoWSTR(subloc);
+			const wchar_t* ch1 = wstr2.c_str();
+			wchar_t* args[] = { const_cast<wchar_t*>(ch), const_cast<wchar_t*>(ch1)};
+			PySys_SetArgv(2, args);
 			int ii = 0;
 			string loc = subloc + "scripts\\" + scriptname;
-			_callpyloc = _Py_fopen(loc.c_str(), "r+");
+			_pyblankscriptname = subloc + "scripts\\" + "blank.py";
+			while (_callpyloc != "")
+				Sleep(0);
+			_callpyloc = loc;
 			try
 			{
 				_pyscriptname = scriptname;
-				scriptthreads.push_back( new thread (&controls::callpyscript,this));
+				thread* thptr = nullptr;
+				scriptthreads.push_back(thptr = new thread (&controls::callpyscript,this));
+				//thptr->detach();
 			}
 			catch (...)
 			{

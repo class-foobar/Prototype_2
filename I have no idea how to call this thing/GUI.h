@@ -102,7 +102,7 @@ namespace GAME
 			UIresult hide();
 			UIresult switchvis();
 			vector<void*> otherobjts;
-			map<string, pair<string, boost::any>> memory;
+			map<int,map<string, pair<string, boost::any>>> memory;
 		};
 		struct simpleshape
 		{
@@ -209,6 +209,7 @@ namespace GAME
 			ui PreAllocateStyle(string name);
 			UIresult addstyle(style st, string name);
 		public:
+			void reinit();
 			map<string, vector<boost::any>> args;
 			AZfile gameuif;
 			AZfile stylef;

@@ -79,13 +79,11 @@ namespace DX2D
 	bool isppaused = false;
 	bool isfscreentoud = false;
 	bool iscurrentlyfscreened = false;
-	int score = 0;
 	bool callfunc = false;
 	int powupcreated = 0;
 	int difficulty = 0;
 	frame* backgroundframe;
 	frame* pf = nullptr;
-	vector<frame*> ssfvec; // shield storage vec;
 	int projinfly = 0;
 	int curprojnum = 0;
 	vector <clock_t> projectilefiredate;
@@ -93,9 +91,7 @@ namespace DX2D
 	vector <ship*> shipsvec;
 	vector<camera*>*shipcamvec;
 	vector <bool*> projrenbp;
-	//
 	void initships();
-	//engine-specific ( mostly ) 
 	struct physreactonset;
 	ID2D1DeviceContext *hwndRT = nullptr;
 	ID2D1Factory1* pD2DFactory = nullptr;
@@ -107,20 +103,9 @@ namespace DX2D
 	void(*fformaintocall)(physobj*, physobj*);
 	physobj* objtc1;
 	physobj* objtc2;
-
 	class main;
 	main* DXclass = nullptr;
 	class scene;
-
-	//class renderobj
-	//{
-	//public:
-	//	int currentframe;
-
-
-
-	//	map <string, vector<frame*> > f;
-	//};
 	class scene;
 	string bslink;
 	void initgame(int2& bs);
@@ -417,14 +402,16 @@ namespace DX2D
 						}
 						case brushtypes::solidbrush:
 						{
-							RT->FillRectangle(f[i]->brushes[ii].rect, f[i]->brushes[ii].b.solidbrush.first);
-							RT->DrawRectangle(f[i]->brushes[ii].rect, f[i]->brushes[ii].b.solidbrush.second);
+							if(f[i]->brushes[ii].b.solidbrush->first != nullptr)
+								RT->FillRectangle(f[i]->brushes[ii].rect, f[i]->brushes[ii].b.solidbrush->first);
+							if(f[i]->brushes[ii].b.solidbrush->second != nullptr)
+								RT->DrawRectangle(f[i]->brushes[ii].rect, f[i]->brushes[ii].b.solidbrush->second);
 							break;
 						}
 						case brushtypes::radialgradient:
 						{
-							RT->FillEllipse(f[i]->brushes[ii].elipse, f[i]->brushes[ii].b.radialgradient.first);
-							RT->DrawEllipse(f[i]->brushes[ii].elipse, f[i]->brushes[ii].b.radialgradient.second);
+							RT->FillEllipse(f[i]->brushes[ii].elipse, f[i]->brushes[ii].b.radialgradient->first);
+							RT->DrawEllipse(f[i]->brushes[ii].elipse, f[i]->brushes[ii].b.radialgradient->second);
 							break;
 						}
 						}
@@ -1535,20 +1522,49 @@ namespace DX2D
 				DXclass->programdata->setvar((int2)posf2.toint2(),"mouseposrelative",true,"INT2");
 			}
 			i = 0;
-			while (i < scriptthreads.size())
+			int ii = 0;
+			while (ii < 2 && scriptthreads.size() != 0)
 			{
-				try
+				while (i < scriptthreads.size())
 				{
-					scriptthreads[i]->join();
-				}
-				catch (...)
-				{
+					if (scriptthreads[i]->joinable())
+					{
+						try
+						{
+							scriptthreads[i]->join();
+						}
+						catch (...)
+						{
 
+						}
+						delete scriptthreads[i];
+						scriptthreads.erase(scriptthreads.begin() + i);
+					}
+					i++;
 				}
-				delete scriptthreads[i];
-				scriptthreads.erase(scriptthreads.begin()+i);
-				i++;
+				ii++;
 			}
+			i = 0;
+			if (!(ii < 2))
+			{
+				//Sleep(10);
+				while (i < scriptthreads.size())
+				{
+					try
+					{
+						scriptthreads[i]->join();
+						delete scriptthreads[i];
+					}
+					catch (...)
+					{
+
+					}
+					scriptthreads.erase(scriptthreads.begin() + i);
+					i++;
+				}
+			}
+			i = 0;
+			ii = 0;
 			break;
 		}
 		case WM_MOUSEWHEEL:

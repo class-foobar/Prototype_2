@@ -158,9 +158,11 @@
     <ClInclude Include="universe.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="blank.py" />
     <None Include="button_flagproc.py" />
     <None Include="button_msg_main.py" />
     <None Include="packages.config" />
+    <None Include="window_createempty.py" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\economy\economy\economy.vcxproj">

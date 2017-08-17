@@ -167,6 +167,7 @@ namespace DX2D
 	private:
 		physics pclass;
 		int2* pobjpos;
+		void callreinit();
 
 	protected:
 		vector<frame*> defaultbutton_fv;
@@ -176,23 +177,55 @@ namespace DX2D
 		int defaultbutton_pressi = 2;
 		float defaultbutton_secpt = 0.2f;
 		map<string, void*> textnames;
-		FILE* _callpyloc;
-		string _pyscriptname;
+		string _callpyloc = "";
+		string _pyscriptname = "";
+		string _pyblankscriptname = "";
 		int _testi = 0;
+		ui _realtesti = 0;
 		void callpyscript()
 		{
+			auto localname = _pyscriptname;
+			string loccopy = _callpyloc;
+			FILE* _f = NULL;
+			//if(_testi < 51)
+			_f = _Py_fopen(loccopy.c_str(), "r+");/* fopen(loccopy.c_str(), "r+");*/
+			//else
+			//{
+			//	_f = _Py_fopen(_pyblankscriptname.c_str(), "r+");
+			//	localname = "blank.py";
+			//}
+			_pyscriptname = "";
+			_callpyloc = "";
 			try
 			{
-				while (_testi == 51)
-					break;
-				PyRun_SimpleFile(_callpyloc, _pyscriptname.c_str());
+				//if (_testi == 51)
+				//{
+				//	malloc(sizeof(ulli));
+				//	//callreinit();
+				//	_testi = -1;
+				//}
+				/*auto res = PyRun_FileEx(_f, _pyscriptname.c_str(), Py_eval_input,Py_True, Py_True,1);*/
+				//auto res2 = PyRun_AnyFileEx(_f, localname.c_str(), false);
+				auto res = PyRun_AnyFileEx(_f, localname.c_str(), true);
+				//fclose(_f);
 				_testi++;
+				_realtesti++;
 			}
-			catch (...)
+			catch (std::exception& e)
 			{
 				cout << "\b";
 				cout << "Critical Error has occured..." << endl << ">";
 			}
+			//__try
+			//{
+			//	PyRun_AnyFile(_f, _pyscriptname.c_str());
+			//	_testi++;
+			//}
+			//__except (EXCEPTION_CONTINUE_EXECUTION)
+			//{
+			//	cout << "\b";
+			//	cout << "Critical Error has occured..." << endl << ">";
+			//}
 		}
 	public:
 		inline physics* GetPhysP()
@@ -653,8 +686,8 @@ namespace DX2D
 				frame* f = new frame;
 				brush b(true, new int2{ 0,0 }, new int2{ 100,25 }, new float(0.0f));
 				b.SetType(brushtypes::solidbrush);
-				hwndRT->CreateSolidColorBrush(ColorF(ColorF::Gray), &b.b.solidbrush.first);
-				hwndRT->CreateSolidColorBrush(ColorF(ColorF::Gray), &b.b.solidbrush.second);
+				hwndRT->CreateSolidColorBrush(ColorF(ColorF::Gray), &b.b.solidbrush->first);
+				hwndRT->CreateSolidColorBrush(ColorF(ColorF::Gray), &b.b.solidbrush->second);
 				f->brushes.push_back(b);
 				fv.push_back(f);
 			}
@@ -663,15 +696,15 @@ namespace DX2D
 				{
 					brush b(true, new int2{ 1,1 }, new int2{ 99,24 }, new float(0.0f));
 					b.SetType(brushtypes::solidbrush);
-					hwndRT->CreateSolidColorBrush(ColorF(ColorF::LightGray, 0.0f), &b.b.solidbrush.first);
-					hwndRT->CreateSolidColorBrush(ColorF(ColorF::Gray), &b.b.solidbrush.second);
+					hwndRT->CreateSolidColorBrush(ColorF(ColorF::LightGray, 0.0f), &b.b.solidbrush->first);
+					hwndRT->CreateSolidColorBrush(ColorF(ColorF::Gray), &b.b.solidbrush->second);
 					f->brushes.push_back(b);
 				}
 				{
 					brush b(true, new int2{ 2,2 }, new int2{ 98,23 }, new float(0.0f));
 					b.SetType(brushtypes::solidbrush);
-					hwndRT->CreateSolidColorBrush(ColorF(ColorF::LightGray), &b.b.solidbrush.first);
-					hwndRT->CreateSolidColorBrush(ColorF(ColorF::Gray), &b.b.solidbrush.second);
+					hwndRT->CreateSolidColorBrush(ColorF(ColorF::LightGray), &b.b.solidbrush->first);
+					hwndRT->CreateSolidColorBrush(ColorF(ColorF::Gray), &b.b.solidbrush->second);
 					f->brushes.push_back(b);
 				}
 				fv.push_back(f);
@@ -681,8 +714,8 @@ namespace DX2D
 				{
 					brush b(true, new int2{ 0,0 }, new int2{ 100,25 }, new float(0.0f));
 					b.SetType(brushtypes::solidbrush);
-					hwndRT->CreateSolidColorBrush(ColorF(ColorF::LightGray, 1.0f), &b.b.solidbrush.first);
-					hwndRT->CreateSolidColorBrush(ColorF(ColorF::LightGray), &b.b.solidbrush.second);
+					hwndRT->CreateSolidColorBrush(ColorF(ColorF::LightGray, 1.0f), &b.b.solidbrush->first);
+					hwndRT->CreateSolidColorBrush(ColorF(ColorF::LightGray), &b.b.solidbrush->second);
 					f->brushes.push_back(b);
 				}
 				fv.push_back(f);

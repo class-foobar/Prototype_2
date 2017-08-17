@@ -113,5 +113,11 @@
     <None Include="button_msg_main.py">
       <Filter>Scripts</Filter>
     </None>
+    <None Include="blank.py">
+      <Filter>Scripts</Filter>
+    </None>
+    <None Include="window_createempty.py">
+      <Filter>Scripts</Filter>
+    </None>
   </ItemGroup>
 </Project>

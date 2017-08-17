@@ -51,6 +51,7 @@
 #include <Wincodec.h>
 #include <d2d1effecthelpers.h>
 #include <Mmsystem.h>
+#include <excpt.h>
 #define DETECTMEMORYLEAKS 0
 #ifdef _DEBUG
 #if DETECTMEMORYLEAKS == 1
@@ -658,6 +659,8 @@ namespace common
 		int g;
 		int b;
 		float a;
+		bool in = true;
+		bool out = true;
 		RGBA()
 		{
 			r = 0;
@@ -698,52 +701,223 @@ namespace common
 	{
 		return std::to_string(i);
 	}
-}
-namespace Python
-{
-	inline PyObject* VecToPyobj(vector<ui> v)
+	namespace Python
 	{
-		int i = 0;
-		PyObject* ret = PyList_New(0);
-		while (i < v.size())
+		inline PyObject* VecToPyobj(vector<ui> v)
 		{
-			PyList_Append(ret, PyLong_FromUnsignedLong(v[i]));
-			i++;
+			int i = 0;
+			PyObject* ret = PyList_New(0);
+			while (i < v.size())
+			{
+				PyList_Append(ret, PyLong_FromUnsignedLong(v[i]));
+				i++;
+			}
+			return ret;
 		}
-		return ret;
-	}
-	inline PyObject* VecToPyobj(vector<int> v)
-	{
-		int i = 0;
-		PyObject* ret = PyList_New(0);
-		while (i < v.size())
+		inline PyObject* VecToPyobj(vector<int> v)
 		{
-			PyList_Append(ret, PyLong_FromLong(v[i]));
-			i++;
+			int i = 0;
+			PyObject* ret = PyList_New(0);
+			while (i < v.size())
+			{
+				PyList_Append(ret, PyLong_FromLong(v[i]));
+				i++;
+			}
+			return ret;
 		}
-		return ret;
-	}
-	inline PyObject* VecToPyobj(vector<ulli> v)
-	{
-		int i = 0;
-		PyObject* ret = PyList_New(0);
-		while (i < v.size())
+		inline PyObject* VecToPyobj(vector<ulli> v)
 		{
-			PyList_Append(ret, PyLong_FromUnsignedLongLong(v[i]));
-			i++;
+			int i = 0;
+			PyObject* ret = PyList_New(0);
+			while (i < v.size())
+			{
+				PyList_Append(ret, PyLong_FromUnsignedLongLong(v[i]));
+				i++;
+			}
+			return ret;
 		}
-		return ret;
-	}
-	inline PyObject* VecToPyobj(vector<string> v)
-	{
-		int i = 0;
-		PyObject* ret = PyList_New(0);
-		while (i < v.size())
+		inline PyObject* VecToPyobj(vector<string> v)
 		{
-			PyList_Append(ret, PyUnicode_FromString(v[i].c_str()));
-			i++;
+			int i = 0;
+			PyObject* ret = PyList_New(0);
+			while (i < v.size())
+			{
+				PyList_Append(ret, PyUnicode_FromString(v[i].c_str()));
+				i++;
+			}
+			return ret;
 		}
-		return ret;
+		inline PyObject* ToPyObj(int var)
+		{
+			return PyLong_FromLong(var);
+		}
+		inline PyObject* ToPyObj(string var)
+		{
+			return PyUnicode_FromStringAndSize(var.c_str(), var.size());
+		}
+		inline PyObject* ToPyObj(ui var)
+		{
+			return PyLong_FromUnsignedLong(var);
+		}
+		inline PyObject* ToPyObj(ulli var)
+		{
+			return PyLong_FromUnsignedLongLong(var);
+		}
+		inline PyObject* ToPyObj(void* var)
+		{
+			return PyLong_FromVoidPtr(var);
+		}
+		inline PyObject* ToPyObj(bool var)
+		{
+			return PyBool_FromLong(var);
+		}
+		inline PyObject* ToPyObj(wstring var)
+		{
+			return PyUnicode_FromWideChar(var.c_str(), var.size());
+		}
+		inline PyObject* ToPyObj(lli var)
+		{
+			return PyLong_FromLongLong(var);
+		}
+		inline PyObject* ToPyObj(double var)
+		{
+			return PyLong_FromDouble(var);
+		}
+		inline PyObject* ToPyObj(float var)
+		{
+			return PyFloat_FromDouble(var);
+		}
+		inline boost::any AnyFromPyObj(PyObject* val,string type)
+		{
+			if (type == "INT" || type == "INT32")
+			{
+				return (boost::any)(PyLong_AsLong(val));
+			}
+			else if (type == "UINT" || type == "UINT32")
+			{
+				return (boost::any)(PyLong_AsUnsignedLong(val));
+			}
+			else if (type == "INT64")
+			{
+				return (boost::any)(PyLong_AsLongLong(val));
+			}
+			else if (type == "UINT64")
+			{
+				return (boost::any)(PyLong_AsUnsignedLongLong(val));
+			}
+			//else if (type == "INT128")
+			//{
+			//	return ToPyObj( boost::any_cast<mp::int128_t>(val) );
+			//}
+			//else if (type == "UINT128")
+			//{
+			//	return ToPyObj( boost::any_cast<mp::uint128_t>(val) );
+			//}
+		/*	else if (type == "CHAR")
+			{
+				return (boost::any)(PyUnico(val));
+			}
+			else if (type == "WCHAR")
+			{
+				return (boost::any)(PyLong_AsLong(val));
+			}*/
+			else if (type == "BOOL")
+			{
+				return (boost::any)(bool)(PyObject_IsTrue(val));
+			}
+			else if (type == "FLOAT")
+			{
+				return (boost::any)(float)(PyFloat_AsDouble(val));
+			}
+			else if (type == "DOUBLE")
+			{
+				return (boost::any)(PyFloat_AsDouble(val));
+			}
+			else if (type == "STR")
+			{
+				return (boost::any)(string)(_PyUnicode_AsString(val));
+			}
+			/*else if (type == "WSTR")
+			{
+				const std::wstring ws = boost::any_cast<wstring>(val);
+				const std::locale locale("");
+				typedef std::codecvt<wchar_t, char, std::mbstate_t> converter_type;
+				const converter_type& converter = std::use_facet<converter_type>(locale);
+				std::vector<char> to(ws.length() * converter.max_length());
+				std::mbstate_t state;
+				const wchar_t* from_next;
+				char* to_next;
+				const converter_type::result result = converter.out(state, ws.data(), ws.data() + ws.length(), from_next, &to[0], &to[0] + to.size(), to_next);
+				const std::string s(&to[0], to_next);
+				return ToPyObj(s);
+			}*/
+		}
+		inline PyObject* CastPyObj(boost::any val, string type)
+		{
+			if (type == "INT" || type == "INT32")
+			{
+				return ToPyObj(boost::any_cast<int>(val));
+			}
+			else if (type == "UINT" || type == "UINT32")
+			{
+				return ToPyObj(boost::any_cast<ui>(val) );
+			}
+			else if (type == "INT64")
+			{
+				return ToPyObj(boost::any_cast<lli>(val) );
+			}
+			else if (type == "UINT64")
+			{
+				return ToPyObj(boost::any_cast<ulli>(val) );
+			}
+			//else if (type == "INT128")
+			//{
+			//	return ToPyObj( boost::any_cast<mp::int128_t>(val) );
+			//}
+			//else if (type == "UINT128")
+			//{
+			//	return ToPyObj( boost::any_cast<mp::uint128_t>(val) );
+			//}
+			else if (type == "CHAR")
+			{
+				return ToPyObj( boost::any_cast<char>(val) );
+			}
+			else if (type == "WCHAR")
+			{
+				return ToPyObj( boost::any_cast<wchar_t>(val) );
+			}
+			else if (type == "BOOL")
+			{
+				return ToPyObj( boost::any_cast<bool>(val) );
+			}
+			else if (type == "FLOAT")
+			{
+				return ToPyObj( boost::any_cast<float>(val) );
+			}
+			else if (type == "DOUBLE")
+			{
+				return ToPyObj( boost::any_cast<double>(val) );
+			}
+			else if (type == "STR")
+			{
+				string str = (string) "\"" + boost::any_cast<string>(val) + (string) "\"" + "\n";
+				return ToPyObj( str );
+			}
+			else if (type == "WSTR")
+			{
+				const std::wstring ws = boost::any_cast<wstring>(val);
+				const std::locale locale("");
+				typedef std::codecvt<wchar_t, char, std::mbstate_t> converter_type;
+				const converter_type& converter = std::use_facet<converter_type>(locale);
+				std::vector<char> to(ws.length() * converter.max_length());
+				std::mbstate_t state;
+				const wchar_t* from_next;
+				char* to_next;
+				const converter_type::result result = converter.out(state, ws.data(), ws.data() + ws.length(), from_next, &to[0], &to[0] + to.size(), to_next);
+				const std::string s(&to[0], to_next);
+				return ToPyObj( s );
+			}
+		}
 	}
 }
 inline bool operator>(float2 f0, float2 f1)

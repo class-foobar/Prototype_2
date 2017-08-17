@@ -7,8 +7,8 @@ namespace DX2D
 	union brushunion
 	{
 		ID2D1LinearGradientBrush*		 						  lineargradient;
-		pair<ID2D1RadialGradientBrush*, ID2D1RadialGradientBrush*>radialgradient; // first will fill rect, second will be  drawn around.
-		pair<ID2D1SolidColorBrush*, ID2D1SolidColorBrush*>		  solidbrush; // first will fill rect, second will be  drawn around.
+		pair<ID2D1RadialGradientBrush*, ID2D1RadialGradientBrush*>*radialgradient; // first will fill rect, second will be  drawn around.
+		pair<ID2D1SolidColorBrush*, ID2D1SolidColorBrush*>		  *solidbrush; // first will fill rect, second will be  drawn around.
 		ID2D1BitmapBrush*				 						  bitmapbrush;
 		void*							 						  nullplaceholder;
 		brushunion()
@@ -62,14 +62,18 @@ namespace DX2D
 			}
 			case radialgradient:
 			{
-				b.radialgradient.first = NULL;
-				b.radialgradient.second = NULL;
+				/*b.radialgradient.first = NULL;
+				b.radialgradient.second = NULL;*/
+				b.radialgradient = NULL;
+				b.radialgradient = new pair<ID2D1RadialGradientBrush*, ID2D1RadialGradientBrush*>(nullptr, nullptr);
 				break;
 			}
 			case solidbrush:
 			{
-				b.solidbrush.first = NULL;
-				b.solidbrush.second = NULL;
+				//b.solidbrush.first = NULL;
+				//b.solidbrush.second = NULL;
+				b.solidbrush = NULL;
+				b.solidbrush = new pair<ID2D1SolidColorBrush*, ID2D1SolidColorBrush*>(nullptr, nullptr);
 				break;
 			}
 			case bitmapbrush:
