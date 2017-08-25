@@ -554,6 +554,7 @@ namespace DX2D
 				string fontname = menu.GetVar<string>("MAINMENU@" + buttons[i] + "@FONTNAME");
 				float fontsize = menu.GetVar<float>("MAINMENU@" + buttons[i] + "@FONTSIZE");
 				bool novis = menu.GetVar<bool>("MAINMENU@" + buttons[i] + "@NOVISUALS");
+				bool isbackground = menu.GetVar<bool>("MAINMENU@" + buttons[i] + "@ISBACKGROUND");
 				if (!novis)
 					con.addbutton(btext, new int2(bpos), bsize, GAME::funcidmap[ID], mf, maincam, false, textc, fontsize, fontname);
 				else
@@ -567,6 +568,8 @@ namespace DX2D
 					butt->anyvars.push_back(start);
 					butt->hassubbtns = true;
 				}
+				button* butt = DXclass->con.latestcreation;
+				butt->backgroundbutton = isbackground;
 				i++;
 			}
 			programdata = new debugging::debugwindow;
@@ -955,6 +958,7 @@ namespace DX2D
 			string fontname = menu.GetVar<string>("GAME@" + buttons[i] + "@FONTNAME");
 			float fontsize = menu.GetVar<float>("GAME@" + buttons[i] + "@FONTSIZE");
 			bool novis = menu.GetVar<bool>("GAME@" + buttons[i] + "@NOVISUALS");
+			bool isbackground = menu.GetVar<bool>("GAME@" + buttons[i] + "@ISBACKGROUND");
 			if (!novis)
 				DXclass->con.addbutton(btext, new int2(bpos), bsize, GAME::funcidmap[ID], mf, maincam, false, DXclass->textc, fontsize, fontname);
 			else
@@ -964,6 +968,7 @@ namespace DX2D
 			{
 				DXclass->con.buttons[DXclass->con.buttons.size()-1]->rbuttonpressfunc = GAME::select;
 			}
+			DXclass->con.latestcreation->backgroundbutton = isbackground;
 			i++;
 		}
 		mcam = DXclass->maincam;
@@ -1508,10 +1513,13 @@ namespace DX2D
 				movetype = mt_movnext;
 			else
 				movetype = mt_mov;
-			DXclass->con.MouseEvent(wParam, lParam, msg);
 			int i = 0;
+			bool waspycalled = false;
 			if(UI != nullptr)
-				UI->MouseEvent(wParam, lParam, msg);
+				waspycalled = UI->MouseEvent(wParam, lParam, msg);
+			DXclass->con.waspycalled = waspycalled;
+			DXclass->con.MouseEvent(wParam, lParam, msg);
+			DXclass->con.waspycalled = false;
 			if (DXclass->programdata != nullptr)
 			{
 				int2 pos(GET_X_LPARAM((lParam)), GET_Y_LPARAM((lParam)));

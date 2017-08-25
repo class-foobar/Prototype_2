@@ -168,7 +168,6 @@ namespace DX2D
 		physics pclass;
 		int2* pobjpos;
 		void callreinit();
-
 	protected:
 		vector<frame*> defaultbutton_fv;
 		frame* defaultbutton_disabled;
@@ -187,25 +186,11 @@ namespace DX2D
 			auto localname = _pyscriptname;
 			string loccopy = _callpyloc;
 			FILE* _f = NULL;
-			//if(_testi < 51)
-			_f = _Py_fopen(loccopy.c_str(), "r+");/* fopen(loccopy.c_str(), "r+");*/
-			//else
-			//{
-			//	_f = _Py_fopen(_pyblankscriptname.c_str(), "r+");
-			//	localname = "blank.py";
-			//}
+			_f = _Py_fopen(loccopy.c_str(), "r+");
 			_pyscriptname = "";
 			_callpyloc = "";
 			try
 			{
-				//if (_testi == 51)
-				//{
-				//	malloc(sizeof(ulli));
-				//	//callreinit();
-				//	_testi = -1;
-				//}
-				/*auto res = PyRun_FileEx(_f, _pyscriptname.c_str(), Py_eval_input,Py_True, Py_True,1);*/
-				//auto res2 = PyRun_AnyFileEx(_f, localname.c_str(), false);
 				auto res = PyRun_AnyFileEx(_f, localname.c_str(), true);
 				//fclose(_f);
 				_testi++;
@@ -228,6 +213,7 @@ namespace DX2D
 			//}
 		}
 	public:
+		bool waspycalled = false;
 		inline physics* GetPhysP()
 		{
 			return &pclass;

@@ -45,10 +45,14 @@ def main ():
     if not isinside:
         return
     if(GUI.Memory_Find(wnd,msg)):
+        print(msg + " was found!")
         pyf = GUI.Memory_Get(wnd,msg)
-        mod = importlib.import_module(pyf)
+        npyf = pyf.replace(".py","")
+        mod = importlib.import_module(npyf)
         met = getattr(mod,"main")
-        met(strid,float2(0.1,0.1),float2(0.1,0.1))
+        met(strid,0.1,0.1,0.1,0.1)
+    else: 
+        print(msg + " was not found")
     if msg == "MOUSEMOVE":
         if(not hasmover) and isinside:
             GUI.Memory_Set(wnd,"hasmover","BOOL",true)

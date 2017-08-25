@@ -16,6 +16,15 @@
     <Filter Include="Scripts">
       <UniqueIdentifier>{039eb792-9092-4712-b2e1-fd1a06a57a0f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Scripts\basewindow">
+      <UniqueIdentifier>{4398e721-a8ed-4ceb-8961-4776727394c5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scripts\button">
+      <UniqueIdentifier>{36f8e397-0764-42bd-9f41-ccec42a812b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scripts\Utillity">
+      <UniqueIdentifier>{1977001d-1ae7-4065-a7f2-eac9dbdc2564}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -107,17 +116,32 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="basewindow_flagproc.py">
+      <Filter>Scripts\basewindow</Filter>
+    </None>
+    <None Include="basewindow_msg_close.py">
+      <Filter>Scripts\basewindow</Filter>
+    </None>
+    <None Include="basewindow_msg_main.py">
+      <Filter>Scripts\basewindow</Filter>
+    </None>
+    <None Include="basewindow_msg_minimize.py">
+      <Filter>Scripts\basewindow</Filter>
+    </None>
+    <None Include="basewindow_msg_move.py">
+      <Filter>Scripts\basewindow</Filter>
+    </None>
     <None Include="button_flagproc.py">
-      <Filter>Scripts</Filter>
+      <Filter>Scripts\button</Filter>
     </None>
     <None Include="button_msg_main.py">
-      <Filter>Scripts</Filter>
+      <Filter>Scripts\button</Filter>
     </None>
     <None Include="blank.py">
-      <Filter>Scripts</Filter>
+      <Filter>Scripts\Utillity</Filter>
     </None>
     <None Include="window_createempty.py">
-      <Filter>Scripts</Filter>
+      <Filter>Scripts\Utillity</Filter>
     </None>
   </ItemGroup>
 </Project>

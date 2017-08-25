@@ -625,7 +625,7 @@ namespace classvariables
 #define defaultinterpolationmode D2D1_BITMAP_INTERPOLATION_MODE_LINEAR  //D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR
 #define advancedinterpolatonmode D2D1_INTERPOLATION_MODE::D2D1_INTERPOLATION_MODE_ANISOTROPIC
 #define PYFUNCD(name) static  PyObject* name(PyObject *self, PyObject *args)
-#define PYFUNC(name) static PyObject* name(PyObject *self, PyObject *args); vecbreaker<PyObject*(*)(PyObject*,PyObject*)> name ## generic_vbreaker(vb,name,#name); PYFUNCD(name)
+#define PYFUNC(name) static PyObject* name(PyObject *self, PyObject *args); vecbreaker<PyObject*(*)(PyObject*,PyObject*)> name ## generic_vbreaker(vb,name,#name,__COUNTER__); PYFUNCD(name)
 #define BS(name) void name (string s); vecbreaker<void(*)(string s)> name ## vbreaker = vb + &name
 #define PYMETH(name) {#name,name,METH_VARARGS, "If I'd tell you I'd have to kill you"}
 template<typename univar>
@@ -643,7 +643,7 @@ public:
 	{
 
 	}
-	vecbreaker(vecbreaker vbr,univar uv,string str)
+	vecbreaker(vecbreaker &vbr,univar uv,string str...)
 	{
 		vbr.vec.push_back(uv);
 		vbr.names.push_back(str);
@@ -900,7 +900,7 @@ namespace common
 			}
 			else if (type == "STR")
 			{
-				string str = (string) "\"" + boost::any_cast<string>(val) + (string) "\"" + "\n";
+				string str = (string) boost::any_cast<string>(val);
 				return ToPyObj( str );
 			}
 			else if (type == "WSTR")

@@ -158,6 +158,11 @@
     <ClInclude Include="universe.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="basewindow_flagproc.py" />
+    <None Include="basewindow_msg_close.py" />
+    <None Include="basewindow_msg_main.py" />
+    <None Include="basewindow_msg_minimize.py" />
+    <None Include="basewindow_msg_move.py" />
     <None Include="blank.py" />
     <None Include="button_flagproc.py" />
     <None Include="button_msg_main.py" />

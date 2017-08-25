@@ -96,7 +96,7 @@ namespace GAME
 			frame* f = nullptr;
 			frame* sf = nullptr;
 			vector<bool*> shaperb;
-			UIresult initvis(style& s, uni2<float> npos, uni2<float> screenmultip);
+			UIresult initvis(style& s, uni2<float> npos, uni2<float> screenmultip, ulli flags = 0);
 			UIresult scale(int2 nsize);
 			UIresult show();
 			UIresult hide();
@@ -112,6 +112,8 @@ namespace GAME
 			common::RGBA* seccol = nullptr;
 			bool hassprite = false;
 			sprite ico;
+			bool lockh = false;
+			bool lockv = false;
 			union /*shapesize*/
 			{
 				float radius = 0.0f;
@@ -224,8 +226,9 @@ namespace GAME
 			map<string, ui> wndnamemap;
 			map<ui, style> styles;
 			map<string, sprite> icons;
+			//uni2<float> screensizemultip;
 			map<string, ui> styleids;
-			void MouseEvent(WPARAM wParam, LPARAM lParam, UINT msg);
+			bool MouseEvent(WPARAM wParam, LPARAM lParam, UINT msg);
 			UIresult AttachTo(window* parent, window* child, unsigned long int flags = AT_NULL);
 			//UIresult NewWindow(window*parent, int2 pos, int2 size, ui styleid, unsigned long int flags = 0x00000000L);
 			//UIresult NewWindow(window*parent, int2 pos, int2 size, string stylename, unsigned long int flags = 0x00000000L);

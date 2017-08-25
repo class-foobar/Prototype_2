@@ -1,6 +1,7 @@
 import sys
 import GUI
 import AZflib
+import importlib
 args = sys.argv
 strid = sys.argv[0]
 loc = sys.argv[1]
@@ -15,7 +16,9 @@ OUTptr = GUI.GetCol(wnd,"OUT")
 GUI.AddColPtr(wnd,INptr,"INcopy")
 GUI.AddColPtr(wnd,OUTptr,"OUTcopy")
 file = AZflib.Open(loc + "/data/UI/gameui.data")
-b = AZflib.FindVar(strv + "@DATA@LBUTTONUP")
-if b:
-    GUI.Memory_Set(wnd,"LBUTTONUP","STR",AZflib.GetVar(file,"STR",strv + "@DATA@LBUTTONUP"))
+inputvec = ["LBUTTONUP","RBUTTONUP","LBUTTONDOWN","RBUTTONDOWN","MBUTTONUP","MBUTTONDOWN","MOUSEMOVE"]
+for v in inputvec:
+    b = AZflib.FindVar(file,floc + "@DATA@" + v)
+    if b:
+       GUI.Memory_Set(wnd,v,"STR",AZflib.GetVar(file,"STR",floc + "@DATA@" + v))
 GUI.Exit(strid)

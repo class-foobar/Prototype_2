@@ -83,14 +83,25 @@ namespace DX2D
 			v.push_back((void*)pairptr);
 			v.push_back(pos.x);
 			v.push_back(pos.y);
-			UI->args.insert(make_pair(strid, v));
 			string subloc = boost::any_cast<string>(bt->anyvars[3]);
-			wstring wstr = STRtoWSTR(strid);
-			const wchar_t * ch = wstr.c_str();
-			wstring wstr2 = STRtoWSTR(subloc);
-			const wchar_t* ch1 = wstr2.c_str();
-			wchar_t* args[] = { const_cast<wchar_t*>(ch), const_cast<wchar_t*>(ch1)};
-			PySys_SetArgv(2, args);
+
+			wstring wstr0 = STRtoWSTR(strid);
+			wchar_t * ch0 = new wchar_t[wstr0.size() + 1];
+			wcsncpy(ch0, wstr0.c_str(), wstr0.size() + 1);
+			wstring wstr1 = STRtoWSTR(subloc);
+			wchar_t * ch1 = new wchar_t[wstr1.size() + 1];
+			wcsncpy(ch1, wstr1.c_str(), wstr1.size() + 1);
+			wchar_t* _args[] = { ch0, /*ch1*/};
+			int argc = sizeof(_args) / sizeof(_args[0]);
+			vector<wchar_t*> w_tv = { ch0,ch1 };
+			v.push_back(w_tv);
+			while (UI->isargbmodified)
+				Sleep(0);
+			UI->isargbmodified = true;
+			UI->args.insert(make_pair(strid, v));
+			UI->isargbmodified = false;
+
+			PySys_SetArgv(argc, _args);
 			int ii = 0;
 			string loc = subloc + "scripts\\" + scriptname;
 			_pyblankscriptname = subloc + "scripts\\" + "blank.py";
@@ -102,7 +113,6 @@ namespace DX2D
 				_pyscriptname = scriptname;
 				thread* thptr = nullptr;
 				scriptthreads.push_back(thptr = new thread (&controls::callpyscript,this));
-				//thptr->detach();
 			}
 			catch (...)
 			{
@@ -197,13 +207,19 @@ namespace DX2D
 			}
 			GUI::core* UIptr = GAME::UI;
 			if (buttons[i]->callpyscript)
-				if(buttons[i]->callpyonanymmove)
+				if (buttons[i]->callpyonanymmove)
+				{
 					callpy(buttons[i], msg, pos);
+					waspycalled = true;
+				}
 				else
 				{
 					int4 rec(*buttons[i]->pos, *buttons[i]->pos + buttons[i]->size);
-					if(classvariables::isinside(rec,pos))
+					if (classvariables::isinside(rec, pos))
+					{
 						callpy(buttons[i], msg, pos);
+						waspycalled = true;
+					}
 				}
 			i++;
 		}
@@ -219,7 +235,7 @@ namespace DX2D
 		i = 0;
 		while (i < bac.size())
 		{
-			if (bac.size() != 1 && bac[i]->backgroundbutton)
+			if (bac.size() != 1 && bac[i]->backgroundbutton || (bac[i]->backgroundbutton && waspycalled))
 			{
 				i++;
 				continue;
@@ -242,8 +258,11 @@ namespace DX2D
 					mmousemovefunc(pos);
 			while (i < bac.size())
 			{
-				if (bac.size() != 1 && bac[i]->backgroundbutton)
-					break;
+				if ((bac.size() != 1 && bac[i]->backgroundbutton) || (bac[i]->backgroundbutton && waspycalled))
+				{
+					i++;
+					continue;
+				}
 				MouseMove(bac[i], pos);
 				i++;
 			}
@@ -253,8 +272,11 @@ namespace DX2D
 		{
 			while (i < bac.size())
 			{
-				if (bac.size() != 1 && bac[i]->backgroundbutton)
-					break;
+				if ((bac.size() != 1 && bac[i]->backgroundbutton) || (bac[i]->backgroundbutton && waspycalled))
+				{
+					i++;
+					continue;
+				}
 				MouseMMB(bac[i], pos);
 				i++;
 			}
@@ -264,8 +286,11 @@ namespace DX2D
 		{
 			while (i < bac.size())
 			{
-				if (bac.size() != 1 && bac[i]->backgroundbutton)
-					break;
+				if ((bac.size() != 1 && bac[i]->backgroundbutton) || (bac[i]->backgroundbutton && waspycalled))
+				{
+					i++;
+					continue;
+				}
 				MouseMMBup(bac[i], pos);
 				i++;
 			}
@@ -275,8 +300,11 @@ namespace DX2D
 		{
 			while (i < bac.size())
 			{
-				if (bac.size() != 1 && bac[i]->backgroundbutton)
-					break;
+				if ((bac.size() != 1 && bac[i]->backgroundbutton) || (bac[i]->backgroundbutton && waspycalled))
+				{
+					i++;
+					continue;
+				}
 				MouseRMB(bac[i], pos);
 				i++;
 			}
@@ -286,8 +314,11 @@ namespace DX2D
 		{
 			while (i < bac.size())
 			{
-				if (bac.size() != 1 && bac[i]->backgroundbutton)
-					break;
+				if ((bac.size() != 1 && bac[i]->backgroundbutton) || (bac[i]->backgroundbutton && waspycalled))
+				{
+					i++;
+					continue;
+				}
 				MouseRMBup(bac[i], pos);
 				i++;
 			}
@@ -297,8 +328,11 @@ namespace DX2D
 		{
 			while (i < bac.size())
 			{
-				if (bac.size() != 1 && bac[i]->backgroundbutton)
-					break;
+				if ((bac.size() != 1 && bac[i]->backgroundbutton) || (bac[i]->backgroundbutton && waspycalled))
+				{
+					i++;
+					continue;
+				}
 				MouseLMB(bac[i], pos);
 				i++;
 			}
@@ -308,8 +342,11 @@ namespace DX2D
 		{
 			while (i < bac.size())
 			{
-				if (bac.size() != 1 && bac[i]->backgroundbutton)
-					break;
+				if ((bac.size() != 1 && bac[i]->backgroundbutton) || (bac[i]->backgroundbutton && waspycalled))
+				{
+					i++;
+					continue;
+				}
 				MouseLMBup(bac[i], pos);
 				i++;
 			}

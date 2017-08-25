@@ -1,5 +1,6 @@
 #include "GUI.h"
 #define corruptioncheck 0
+
 namespace GAME
 {
 	extern int4 camrect;
@@ -8,682 +9,767 @@ namespace GAME
 	{
 		namespace Python
 		{
-			vecbreaker <PyObject*(*)(PyObject*, PyObject*)> vb;
-			//----------------------------------------------------------------------------------------------------------------------------
-			//MODULE: GUI 
-			PYFUNC(NewWindow)
+			namespace GUIMOD
 			{
-				ui flags, parentid;
-				uni2<float> pos, size;
-				char* chstylename = NULL, *chthisname = NULL;
-				PyArg_ParseTuple(args, "I|s|f|f|f|f|I|s", &parentid, &chstylename, &pos.x, &pos.y, &size.x, &size.y,&flags,&chthisname);
-				string stylename = chstylename;
-				string thisname = chthisname;
-				auto res = UI->NewWindow(UI->wnds[parentid], pos, size, stylename, (ui)flags);
-				auto wnd = boost::any_cast<window*>(res.retval[0]);
-				wnd->strname = thisname;
+				vecbreaker <PyObject*(*)(PyObject*, PyObject*)> vb;
+				//----------------------------------------------------------------------------------------------------------------------------
+				//MODULE: GUI 
+				PYFUNC(NewWindow)
+				{
+					ui flags, parentid;
+					uni2<float> pos, size;
+					char* chstylename = NULL, *chthisname = NULL;
+					PyArg_ParseTuple(args, "I|s|f|f|f|f|I|s", &parentid, &chstylename, &pos.x, &pos.y, &size.x, &size.y, &flags, &chthisname);
+					string stylename = chstylename;
+					string thisname = chthisname;
+					auto res = UI->NewWindow(UI->wnds[parentid], pos, size, stylename, (ui)flags);
+					auto wnd = boost::any_cast<window*>(res.retval[0]);
+					wnd->strname = thisname;
 #if corruptioncheck == 1
-				auto _heap = malloc(sizeof(int));
-				free(_heap);
+					auto _heap = malloc(sizeof(int));
+					free(_heap);
 #endif
-				return PyBool_FromLong(0);
-			}
-			PYFUNC(HideWindow)
-			{
-				ui ID;
-				PyArg_ParseTuple(args, "I", &ID);
-				UI->wnds[ID]->hide();
-				return PyBool_FromLong(0);
-			}
-			PYFUNC(ShowWindow)
-			{
-				ui ID;
-				PyArg_ParseTuple(args, "I", &ID);
-				UI->wnds[ID]->show();
-				return PyBool_FromLong(0);
-			}
-			PYFUNC(SwitchWinVis)
-			{
-				ui ID;
-				PyArg_ParseTuple(args, "I", &ID);
-				UI->wnds[ID]->switchvis();
-				return PyBool_FromLong(0);
-			}
-			PYFUNC(GetX)
-			{
-				ui ID;
-				PyArg_ParseTuple(args, "I", &ID);
-				return PyLong_FromLong(UI->wnds[ID]->pos->x);
-			}
-			PYFUNC(GetY)
-			{
-				ui ID;
-				PyArg_ParseTuple(args, "I", &ID);
-				return PyLong_FromLong(UI->wnds[ID]->pos->y);
+					return PyLong_FromUnsignedLong(wnd->ID);
+				}
+				PYFUNC(HideWindow)
+				{
+					ui ID;
+					PyArg_ParseTuple(args, "I", &ID);
+					UI->wnds[ID]->hide();
+					return PyBool_FromLong(0);
+				}
+				PYFUNC(ShowWindow)
+				{
+					ui ID;
+					PyArg_ParseTuple(args, "I", &ID);
+					UI->wnds[ID]->show();
+					return PyBool_FromLong(0);
+				}
+				PYFUNC(SwitchWinVis)
+				{
+					ui ID;
+					PyArg_ParseTuple(args, "I", &ID);
+					UI->wnds[ID]->switchvis();
+					return PyBool_FromLong(0);
+				}
+				PYFUNC(GetX)
+				{
+					ui ID;
+					PyArg_ParseTuple(args, "I", &ID);
+					return PyLong_FromLong(UI->wnds[ID]->pos->x);
+				}
+				PYFUNC(GetY)
+				{
+					ui ID;
+					PyArg_ParseTuple(args, "I", &ID);
+					return PyLong_FromLong(UI->wnds[ID]->pos->y);
 
-			}
-			PYFUNC(SetX)
-			{
-				ui ID;
-				int n;
-				PyArg_ParseTuple(args, "I","i", &ID,&n);
-				UI->wnds[ID]->pos->x = n;
-				return PyBool_FromLong(0);
-			}
-			PYFUNC(SetY)
-			{
-				ui ID;
-				int n;
-				PyArg_ParseTuple(args, "I", "i", &ID, &n);
-				UI->wnds[ID]->pos->y = n;
-				return PyBool_FromLong(0);
-			}
-			PYFUNC(SetXu)
-			{
-				ui ID;
-				int n;
-				PyArg_ParseTuple(args, "I", "i", &ID, &n);
-				int2 old = *UI->wnds[ID]->pos;
-				UI->wnds[ID]->pos->x = n;
-				UI->wnds[ID]->updatepos(old);
-				return PyBool_FromLong(0);
+				}
+				PYFUNC(SetX)
+				{
+					ui ID;
+					int n;
+					PyArg_ParseTuple(args, "I", "i", &ID, &n);
+					UI->wnds[ID]->pos->x = n;
+					return PyBool_FromLong(0);
+				}
+				PYFUNC(SetY)
+				{
+					ui ID;
+					int n;
+					PyArg_ParseTuple(args, "I", "i", &ID, &n);
+					UI->wnds[ID]->pos->y = n;
+					return PyBool_FromLong(0);
+				}
+				PYFUNC(SetXu)
+				{
+					ui ID;
+					int n;
+					PyArg_ParseTuple(args, "I", "i", &ID, &n);
+					int2 old = *UI->wnds[ID]->pos;
+					UI->wnds[ID]->pos->x = n;
+					UI->wnds[ID]->updatepos(old);
+					return PyBool_FromLong(0);
 
-			}
-			PYFUNC(SetYu)
-			{
-				ui ID;
-				int n;
-				PyArg_ParseTuple(args, "I", "i", &ID, &n);
-				int2 old = *UI->wnds[ID]->pos;
-				UI->wnds[ID]->pos->y = n;
-				UI->wnds[ID]->updatepos(old);
-				return PyBool_FromLong(0);
-			}
-			PYFUNC(SetSX)
-			{
-				ui ID;
-				int n;
-				PyArg_ParseTuple(args, "I", "i", &ID, &n);
-				UI->wnds[ID]->size.x = n;
-				return PyBool_FromLong(0);
-			}
-			PYFUNC(SetSY)
-			{
-				ui ID;
-				int n;
-				PyArg_ParseTuple(args, "I", "i", &ID, &n);
-				UI->wnds[ID]->size.y = n;
-				return PyBool_FromLong(0);
-			}
-			PYFUNC(GetSX)
-			{
-				ui ID;
-				PyArg_ParseTuple(args, "I", &ID);
-				return PyLong_FromLong(UI->wnds[ID]->size.x);
-			}
-			PYFUNC(GetSY)
-			{
-				ui ID;
-				PyArg_ParseTuple(args, "I", &ID);
-				return PyLong_FromLong(UI->wnds[ID]->size.y);
-			}
-			PYFUNC(SetCol)
-			{
-				ui ID;
-				string node, nnode;
-				char *ch0 = NULL, *ch1 = NULL;
-				bool switcharound = false;
-				PyArg_ParseTuple(args, "I|s|s|b", &ID, &ch0, &ch1, &switcharound);
-				node = ch0;
-				nnode = ch1;
-				style s = UI->styles[UI->wnds[ID]->styleid];
-				auto oldptr = *UI->wnds[ID]->colnodes[node];
-				auto ptr = *UI->wnds[ID]->colnodes[node] = *UI->wnds[ID]->colnodes[nnode];
-				if (switcharound == true)
-					*UI->wnds[ID]->colnodes[nnode] = oldptr;
+				}
+				PYFUNC(SetYu)
+				{
+					ui ID;
+					int n;
+					PyArg_ParseTuple(args, "I", "i", &ID, &n);
+					int2 old = *UI->wnds[ID]->pos;
+					UI->wnds[ID]->pos->y = n;
+					UI->wnds[ID]->updatepos(old);
+					return PyBool_FromLong(0);
+				}
+				PYFUNC(SetSX)
+				{
+					ui ID;
+					int n;
+					PyArg_ParseTuple(args, "I", "i", &ID, &n);
+					UI->wnds[ID]->size.x = n;
+					return PyBool_FromLong(0);
+				}
+				PYFUNC(SetSY)
+				{
+					ui ID;
+					int n;
+					PyArg_ParseTuple(args, "I", "i", &ID, &n);
+					UI->wnds[ID]->size.y = n;
+					return PyBool_FromLong(0);
+				}
+				PYFUNC(GetSX)
+				{
+					ui ID;
+					PyArg_ParseTuple(args, "I", &ID);
+					return PyLong_FromLong(UI->wnds[ID]->size.x);
+				}
+				PYFUNC(GetSY)
+				{
+					ui ID;
+					PyArg_ParseTuple(args, "I", &ID);
+					return PyLong_FromLong(UI->wnds[ID]->size.y);
+				}
+				PYFUNC(SetCol)
+				{
+					ui ID;
+					string node, nnode;
+					char *ch0 = NULL, *ch1 = NULL;
+					bool switcharound = false;
+					PyArg_ParseTuple(args, "I|s|s|b", &ID, &ch0, &ch1, &switcharound);
+					node = ch0;
+					nnode = ch1;
+					style s = UI->styles[UI->wnds[ID]->styleid];
+					auto oldptr = *UI->wnds[ID]->colnodes[node];
+					auto ptr = *UI->wnds[ID]->colnodes[node] = *UI->wnds[ID]->colnodes[nnode];
+					if (switcharound == true)
+						*UI->wnds[ID]->colnodes[nnode] = oldptr;
 #if corruptioncheck == 1
-				auto _heap = malloc(sizeof(int));
-				free(_heap);
+					auto _heap = malloc(sizeof(int));
+					free(_heap);
 #endif
-				return PyBool_FromLong(0);
-			}
-			PYFUNC(GetCol)
-			{
-				string name;
-				char* ch0 = NULL;
-				ui ID;
-				PyArg_ParseTuple(args, "I|s", &ID,&ch0);
-				name = ch0;
+					return PyBool_FromLong(0);
+				}
+				PYFUNC(GetCol)
+				{
+					string name;
+					char* ch0 = NULL;
+					ui ID;
+					PyArg_ParseTuple(args, "I|s", &ID, &ch0);
+					name = ch0;
 #if corruptioncheck == 1
-				auto _heap = malloc(sizeof(int));
-				free(_heap);
+					auto _heap = malloc(sizeof(int));
+					free(_heap);
 #endif
-				return PyLong_FromVoidPtr(UI->wnds[ID]->colnodes[name]);
-			}
-			PYFUNC(AddColPtr)
-			{
-				ui ID;
-				ulli ptr0, ptr1;
-				string name;
-				char* ch0 = NULL;
-				PyArg_ParseTuple(args, "I|K|s", &ID,&ptr0,&ch0);
-				name = ch0;
-				auto c0 = static_cast<pair<ID2D1SolidColorBrush*, ID2D1SolidColorBrush*>*>((void*)ptr0);
-				UI->wnds[ID]->colnodes.insert(make_pair(name, new pair<ID2D1SolidColorBrush*, ID2D1SolidColorBrush*>(*c0)));
-				return PyLong_FromLong(0);
-			}
-			PYFUNC(CreateColFromRGB)
-			{
-				ulli ptr0,ptr1;
-				PyArg_ParseTuple(args, "K|K",&ptr0,&ptr1);
-				common::RGBA* col0 = static_cast<common::RGBA*>((void*) ptr0);
-				common::RGBA* col1 = nullptr;
-				if(ptr1 != 0)
-					col1 = static_cast<common::RGBA*>((void*) ptr1);
-				camera* cam = UI->cam;
-				ID2D1SolidColorBrush* b0;
-				ID2D1SolidColorBrush* b1 = nullptr;
-				(*cam->GetRenderTargetP())->CreateSolidColorBrush(col0->toColorF(), &b0);
-				if(col1 != nullptr)
-					(*cam->GetRenderTargetP())->CreateSolidColorBrush(col1->toColorF(), &b1);
-				pair<ID2D1SolidColorBrush*, ID2D1SolidColorBrush*>* pir = new pair<ID2D1SolidColorBrush*, ID2D1SolidColorBrush*>(b0, b1);
-				return PyLong_FromVoidPtr(pir);
-			}
-			PYFUNC(AddCol)
-			{
-				ui ID;
-				float r, g, b, a;
-				char* ch0 = NULL;
-				string name;
-				PyArg_ParseTuple(args, "I|f|f|f|f|s", &ID, &r,&g,&b,&a,&ch0);
-				name = ch0;
-				common::RGBA col(r, g, b, a);
-				auto ptr = malloc(sizeof common::RGBA);
-				ptr = new common::RGBA(col);
-				if(ID != 0)
-					UI->wnds[ID]->otherobjts.push_back(ptr);
-				return PyLong_FromVoidPtr(ptr);
-			}
-			PYFUNC(UpdatePos)
-			{
-				ui ID;
-				int2 old;
-				PyArg_ParseTuple(args, "I|i|i", &ID,&old.x,&old.y);
-				UI->wnds[ID]->updatepos(old);
-				return PyLong_FromLong(0);
-			}
-			PYFUNC(GetArg)
-			{
-				string strid;
-				char* stridch = NULL;
-				int it;
-				PyArg_ParseTuple(args, "s|i", &stridch,&it);
-				strid = stridch;
-				vector<boost::any> bargs = UI->args[strid];
-				switch (it)
-				{
-				case 0:
-				{
-					return PyLong_FromUnsignedLong(boost::any_cast<ui>(bargs[0]));
-					break;
+					return PyLong_FromVoidPtr(UI->wnds[ID]->colnodes[name]);
 				}
-				case 1:
+				PYFUNC(AddColPtr)
 				{
-					return PyLong_FromLong(boost::any_cast<int>(bargs[1]));
-					break;
+					ui ID;
+					ulli ptr0, ptr1;
+					string name;
+					char* ch0 = NULL;
+					PyArg_ParseTuple(args, "I|K|s", &ID, &ptr0, &ch0);
+					name = ch0;
+					auto c0 = static_cast<pair<ID2D1SolidColorBrush*, ID2D1SolidColorBrush*>*>((void*)ptr0);
+					UI->wnds[ID]->colnodes.insert(make_pair(name, new pair<ID2D1SolidColorBrush*, ID2D1SolidColorBrush*>(*c0)));
+					return PyLong_FromLong(0);
 				}
-				case 2:
+				PYFUNC(CreateColFromRGB)
 				{
-					return PyLong_FromUnsignedLong(boost::any_cast<ui>(bargs[2]));
-					break;
+					ulli ptr0, ptr1;
+					PyArg_ParseTuple(args, "K|K", &ptr0, &ptr1);
+					common::RGBA* col0 = static_cast<common::RGBA*>((void*)ptr0);
+					common::RGBA* col1 = nullptr;
+					if (ptr1 != 0)
+						col1 = static_cast<common::RGBA*>((void*)ptr1);
+					camera* cam = UI->cam;
+					ID2D1SolidColorBrush* b0;
+					ID2D1SolidColorBrush* b1 = nullptr;
+					(*cam->GetRenderTargetP())->CreateSolidColorBrush(col0->toColorF(), &b0);
+					if (col1 != nullptr)
+						(*cam->GetRenderTargetP())->CreateSolidColorBrush(col1->toColorF(), &b1);
+					pair<ID2D1SolidColorBrush*, ID2D1SolidColorBrush*>* pir = new pair<ID2D1SolidColorBrush*, ID2D1SolidColorBrush*>(b0, b1);
+					return PyLong_FromVoidPtr(pir);
 				}
-				case 3:
+				PYFUNC(AddCol)
 				{
-					string str = boost::any_cast<string>(bargs[3]);
-					return PyUnicode_FromStringAndSize(str.c_str(),str.size());
-					break;
+					ui ID;
+					float r, g, b, a;
+					char* ch0 = NULL;
+					string name;
+					PyArg_ParseTuple(args, "I|f|f|f|f|s", &ID, &r, &g, &b, &a, &ch0);
+					name = ch0;
+					common::RGBA col(r, g, b, a);
+					auto ptr = malloc(sizeof common::RGBA);
+					ptr = new common::RGBA(col);
+					if (ID != 0)
+						UI->wnds[ID]->otherobjts.push_back(ptr);
+					return PyLong_FromVoidPtr(ptr);
 				}
-				case 4:
+				PYFUNC(UpdatePos)
 				{
-					string str = boost::any_cast<string>(bargs[4]);
-					return PyUnicode_FromStringAndSize(str.c_str(), str.size());
-					break;
+					ui ID;
+					int2 old;
+					PyArg_ParseTuple(args, "I|i|i", &ID, &old.x, &old.y);
+					UI->wnds[ID]->updatepos(old);
+					return PyLong_FromLong(0);
 				}
-				case 5:
+				PYFUNC(GetArg)
 				{
-					return PyLong_FromVoidPtr(boost::any_cast<void*>(bargs[5]));
-					break;
+					string strid;
+					char* stridch = NULL;
+					int it;
+					PyArg_ParseTuple(args, "s|i", &stridch, &it);
+					strid = stridch;
+					vector<boost::any> bargs = UI->args[strid];
+					switch (it)
+					{
+					case 0:
+					{
+						return PyLong_FromUnsignedLong(boost::any_cast<ui>(bargs[0]));
+						break;
+					}
+					case 1:
+					{
+						return PyLong_FromLong(boost::any_cast<int>(bargs[1]));
+						break;
+					}
+					case 2:
+					{
+						return PyLong_FromUnsignedLong(boost::any_cast<ui>(bargs[2]));
+						break;
+					}
+					case 3:
+					{
+						string str = boost::any_cast<string>(bargs[3]);
+						return PyUnicode_FromStringAndSize(str.c_str(), str.size());
+						break;
+					}
+					case 4:
+					{
+						string str = boost::any_cast<string>(bargs[4]);
+						return PyUnicode_FromStringAndSize(str.c_str(), str.size());
+						break;
+					}
+					case 5:
+					{
+						return PyLong_FromVoidPtr(boost::any_cast<void*>(bargs[5]));
+						break;
+					}
+					case 6:
+					{
+						return PyLong_FromLong(boost::any_cast<int>(bargs[6]));
+						break;
+					}
+					case 7:
+					{
+						return PyLong_FromLong(boost::any_cast<int>(bargs[7]));
+						break;
+					}
+					}
 				}
-				case 6:
+				PYFUNC(Exit)
 				{
-					return PyLong_FromLong(boost::any_cast<int>(bargs[6]));
-					break;
-				}
-				case 7:
-				{
-					return PyLong_FromLong(boost::any_cast<int>(bargs[7]));
-					break;
-				}
-				}
-			}
-			PYFUNC(Exit)
-			{
-				string strid;
-				char*ch = NULL;
-				PyArg_ParseTuple(args, "s", &ch);
-				strid = ch;
-				while (UI->isargbmodified)
-					Sleep(0);
-				UI->isargbmodified = true;
-				UI->args.erase(strid);
-				UI->isargbmodified = false;
-#if corruptioncheck == 1
-				auto _heap = malloc(sizeof(int));
-				free(_heap);
-#endif
-				return PyLong_FromLong(0);
-			}
-			PYFUNC(MouseMoveDetB)
-			{
-				ulli ptr;
-				bool b;
-				PyArg_ParseTuple(args, "K|b", &ptr,&b);
-				auto bcptr = static_cast<pair<button*, controls*>*>((void*)ptr);
-				bcptr->first->callpyonanymmove = b;
-				return Py_True;
-			}
-			PYFUNC(Memory_Set)
-			{
-				string type, name, dummytype, dummyname;
-				ui ID;
-				char* ch0 = NULL, *ch1 = NULL;
-				bool b = false;
-				PyObject* obj;
-				PyArg_ParseTuple(args, "I|s|s|O", &ID,&ch0,&ch1,&obj);
-				name = ch0;
-				type = ch1;
-				int pid = getpid();
-				window* wnd = UI->wnds[ID];
-				if (!MapFind(wnd->memory, pid))
-				{
-					wnd->memory[pid];
-				}
-				if (type == "STR")
-				{
-					string val = PyBytes_AsString(obj);
-					MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
-				}
-				else if (type == "INT")
-				{
-					int val = PyLong_AsLong(obj);
-					//PyArg_ParseTuple(args, string("I|s|s|" + 'i').c_str(), &ID, &dummyname, &dummytype, &val);
-					MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
-				}
-				else if (type == "BOOL")
-				{
-					bool val;
-					//PyArg_ParseTuple(args, string("I|s|s|" + 'p').c_str(), &ID, &ch0, &ch1, &val);
-					val = PyObject_IsTrue(obj);
-					::getpid();
-					MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
-				}
-				else if (type == "FLOAT")
-				{
-					float val = PyFloat_AsDouble(obj);
-					//PyArg_ParseTuple(args, string("I|s|s|" + 'f').c_str(), &ID, &ch0, &ch1, &val);
-					MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
-				}
-#if corruptioncheck == 1
-				auto _heap = malloc(sizeof(int));
-				free(_heap);
-#endif
-				Py_CLEAR(obj);
-				return Py_True;
+					string strid;
+					char*ch = NULL;
+					PyArg_ParseTuple(args, "s", &ch);
+					strid = ch;
+					while (UI->isargbmodified)
+						Sleep(0);
+					UI->isargbmodified = true;
+					if (MapFind(UI->args, strid))
+					{
+						auto bargs = UI->args[strid];
+						auto fargs = boost::any_cast<vector<wchar_t*>>(bargs[bargs.size() - 1]);
+						int i = 0;
+						while (i < fargs.size())
+						{
+							delete[] fargs[i];
+							i++;
+						}
+						UI->args.erase(strid);
+					}
+					UI->isargbmodified = false;
 
-			}
-			PYFUNC(Memory_GetType)
-			{
-				string type, name;
-				ui ID;
-				char* ch0 = NULL;
-				PyArg_ParseTuple(args, "I|s", &ID, &ch0);
-				name = ch0;
-				window* wnd = UI->wnds[ID];
-				type = wnd->memory[getpid()][name].first;
-				return PyUnicode_FromStringAndSize(type.c_str(), type.size());
-			}
-			PYFUNC(Memory_Get)
-			{
-				string type, name;
-				ui ID;
-				char* ch0 = NULL;
-				PyArg_ParseTuple(args, "I|s", &ID, &ch0);
-				name = ch0;
-				window* wnd = UI->wnds[ID];
-				auto var = wnd->memory[getpid()][name].second;
-				type = wnd->memory[getpid()][name].first;
-				if (type == "STR")
-				{
-					auto val = boost::any_cast<string>(var);
-					return PyUnicode_FromStringAndSize(val.c_str(), val.size());
-				}
-				else if (type == "INT")
-				{
-					return PyLong_FromLong(boost::any_cast<int>(var));
-				}
-				else if (type == "BOOL")
-				{
-					return PyBool_FromLong((long)boost::any_cast<bool>(var));
-				}
-				else if (type == "FLOAT")
-				{
-					return PyFloat_FromDouble(boost::any_cast<float>(var));
-				}
-				return PyLong_FromLong(0);
-			}
-			PYFUNC(Memory_Find)
-			{
-				string name;
-				ui ID;
-				char* ch0 = NULL;
-				PyArg_ParseTuple(args, "I|s", &ID, &ch0);
-				name = ch0;
-				return PyBool_FromLong((long) MapFind(UI->wnds[ID]->memory[getpid()], name));
-			}
-			PYFUNC(GetRealPosX)
-			{
-				int i;
-				ui ID;
-				PyArg_ParseTuple(args, "I|i", &ID, &i);
-				window* wnd = UI->wnds[ID];
-				return PyLong_FromLong(wnd->btts[i]->pos->x);
-			}
-			PYFUNC(GetRealPosY)
-			{
-				int i;
-				ui ID;
-				PyArg_ParseTuple(args, "I|i", &ID, &i);
-				window* wnd = UI->wnds[ID];
-				return PyLong_FromLong(wnd->btts[i]->pos->y);
-			}
-			PYFUNC(GetRealSizeX)
-			{
-				int i;
-				ui ID;
-				PyArg_ParseTuple(args, "I|i", &ID, &i);
-				window* wnd = UI->wnds[ID];
-				return PyLong_FromLong(wnd->btts[i]->size.x);
-			}
-			PYFUNC(GetRealSizeY)
-			{
-				int i;
-				ui ID;
-				PyArg_ParseTuple(args, "I|i", &ID, &i);
-				window* wnd = UI->wnds[ID];
-				return PyLong_FromLong(wnd->btts[i]->size.y);
-			}
-			PYFUNC(IsInside)
-			{
-				int4 rect;
-				int2 point;
-				PyArg_ParseTuple(args, "i|i|i|i|i|i", &point.x,&point.y,&rect.x,&rect.y,&rect.z,&rect.w);
-				return PyBool_FromLong((long)classvariables::isinside(rect, point));
-			}
-			PYFUNC(CursorX)
-			{
-				LPPOINT p = NULL;
-				GetCursorPos(p);
-				return PyLong_FromLong(p->x);
-			}
-			PYFUNC(CursorY)
-			{
-				LPPOINT p = NULL;
-				GetCursorPos(p);
-				return PyLong_FromLong(p->y);
-			}
-			PYFUNC(File_GetVar)
-			{
-				string filename, varname, type;
-				char* ch0 = NULL; char* ch1 = NULL; char* ch2 = NULL;
-				PyArg_ParseTuple(args, "s|s|s", &ch0,&ch1,&ch2);
-				filename = ch0;
-				varname = ch1;
-				type = ch2;
-				AZfile *file = nullptr;
-				if (filename == "gameui")
-					file = &UI->gameuif;
-				else if (filename == "styles")
-					file = &UI->stylef;
-				auto var = *file->GetFromNodes(varname);
 #if corruptioncheck == 1
-				auto _heap = malloc(sizeof(int));
-				free(_heap);
+					auto _heap = malloc(sizeof(int));
+					free(_heap);
 #endif
-				if (type == "STR")
-				{
-					auto val = boost::any_cast<string>(var);
-					return PyUnicode_FromStringAndSize(val.c_str(), val.size());
+					return PyLong_FromLong(0);
 				}
-				else if (type == "INT")
+				PYFUNC(MouseMoveDetB)
 				{
-					return PyLong_FromLong(boost::any_cast<int>(var));
+					ulli ptr;
+					bool b;
+					PyArg_ParseTuple(args, "K|b", &ptr, &b);
+					auto bcptr = static_cast<pair<button*, controls*>*>((void*)ptr);
+					bcptr->first->callpyonanymmove = b;
+					return Py_True;
 				}
-				else if (type == "BOOL")
+				PYFUNC(Memory_Set)
 				{
-					return PyBool_FromLong((long)boost::any_cast<bool>(var));
-				}
-				else if (type == "FLOAT")
-				{
-					return PyFloat_FromDouble(boost::any_cast<float>(var));
-				}
-			}
-			PYFUNC(File_Find)
-			{
-				string filename, varname;
-				char* ch0 = NULL, *ch1 = NULL;
-				PyArg_ParseTuple(args, "s|s",&ch0,&ch1);
-				filename = ch0;
-				varname = ch1;
-				AZfile *file = nullptr;
-				if (filename == "gameui")
-					file = &UI->gameuif; 
-				else if (filename == "styles")
-					file = &UI->stylef;
-				return PyBool_FromLong((long)file->findvar(varname));  
-			}
-			PYFUNC(AddSpriteToShape)
-			{
-				string spritename;
-				ui ID;
-				int i;
-				char* ch0 = NULL;
-				PyArg_ParseTuple(args, "I|s|i", &ID,&ch0,&i);
-				spritename = ch0;
-				window* wnd = UI->wnds[ID];
-				style s = UI->styles[wnd->styleid];
-				sprite sp = UI->icons[spritename];
-				sp.SetOffsetXYp(wnd->pos, true);
-				//bool* rb = new bool(true);
-				sp.render = wnd->shaperb[i];
-				sp.useidentp = true;
-				sp.identp = wnd->identp;
-				sp.size = (s.shapes[i].size * wnd->defmultip).toint2();
-				int2* i2sp;
-				sp.SyncPos(i2sp = new int2((s.shapes[i].pos * wnd->defmultip).toint2()), false);
-				wnd->sf->sprites.push_back(sp);
-				wnd->posvec.push_back(make_pair(i2sp, *i2sp));
+					string type, name, dummytype, dummyname;
+					ui ID;
+					char* ch0 = NULL, *ch1 = NULL;
+					bool b = false;
+					PyObject* obj;
+					PyArg_ParseTuple(args, "I|s|s|O", &ID, &ch0, &ch1, &obj);
+					name = ch0;
+					type = ch1;
+					int pid = getpid();
+					window* wnd = UI->wnds[ID];
+					if (!MapFind(wnd->memory, pid))
+					{
+						wnd->memory[pid];
+					}
+					if (type == "STR")
+					{
+						string val = PyBytes_AsString(PyUnicode_AsUTF8String(obj));
+						MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
+					}
+					else if (type == "INT")
+					{
+						int val = PyLong_AsLong(obj);
+						//PyArg_ParseTuple(args, string("I|s|s|" + 'i').c_str(), &ID, &dummyname, &dummytype, &val);
+						MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
+					}
+					else if (type == "BOOL")
+					{
+						bool val;
+						//PyArg_ParseTuple(args, string("I|s|s|" + 'p').c_str(), &ID, &ch0, &ch1, &val);
+						val = PyObject_IsTrue(obj);
+						::getpid();
+						MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
+					}
+					else if (type == "FLOAT")
+					{
+						float val = PyFloat_AsDouble(obj);
+						//PyArg_ParseTuple(args, string("I|s|s|" + 'f').c_str(), &ID, &ch0, &ch1, &val);
+						MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
+					}
 #if corruptioncheck == 1
-				auto _heap = malloc(sizeof(int));
-				free(_heap);
+					auto _heap = malloc(sizeof(int));
+					free(_heap);
 #endif
-				return PyLong_FromLong(0);
-			}
-			PYFUNC(GetName)
-			{
-				ui ID;
-				PyArg_ParseTuple(args, "I", &ID);
-				window* wnd = UI->wnds[ID];
-				return PyUnicode_FromStringAndSize(wnd->strname.c_str(),wnd->strname.size());
-			}
-			static  PyObject* test(PyObject *self, PyObject *args)
-			{
-				return NULL;
-			}
-			static PyMethodDef GUIMethods[] =
-			{
-				//{ "test",test,METH_VARARGS, "If I'd tell you I'd have to kill you" }
-				PYMETH(NewWindow),
-				PYMETH(HideWindow),
-				PYMETH(ShowWindow),
-				PYMETH(SwitchWinVis),
-				PYMETH(GetX),
-				PYMETH(GetY),
-				PYMETH(SetX),
-				PYMETH(SetY),
-				PYMETH(SetXu),
-				PYMETH(SetYu),
-				PYMETH(SetSX),
-				PYMETH(SetSY),
-				PYMETH(GetSX),
-				PYMETH(GetSY),
-				PYMETH(SetCol),
-				PYMETH(GetCol),
-				PYMETH(AddCol),
-				PYMETH(CreateColFromRGB),
-				PYMETH(GetCol),
-				PYMETH(AddColPtr),
-				PYMETH(UpdatePos),
-				PYMETH(GetArg),
-				PYMETH(Exit),
-				PYMETH(MouseMoveDetB),
-				PYMETH(Memory_Set),
-				PYMETH(Memory_GetType),
-				PYMETH(Memory_Get),
-				PYMETH(Memory_Find),
-				PYMETH(GetRealPosX),
-				PYMETH(GetRealPosY),
-				PYMETH(GetRealSizeX),
-				PYMETH(GetRealSizeY),
-				PYMETH(IsInside),
-				PYMETH(CursorX),
-				PYMETH(CursorY),
-				PYMETH(File_GetVar),
-				PYMETH(File_Find),
-				PYMETH(AddSpriteToShape),
-				PYMETH(GetName),
-				{ NULL, NULL, 0, NULL } // note to self: NEVER DELETE THIS
-			};
-			static struct PyModuleDef GUImodule = {
-				PyModuleDef_HEAD_INIT,
-				"GUI",   /* name of module */
-				NULL, /* module documentation, may be NULL */
-				-1,       /* size of per-interpreter state of the module,
-									 or -1 if the module keeps state in global variables. */
-				GUIMethods
-			};
-			//PyObject* test(PyObject *self, PyObject *args)
-			//{
-			//	return nullptr;
-			//}
-			PyMODINIT_FUNC PyInit_GUI(void)
-			{
-				PyObject *m;
-				m = PyModule_Create(&GUImodule);
-				if (m == NULL)
+					//Py_DECREF(obj);
+					return Py_True;
+
+				}
+				PYFUNC(Memory_GetType)
+				{
+					string type, name;
+					ui ID;
+					char* ch0 = NULL;
+					PyArg_ParseTuple(args, "I|s", &ID, &ch0);
+					name = ch0;
+					window* wnd = UI->wnds[ID];
+					type = wnd->memory[getpid()][name].first;
+					return PyUnicode_FromStringAndSize(type.c_str(), type.size());
+				}
+				PYFUNC(Memory_Get)
+				{
+					string type, name;
+					ui ID;
+					char* ch0 = NULL;
+					PyArg_ParseTuple(args, "I|s", &ID, &ch0);
+					name = ch0;
+					window* wnd = UI->wnds[ID];
+					auto var = wnd->memory[getpid()][name].second;
+					type = wnd->memory[getpid()][name].first;
+					if (type == "STR")
+					{
+						auto val = boost::any_cast<string>(var);
+						return PyUnicode_FromStringAndSize(val.c_str(), val.size());
+					}
+					else if (type == "INT")
+					{
+						return PyLong_FromLong(boost::any_cast<int>(var));
+					}
+					else if (type == "BOOL")
+					{
+						return PyBool_FromLong((long)boost::any_cast<bool>(var));
+					}
+					else if (type == "FLOAT")
+					{
+						return PyFloat_FromDouble(boost::any_cast<float>(var));
+					}
+					return PyLong_FromLong(0);
+				}
+				PYFUNC(Memory_Find)
+				{
+					string name;
+					ui ID;
+					char* ch0 = NULL;
+					PyArg_ParseTuple(args, "I|s", &ID, &ch0);
+					name = ch0;
+					//	if (name == "LBUTTONUP")
+				//			DebugBreak();
+					return PyBool_FromLong((long)MapFind(UI->wnds[ID]->memory[getpid()], name));
+				}
+				PYFUNC(GetRealPosX)
+				{
+					int i;
+					ui ID;
+					PyArg_ParseTuple(args, "I|i", &ID, &i);
+					window* wnd = UI->wnds[ID];
+					return PyLong_FromLong(wnd->btts[i]->pos->x);
+				}
+				PYFUNC(GetRealPosY)
+				{
+					int i;
+					ui ID;
+					PyArg_ParseTuple(args, "I|i", &ID, &i);
+					window* wnd = UI->wnds[ID];
+					return PyLong_FromLong(wnd->btts[i]->pos->y);
+				}
+				PYFUNC(GetRealSizeX)
+				{
+					int i;
+					ui ID;
+					PyArg_ParseTuple(args, "I|i", &ID, &i);
+					window* wnd = UI->wnds[ID];
+					return PyLong_FromLong(wnd->btts[i]->size.x);
+				}
+				PYFUNC(GetRealSizeY)
+				{
+					int i;
+					ui ID;
+					PyArg_ParseTuple(args, "I|i", &ID, &i);
+					window* wnd = UI->wnds[ID];
+					return PyLong_FromLong(wnd->btts[i]->size.y);
+				}
+				PYFUNC(IsInside)
+				{
+					int4 rect;
+					int2 point;
+					PyArg_ParseTuple(args, "i|i|i|i|i|i", &point.x, &point.y, &rect.x, &rect.y, &rect.z, &rect.w);
+					return PyBool_FromLong((long)classvariables::isinside(rect, point));
+				}
+				PYFUNC(CursorX)
+				{
+					LPPOINT p = NULL;
+					GetCursorPos(p);
+					return PyLong_FromLong(p->x);
+				}
+				PYFUNC(CursorY)
+				{
+					LPPOINT p = NULL;
+					GetCursorPos(p);
+					return PyLong_FromLong(p->y);
+				}
+				PYFUNC(File_GetVar)
+				{
+					string filename, varname, type;
+					char* ch0 = NULL; char* ch1 = NULL; char* ch2 = NULL;
+					PyArg_ParseTuple(args, "s|s|s", &ch0, &ch1, &ch2);
+					filename = ch0;
+					varname = ch1;
+					type = ch2;
+					AZfile *file = nullptr;
+					if (filename == "gameui")
+						file = &UI->gameuif;
+					else if (filename == "styles")
+						file = &UI->stylef;
+					auto var = *file->GetFromNodes(varname);
+#if corruptioncheck == 1
+					auto _heap = malloc(sizeof(int));
+					free(_heap);
+#endif
+					if (type == "STR")
+					{
+						auto val = boost::any_cast<string>(var);
+						return PyUnicode_FromStringAndSize(val.c_str(), val.size());
+					}
+					else if (type == "INT")
+					{
+						return PyLong_FromLong(boost::any_cast<int>(var));
+					}
+					else if (type == "BOOL")
+					{
+						return PyBool_FromLong((long)boost::any_cast<bool>(var));
+					}
+					else if (type == "FLOAT")
+					{
+						return PyFloat_FromDouble(boost::any_cast<float>(var));
+					}
+				}
+				PYFUNC(File_Find)
+				{
+					string filename, varname;
+					char* ch0 = NULL, *ch1 = NULL;
+					PyArg_ParseTuple(args, "s|s", &ch0, &ch1);
+					filename = ch0;
+					varname = ch1;
+					AZfile *file = nullptr;
+					if (filename == "gameui")
+						file = &UI->gameuif;
+					else if (filename == "styles")
+						file = &UI->stylef;
+					return PyBool_FromLong((long)file->findvar(varname));
+				}
+				PYFUNC(AddSpriteToShape)
+				{
+					string spritename;
+					ui ID;
+					int i;
+					char* ch0 = NULL;
+					PyArg_ParseTuple(args, "I|s|i", &ID, &ch0, &i);
+					spritename = ch0;
+					window* wnd = UI->wnds[ID];
+					style s = UI->styles[wnd->styleid];
+					sprite sp = UI->icons[spritename];
+					sp.SetOffsetXYp(wnd->pos, true);
+					//bool* rb = new bool(true);
+					sp.render = wnd->shaperb[i];
+					sp.useidentp = true;
+					sp.identp = wnd->identp;
+					sp.size = (s.shapes[i].size * wnd->defmultip).toint2();
+					int2* i2sp;
+					sp.SyncPos(i2sp = new int2((s.shapes[i].pos * wnd->defmultip).toint2()), false);
+					wnd->sf->sprites.push_back(sp);
+					wnd->posvec.push_back(make_pair(i2sp, *i2sp));
+#if corruptioncheck == 1
+					auto _heap = malloc(sizeof(int));
+					free(_heap);
+#endif
+					return PyLong_FromLong(0);
+				}
+				PYFUNC(GetName)
+				{
+					ui ID;
+					PyArg_ParseTuple(args, "I", &ID);
+					window* wnd = UI->wnds[ID];
+					return PyUnicode_FromStringAndSize(wnd->strname.c_str(), wnd->strname.size());
+				}
+				PYFUNC(DestroyWnd)
+				{
+					return Py_True;
+				}
+				PYFUNC(DestroyWndAndExit)
+				{
+					return Py_True;
+				}
+				PYFUNC(MinimizeWnd)
+				{
+					return Py_True;
+				}
+				static  PyObject* test(PyObject *self, PyObject *args)
+				{
 					return NULL;
-				return m;
+				}
+				//static PyMethodDef GUIMethods[] =
+				//{
+				//	//{ "test",test,METH_VARARGS, "If I'd tell you I'd have to kill you" }
+				//	PYMETH(NewWindow),
+				//	PYMETH(HideWindow),
+				//	PYMETH(ShowWindow),
+				//	PYMETH(SwitchWinVis),
+				//	PYMETH(GetX),
+				//	PYMETH(GetY),
+				//	PYMETH(SetX),
+				//	PYMETH(SetY),
+				//	PYMETH(SetXu),
+				//	PYMETH(SetYu),
+				//	PYMETH(SetSX),
+				//	PYMETH(SetSY),
+				//	PYMETH(GetSX),
+				//	PYMETH(GetSY),
+				//	PYMETH(SetCol),
+				//	PYMETH(GetCol),
+				//	PYMETH(AddCol),
+				//	PYMETH(CreateColFromRGB),
+				//	PYMETH(GetCol),
+				//	PYMETH(AddColPtr),
+				//	PYMETH(UpdatePos),
+				//	PYMETH(GetArg),
+				//	PYMETH(Exit),
+				//	PYMETH(MouseMoveDetB),
+				//	PYMETH(Memory_Set),
+				//	PYMETH(Memory_GetType),
+				//	PYMETH(Memory_Get),
+				//	PYMETH(Memory_Find),
+				//	PYMETH(GetRealPosX),
+				//	PYMETH(GetRealPosY),
+				//	PYMETH(GetRealSizeX),
+				//	PYMETH(GetRealSizeY),
+				//	PYMETH(IsInside),
+				//	PYMETH(CursorX),
+				//	PYMETH(CursorY),
+				//	PYMETH(File_GetVar),
+				//	PYMETH(File_Find),
+				//	PYMETH(AddSpriteToShape),
+				//	PYMETH(GetName),
+				//	PYMETH(DestroyWnd),
+				//	PYMETH(DestroyWndAndExit),
+				//	PYMETH(MinimizeWnd),
+				//	{ NULL, NULL, 0, NULL } // note to self: NEVER DELETE THIS
+				//};
+				//static struct PyModuleDef GUImodule = {
+				//	PyModuleDef_HEAD_INIT,
+				//	"GUI",   /* name of module */
+				//	NULL, /* module documentation, may be NULL */
+				//	-1,       /* size of per-interpreter state of the module,
+				//						 or -1 if the module keeps state in global variables. */
+				//	GUIMethods
+				//};
+				//PyObject* test(PyObject *self, PyObject *args)
+				//{
+				//	return nullptr;
+				//}
+				PyMethodDef arr[__COUNTER__];
+				struct PyModuleDef GUImodule;
+				PyMODINIT_FUNC PyInit_GUI(void)
+				{
+					int i = 0;
+					vector<PyMethodDef> moddefs;
+					while (i < vb.names.size())
+					{
+						PyMethodDef md[] = { { vb.names[i].c_str(),vb.vec[i],METH_VARARGS,"If I'd tell ya I'd have to kill ya" } };
+						moddefs.push_back(md[0]);
+						i++;
+					}
+					PyMethodDef md[] = { { NULL, NULL, 0, NULL } };
+					moddefs.push_back(md[0]);
+					std::copy(moddefs.begin(), moddefs.end(), arr);
+					GUImodule = {
+						PyModuleDef_HEAD_INIT,
+						"GUI",   /* name of module */
+						NULL, /* module documentation, may be NULL */
+						-1,       /* size of per-interpreter state of the module,
+								  or -1 if the module keeps state in global variables. */
+						arr/*&moddefsnew->operator[](0)*/
+					};
+					PyObject *m;
+					m = PyModule_Create(&GUImodule);
+					if (m == NULL)
+						return NULL;
+					return m;
+				}
 			}
-			//----------------------------------------------------------------------------------------------------------------------------
-			//MODULE: AZflib
-			PYFUNC(Open)
+			namespace AZFLIBMOD
 			{
-				char *ch0, *ch1;
-				string strid, name;
-				PyArg_ParseTuple(args, "s", &ch0);
-				//strid = ch0;
-				name = ch0;
-				auto ptr = new AZfile(name);
-				return PyLong_FromVoidPtr(ptr);
+				//----------------------------------------------------------------------------------------------------------------------------
+				//MODULE: AZflib
+				vecbreaker <PyObject*(*)(PyObject*, PyObject*)> vb;
+				PYFUNC(Open)
+				{
+					char *ch0, *ch1;
+					string strid, name;
+					PyArg_ParseTuple(args, "s", &ch0);
+					//strid = ch0;
+					name = ch0;
+					auto ptr = new AZfile(name);
+					return PyLong_FromVoidPtr(ptr);
+				}
+				PYFUNC(Release)
+				{
+					ulli ptr;
+					PyArg_ParseTuple(args, "K", &ptr);
+					auto file = static_cast<AZfile*>((void*)ptr);
+					delete file;
+					return Py_True;
+				}
+				PYFUNC(GetVar)
+				{
+					ulli ptr;
+					char *ch0, *ch1;
+					string type, name;
+					PyArg_ParseTuple(args, "K|s|s", &ptr, &ch0, &ch1);
+					name = ch1;
+					type = ch0;
+					auto file = static_cast<AZfile*>((void*)ptr);
+					return common::Python::CastPyObj(file->GetVarAny(name), type);
+				}
+				PYFUNC(SetVar)
+				{
+					ulli ptr;
+					char *ch0, *ch1;
+					string type, name;
+					PyObject* val;
+					PyArg_ParseTuple(args, "K|s|s|O", &ptr, &ch0, &ch1, &val);
+					name = ch1;
+					type = ch0;
+					auto file = static_cast<AZfile*>((void*)ptr);
+					file->SetVar(type, new boost::any(common::Python::AnyFromPyObj(val, type)), name);
+					return Py_True;
+				}
+				PYFUNC(SaveFile)
+				{
+					ulli ptr;
+					char *ch0;
+					PyArg_ParseTuple(args, "K|s", &ptr, &ch0);
+					string dir = ch0;
+					auto file = static_cast<AZfile*>((void*)ptr);
+					file->SaveToFile(dir);
+					return Py_True;
+				}
+				PYFUNC(FindVar)
+				{
+					ulli ptr;
+					char *ch0;
+					string name;
+					PyArg_ParseTuple(args, "K|s", &ptr, &ch0);
+					name = ch0;
+					auto file = static_cast<AZfile*>((void*)ptr);
+					return PyBool_FromLong(file->findvar(name));
+				}
+				//static PyMethodDef AZMethods[] =
+				//{
+				//	PYMETH(Open),
+				//	PYMETH(Release),
+				//	PYMETH(GetVar),
+				//	PYMETH(SetVar),
+				//	PYMETH(SaveFile),
+				//	PYMETH(FindVar),
+				//	{ NULL, NULL, 0, NULL }
+				//};
+				//static struct PyModuleDef AZflibmodule = {
+				//	PyModuleDef_HEAD_INIT,
+				//	"AZflib",   /* name of module */
+				//	NULL, /* module documentation, may be NULL */
+				//	-1,       /* size of per-interpreter state of the module,
+				//			  or -1 if the module keeps state in global variables. */
+				//	AZMethods
+				//};
+				//PyMODINIT_FUNC PyInit_AZflib(void)
+				//{
+				//	PyObject *m;
+				//	m = PyModule_Create(&AZflibmodule);
+				//	if (m == NULL)
+				//		return NULL;
+				//	return m;
+				//}
+				PyMethodDef arr[__COUNTER__];
+				struct PyModuleDef AZflibmodule;
+				PyMODINIT_FUNC PyInit_AZflib(void)
+				{
+					PyObject *m;
+					int i = 0;
+					vector<PyMethodDef> moddefs;
+					while (i < vb.names.size())
+					{
+						PyMethodDef md[] = { { vb.names[i].c_str(),vb.vec[i],METH_VARARGS,"If I'd tell ya I'd have to kill ya" } };
+						moddefs.push_back(md[0]);
+						i++;
+					}
+					PyMethodDef md[] = { { NULL, NULL, 0, NULL } };
+					moddefs.push_back(md[0]);
+					std::copy(moddefs.begin(), moddefs.end(), arr);
+					AZflibmodule = {
+						PyModuleDef_HEAD_INIT,
+						"AZflib",   /* name of module */
+						NULL, /* module documentation, may be NULL */
+						-1,       /* size of per-interpreter state of the module,
+								  or -1 if the module keeps state in global variables. */
+						arr
+					};
+					m = PyModule_Create(&AZflibmodule);
+					if (m == NULL)
+						return NULL;
+					return m;
+				}
 			}
-			PYFUNC(Release)
-			{
-				ulli ptr;
-				PyArg_ParseTuple(args, "K", &ptr);
-				auto file =  static_cast<AZfile*>((void*)ptr);
-				delete file;
-				return Py_True;
-			}
-			PYFUNC(GetVar)
-			{
-				ulli ptr; 
-				char *ch0,*ch1;
-				string type, name;
-				PyArg_ParseTuple(args, "K|s|s", &ptr,&ch0,&ch1);
-				name = ch1;
-				type = ch0;
-				auto file = static_cast<AZfile*>((void*)ptr);
-				return common::Python::CastPyObj(file->GetVarAny(name),type);
-			}
-			PYFUNC(SetVar)
-			{
-				ulli ptr;
-				char *ch0, *ch1;
-				string type, name;
-				PyObject* val;
-				PyArg_ParseTuple(args, "K|s|s|O", &ptr, &ch0, &ch1, &val);
-				name = ch1;
-				type = ch0;
-				auto file = static_cast<AZfile*>((void*)ptr);
-				file->SetVar(type, new boost::any( common::Python::AnyFromPyObj(val,type)), name);
-				return Py_True;
-			}
-			PYFUNC(SaveFile)
-			{
-				ulli ptr;
-				char *ch0;
-				PyArg_ParseTuple(args, "K|s", &ptr,&ch0);
-				string dir = ch0;
-				auto file = static_cast<AZfile*>((void*)ptr);
-				file->SaveToFile(dir);
-				return Py_True;
-			}
-			PYFUNC(FindVar)
-			{
-				ulli ptr;
-				char *ch0;
-				string name;
-				PyArg_ParseTuple(args, "K|s", &ptr,&ch0);
-				name = ch0;
-				auto file = static_cast<AZfile*>((void*)ptr);
-				return PyBool_FromLong(file->findvar(name));
-			}
-			static PyMethodDef AZMethods[] =
-			{
-				PYMETH(Open),
-				PYMETH(Release),
-				PYMETH(GetVar),
-				PYMETH(SetVar),
-				PYMETH(SaveFile),
-				PYMETH(FindVar),
-				{ NULL, NULL, 0, NULL }
-			};
-			static struct PyModuleDef AZflibmodule = {
-				PyModuleDef_HEAD_INIT,
-				"AZflib",   /* name of module */
-				NULL, /* module documentation, may be NULL */
-				-1,       /* size of per-interpreter state of the module,
-						  or -1 if the module keeps state in global variables. */
-				AZMethods
-			};
-			PyMODINIT_FUNC PyInit_AZflib(void)
-			{
-				PyObject *m;
-				m = PyModule_Create(&AZflibmodule);
-				if (m == NULL)
-					return NULL;
-				return m;
-			}
-
 		}
 		namespace deffunc
 		{
@@ -744,14 +830,21 @@ namespace GAME
 			ret.code = UI_OK;
 			return ret;
 		}
-		void core::MouseEvent(WPARAM wParam, LPARAM lParam, UINT msg)
+		bool core::MouseEvent(WPARAM wParam, LPARAM lParam, UINT msg)
 		{
 			int i = 0;
+			bool b = false;
 			BOOST_FOREACH(auto& it, wnds)
 			{
-				if(it.second != nullptr )
+				if (it.second != nullptr)
+				{
 					it.second->con.MouseEvent(wParam, lParam, msg);
+					if (it.second->con.waspycalled)
+						b = true;
+					it.second->con.waspycalled = false;
+				}
 			}
+			return b;
 		}
 		UIresult core::AttachTo(window * parent, window * child, unsigned long int flags)
 		{
@@ -884,7 +977,7 @@ namespace GAME
 				}
 			}
 		}
-		UIresult window::initvis(style& s, uni2<float> npos, uni2<float> screenmultip)
+		UIresult window::initvis(style& s, uni2<float> npos, uni2<float> screenmultip, ulli flags )
 		{
 			UIresult ret;
 			proppos = npos;
@@ -904,54 +997,117 @@ namespace GAME
 			//	start = 0;
 			while (i < s.shapes.size())
 			{
-				brush b;
 				bool* rb = new bool(true);
-				shaperb.push_back(rb);
-				delete b.offset;
-				b.offset = pos;
 				if (s.shapes[i].hassprite)
 				{
 					sprite sp = s.shapes[i].ico;
-					sp.SetOffsetXYp(pos, true);
+					sp.SetOffsetXYp(pos, false);
 					sp.render = rb;
 					sp.useidentp = true;
 					sp.identp = identp;
-					sp.size = (s.shapes[i].size * screenmultip).toint2();
 					int2* i2sp;
-					sp.SyncPos(i2sp=new int2((s.shapes[i].pos * screenmultip).toint2()), false);
+					if (s.shapes[i].lockh || s.shapes[i].lockv)
+					{
+						uni2<float> mf;
+						int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
+						if (flags & WF_SCALETO_VH || flags == NULL)
+						{
+							mf.x = ((float)wsize.x)*size.x;
+							mf.y = ((float)wsize.y)*size.y;
+						}
+						else if (flags & WF_SCALETO_V)
+						{
+							mf.x = ((float)wsize.y)*size.x;
+							mf.y = ((float)wsize.y)*size.y;
+						}
+						else if (flags & WF_SCALETO_H)
+						{
+							mf.x = ((float)wsize.x)*size.x;
+							mf.y = ((float)wsize.x)*size.y;
+						}
+						uni2<float> rmf = screenmultip;
+						if (s.shapes[i].lockh)
+							rmf.x = mf.x;
+						if (s.shapes[i].lockv)
+							rmf.y = mf.y;
+						sp.size = (s.shapes[i].size * rmf).toint2();
+						sp.SyncPos(i2sp = new int2((s.shapes[i].pos * rmf).toint2()), false);
+					}
+					else
+					{
+						sp.size = (s.shapes[i].size * screenmultip).toint2();
+						sp.SyncPos(i2sp = new int2((s.shapes[i].pos * screenmultip).toint2()), false);
+					}
 					sf->sprites.push_back(sp);
 					posvec.push_back(make_pair(i2sp,*i2sp));
 				}
-				b.useidentp = true;
-				b.size = new int2((s.shapes[i].size * screenmultip).toint2());
-				b.identp = identp;
-				b.pos = new int2((s.shapes[i].pos * screenmultip).toint2());
-				posvec.push_back(make_pair(b.pos,*b.pos));
-				if (s.shapes[i].shape == 0)
+				if (s.shapes[i].col != NULL || s.shapes[i].seccol != NULL)
 				{
-					b.size = new int2((s.shapes[i].size * screenmultip).toint2());
-					b.createrectfrompossize = true;
-				}
-				else
-					b.elipse.radiusX = b.elipse.radiusY = s.shapes[i].radius;
-				//b.breakonrender = true;
-				b.SetType(solidbrush);
-				auto mcol = s.shapes[i].col->toColorF();
-				if (s.shapes[i].col->in)
-					(*coreptr->cam->GetRenderTargetP())->CreateSolidColorBrush(s.shapes[i].col->toColorF(), &b.b.solidbrush->first);
-				else
-					b.b.solidbrush->first = nullptr;
-				if ((s.shapes[i].seccol != nullptr)?s.shapes[i].seccol->out : s.shapes[i].col->out)
-				{
-					if (s.shapes[i].seccol != nullptr)
-						(*coreptr->cam->GetRenderTargetP())->CreateSolidColorBrush(s.shapes[i].seccol->toColorF(), &b.b.solidbrush->second);
+					brush b;
+					shaperb.push_back(rb);
+					delete b.offset;
+					b.offset = pos;
+					b.useidentp = true;
+					b.identp = identp;
+					if (s.shapes[i].lockh || s.shapes[i].lockv)
+					{
+						uni2<float> mf;
+						int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
+						if (flags & WF_SCALETO_VH || flags == NULL)
+						{
+							mf.x = ((float)wsize.x)*size.x;
+							mf.y = ((float)wsize.y)*size.y;
+						}
+						else if (flags & WF_SCALETO_V)
+						{
+							mf.x = ((float)wsize.y)*size.x;
+							mf.y = ((float)wsize.y)*size.y;
+						}
+						else if (flags & WF_SCALETO_H)
+						{
+							mf.x = ((float)wsize.x)*size.x;
+							mf.y = ((float)wsize.x)*size.y;
+						}
+						uni2<float> rmf = screenmultip;
+						if (s.shapes[i].lockh)
+							rmf.x = mf.x;
+						if (s.shapes[i].lockv)
+							rmf.y = mf.y;
+						b.size = new int2((s.shapes[i].size * rmf).toint2());
+						b.pos = new int2((s.shapes[i].pos * rmf).toint2());
+					}
 					else
-						(*coreptr->cam->GetRenderTargetP())->CreateSolidColorBrush(s.shapes[i].col->toColorF(), &b.b.solidbrush->second);
+					{
+						b.size = new int2((s.shapes[i].size * screenmultip).toint2());
+						b.pos = new int2((s.shapes[i].pos * screenmultip).toint2());
+					}
+					posvec.push_back(make_pair(b.pos, *b.pos));
+					if (s.shapes[i].shape == 0)
+					{
+						b.size = new int2((s.shapes[i].size * screenmultip).toint2());
+						b.createrectfrompossize = true;
+					}
+					else
+						b.elipse.radiusX = b.elipse.radiusY = s.shapes[i].radius;
+					//b.breakonrender = true;
+					b.SetType(solidbrush);
+					auto mcol = s.shapes[i].col->toColorF();
+					if (s.shapes[i].col->in)
+						(*coreptr->cam->GetRenderTargetP())->CreateSolidColorBrush(s.shapes[i].col->toColorF(), &b.b.solidbrush->first);
+					else
+						b.b.solidbrush->first = nullptr;
+					if ((s.shapes[i].seccol != nullptr) ? s.shapes[i].seccol->out : s.shapes[i].col->out)
+					{
+						if (s.shapes[i].seccol != nullptr)
+							(*coreptr->cam->GetRenderTargetP())->CreateSolidColorBrush(s.shapes[i].seccol->toColorF(), &b.b.solidbrush->second);
+						else
+							(*coreptr->cam->GetRenderTargetP())->CreateSolidColorBrush(s.shapes[i].col->toColorF(), &b.b.solidbrush->second);
+					}
+					else
+						b.b.solidbrush->second = nullptr;
+					b.renderp = rb;
+					f->brushes.push_back(b);
 				}
-				else
-					b.b.solidbrush->second = nullptr;
-				b.renderp = rb;
-				f->brushes.push_back(b);
 				i++;
 			}
 			i = start;
@@ -1075,7 +1231,7 @@ namespace GAME
 			uni2<float> mf;
 			int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
 			w->defpos = pos;
-			if (flags & WF_SCALETO_VH)
+			if (flags & WF_SCALETO_VH || flags == NULL)
 			{
 				mf.x = ((float)wsize.x)*size.x;
 				mf.y = ((float)wsize.y)*size.y;
@@ -1092,7 +1248,7 @@ namespace GAME
 			}
 			if (!(flags & WF_NOVINIT))
 			{
-				ret = w->initvis(s, pos, mf);
+				ret = w->initvis(s, pos, mf,flags);
 			}
 			if (flags & WF_HIDE)
 				w->hide();
@@ -1116,17 +1272,23 @@ namespace GAME
 			string inputstr;
 		feachdone:;
 			string msgf = inputstr;
+			wstring wstr0 = STRtoWSTR(strid);
+			wchar_t * ch0 = new wchar_t[wstr0.size() + 1];
+			wcsncpy(ch0, wstr0.c_str(), wstr0.size() + 1);
+			wstring wstr1 = STRtoWSTR(bslink);
+			wchar_t * ch1 = new wchar_t[wstr1.size() + 1];
+			wcsncpy(ch1, wstr1.c_str(), wstr1.size() + 1);
+			wchar_t* _args[] = { ch0, ch1 };
+			int argc = sizeof(_args) / sizeof(_args[0]);
+			vector<wchar_t*> w_tv = { ch0,ch1 };
+			v.push_back(w_tv);
 			while (UI->isargbmodified)
 				Sleep(0);
 			UI->isargbmodified = true;
 			UI->args.insert(make_pair(strid, v));
 			UI->isargbmodified = false;
-			wstring wstr = STRtoWSTR(strid);
-			auto cch = wstr.c_str();
-			wstring wstr2 = STRtoWSTR(bslink);
-			auto cch2 = wstr2.c_str();
-			wchar_t* args[] = { const_cast<wchar_t*>(cch),const_cast<wchar_t*>(cch2) };
-			PySys_SetArgv(2, args);
+
+			PySys_SetArgv(argc, _args);
 			int ii = 0;
 			if (s.flagproc != "")
 			{
@@ -1143,7 +1305,8 @@ namespace GAME
 		UIresult core::init(controls * con, camera * ncam, frame * mf, ui scenen)
 		{
 			int i = 0;
-			PyImport_AppendInittab("GUI", Python::PyInit_GUI);
+			PyImport_AppendInittab("GUI", Python::GUIMOD::PyInit_GUI);
+			PyImport_AppendInittab("AZflib", Python::AZFLIBMOD::PyInit_AZflib);
 			Py_Initialize();
 			PyImport_ImportModule("GUI");
 			PyImport_ImportModule("AZflib");
@@ -1158,8 +1321,8 @@ namespace GAME
 		void core::reinit()
 		{
 			Py_FinalizeEx();
-			PyImport_AppendInittab("GUI", Python::PyInit_GUI);
-			PyImport_AppendInittab("AZflib", Python::PyInit_AZflib);
+			PyImport_AppendInittab("GUI", Python::GUIMOD::PyInit_GUI);
+			PyImport_AppendInittab("AZflib", Python::AZFLIBMOD::PyInit_AZflib);
 			Py_Initialize();
 			PyImport_ImportModule("GUI");
 			PyImport_ImportModule("AZflib");
@@ -1285,6 +1448,8 @@ namespace GAME
 						simsh.radius = sh->getvar<float>("RAD");
 					}
 					simsh.pos = uni2<float>(sh->getvar<float>("POSX"), sh->getvar<float>("POSY"));
+					simsh.lockh = sh->getvar<bool>("LOCKH");
+					simsh.lockv = sh->getvar<bool>("LOCKV");
 					string str2;
 					if (f.GetVarSafe(str2, str + "SHAPE" + common::INTtoSTR(ii) + "@COLNODE"))
 					{
@@ -1296,7 +1461,7 @@ namespace GAME
 					}
 					if (f.GetVarSafe(str2, str + "SHAPE" + common::INTtoSTR(ii) + "@ICON"))
 					{
-						simsh.ico = icons[str];
+						simsh.ico = icons[str2];
 						simsh.hassprite = true;
 					}
 					simsh.id = ii;
