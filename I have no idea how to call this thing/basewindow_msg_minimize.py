@@ -1,6 +1,8 @@
 import sys
 import GUI
-strid = sys.argv[0]
+strid = GUI.GetSTRID()
 wnd = GUI.GetArg(strid, 0)
-GUI.HideWindow(wnd)
+msg = GUI.GetArg(strid, 3)
+if msg == "LBUTTONUP":
+    GUI.HideWindow(wnd)
 GUI.Exit(strid)

@@ -102,7 +102,9 @@ namespace GAME
 			UIresult hide();
 			UIresult switchvis();
 			vector<void*> otherobjts;
+			mutex waitmapmutex;
 			map<int,map<string, pair<string, boost::any>>> memory;
+			map<string, pair<map<string,void*>,void*>> waitmap;
 		};
 		struct simpleshape
 		{
@@ -221,11 +223,14 @@ namespace GAME
 			frame* mainframe = nullptr;
 			window* root;
 			ui scenenum;
-			bool isargbmodified = false;
+			//bool isargbmodified = false;
+			mutex *argmodmutex;
 			map<ui, window*> wnds;
 			map<string, ui> wndnamemap;
 			map<ui, style> styles;
 			map<string, sprite> icons;
+			map<int, string>processtridmap;
+			mutex idmapmutex;
 			//uni2<float> screensizemultip;
 			map<string, ui> styleids;
 			bool MouseEvent(WPARAM wParam, LPARAM lParam, UINT msg);
@@ -234,9 +239,17 @@ namespace GAME
 			//UIresult NewWindow(window*parent, int2 pos, int2 size, string stylename, unsigned long int flags = 0x00000000L);
 			UIresult NewWindow(window*parent, uni2<float> pos, uni2<float> size, ui styleid, unsigned long int flags = 0x00000000L, string strname = "NULL");
 			UIresult NewWindow(window*parent, uni2<float> pos, uni2<float> size, string stylename, unsigned long int flags = 0x00000000L, string strname = "NULL");
-			UIresult init(controls* con, camera* ncam, frame* mf = nullptr, ui scenen = 0);
+			UIresult init(controls* con, camera* ncam, frame* mf = nullptr, ui scenen = 0, string link = "");
 			UIresult addstyle(style st);
 			UIresult createstyles(AZfile& f, string binloc,bool add=true);
+			core()
+			{
+				argmodmutex = new mutex();
+			}
+			~core()
+			{
+				delete argmodmutex;
+			}
 		};
 	}
 }

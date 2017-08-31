@@ -15,7 +15,7 @@ using namespace GAME::GUI;
 namespace GAME
 {
 	extern core* UI;
-	vector<thread*>scriptthreads;
+	vector<pair<thread*,bool*>>scriptthreads;
 }
 namespace DX2D
 {
@@ -35,24 +35,64 @@ namespace DX2D
 	{
 		UI->reinit();
 	}
+	void controls::callpyscript(string strid, string loc, string fname )
+	{
+		//auto localname = _pyscriptname;
+		//string loccopy = _callpyloc;
+		//string strid = _strid;
+		FILE* _f = NULL;
+		_f = _Py_fopen(loc.c_str(), "r");
+		/*_pyscriptname = "";
+		_callpyloc = "";
+		_strid = "";*/
+		UI->argmodmutex->lock();
+		UI->idmapmutex.lock();
+		UI->processtridmap.insert(make_pair(getpid(), strid));
+		UI->idmapmutex.unlock();
+		UI->argmodmutex->unlock();
+		//try
+		//{
+		if (fname == "basewindow_msg_move.py")
+			_testi++;
+		PyGILState_STATE gstate;
+		//gstate = PyGILState_Ensure();
+		auto res = PyRun_AnyFileEx(_f, fname.c_str(), true);
+		//PyGILState_Release(gstate);
+		UI->idmapmutex.lock();
+		UI->processtridmap.erase(getpid());
+		UI->idmapmutex.unlock();
+		auto fuckvs = UI;
+		UI->argmodmutex->lock();
+		_realtesti++;
+		auto bargs = UI->args[strid];
+		auto fargs = boost::any_cast<vector<wchar_t*>>(bargs[(bargs.size() < 10) ? 1 : 8]);
+		int i = 0;
+		while (i < fargs.size())
+		{
+			delete[] fargs[i];
+			i++;
+		}
+		if (bargs.size() > 10)
+		{
+			*boost::any_cast<bool*>(bargs[13]) = true;
+		}
+		UI->args.erase(strid);
+		UI->argmodmutex->unlock();
+		//}
+		//catch (std::exception& e)
+		//{
+		//	cout << "\b";
+		//	cout << "Critical Error has occured..." << endl << ">";
+		//}
+	}
+
 	void controls::callpy(button* bt, UINT msg, int2 pos)
 	{
 		string strid;
-		do
-		{
-			strid = to_string(rand());
-		} while (UI->args.find(strid) != UI->args.end());
-		vector<boost::any> v;
-/*		window* wnd = boost::any_cast<window*>(bt->anyvars[0]);
-		auto m = boost::any_cast<>bt->anyvars[2]*/;
 		auto wnd = boost::any_cast<window*>(bt->anyvars[0]);
-		v.push_back(wnd->ID);
-		v.push_back(bt->anyvars[1]);
-		v.push_back(msg);
 		auto m = boost::any_cast<map<string, string>>(bt->anyvars[2]);
 		map<string,ui>inputs = { {"LBUTTONUP",WM_LBUTTONUP},{"RBUTTONUP",WM_RBUTTONUP },{"LBUTTONDOWN",WM_LBUTTONDOWN },{"RBUTTONDOWN",WM_RBUTTONDOWN },
 		{"MBUTTONUP" ,WM_MBUTTONUP },{"MBUTTONDOWN",WM_MBUTTONDOWN},{"MOUSEMOVE",WM_MOUSEMOVE } };
-		//vector<ui> inpotsuint = { };
 		int i = 0;
 		string inputstr;
 		BOOST_FOREACH(auto it, inputs)
@@ -64,25 +104,37 @@ namespace DX2D
 			}
 		}
 	feachdone:;
-		string msgf = inputstr;
-		//ui bn = 0;
-		v.push_back(msgf);
-		//try // lazynessTM
-		//{
-		//	bn = boost::any_cast<ui>(bt->anyvars[1]);
-		//}
-		//catch (boost::bad_any_cast)
-		//{
-			int bn = boost::any_cast<int>(bt->anyvars[1]);
-		//}
+		int bn = boost::any_cast<int>(bt->anyvars[1]);
 		string scriptname = UI->styles[wnd->styleid].msgproc[UI->styles[wnd->styleid].boxes[bn].message];
+		if (MapFind(wnd->waitmap, scriptname))
+		{
+			wnd->waitmapmutex.lock();
+			auto mttw = static_cast<condition_variable*>(wnd->waitmap[scriptname].second);
+			if (MapFind(wnd->waitmap[scriptname].first, inputstr))
+			{
+				wnd->waitmap[scriptname].second = (void*)new string(inputstr);
+				mttw->notify_one();
+			}
+			wnd->waitmapmutex.unlock();
+			return;
+		}
+		vector<boost::any> v;
+		v.push_back(wnd->ID);
+		v.push_back(bt->anyvars[1]);
+		v.push_back(msg);
+		do
+		{
+			strid = to_string(rand());
+		} while (MapFind(UI->args,strid));
+		string msgf = inputstr;
+		v.push_back(msgf);
 		if (scriptname != "")
 		{
 			v.push_back(bt->anyvars[3]);
 			auto pairptr = new pair<button*, controls*>(bt, this);
 			v.push_back((void*)pairptr);
 			v.push_back(pos.x);
-			v.push_back(pos.y);
+			v.push_back(pos.y); //8(7)
 			string subloc = boost::any_cast<string>(bt->anyvars[3]);
 
 			wstring wstr0 = STRtoWSTR(strid);
@@ -91,34 +143,51 @@ namespace DX2D
 			wstring wstr1 = STRtoWSTR(subloc);
 			wchar_t * ch1 = new wchar_t[wstr1.size() + 1];
 			wcsncpy(ch1, wstr1.c_str(), wstr1.size() + 1);
-			wchar_t* _args[] = { ch0, /*ch1*/};
+			wchar_t* _args[] = { ch0, ch1};
 			int argc = sizeof(_args) / sizeof(_args[0]);
 			vector<wchar_t*> w_tv = { ch0,ch1 };
-			v.push_back(w_tv);
-			while (UI->isargbmodified)
+			v.push_back(w_tv); // 9(8)
+		/*	while (UI->isargbmodified)
 				Sleep(0);
-			UI->isargbmodified = true;
+			UI->isargbmodified = true;*/
+			UI->argmodmutex->lock();
+			v.push_back(scriptname); // 10(9)
+			v.push_back(vector<boost::any>()); // 11(10)
+			v.push_back(map<string,boost::any>()); // 12(11)
+			v.push_back((thread*)nullptr); // 13(12) placeholder
+			bool * bp;
+			v.push_back(bp = new bool (false)); // 14(13) isjoinable or isdetached
+			v.push_back(subloc); // 15(14) accessible from GUI.GetFLoc()
 			UI->args.insert(make_pair(strid, v));
-			UI->isargbmodified = false;
-
-			PySys_SetArgv(argc, _args);
+			//PySys_SetArgv(argc-1, _args);
+			UI->argmodmutex->unlock();
+			UI->idmapmutex.lock();
+			UI->processtridmap.insert(make_pair(getpid(), strid));
+			UI->idmapmutex.unlock();
+			//UI->isargbmodified = false;
 			int ii = 0;
 			string loc = subloc + "scripts\\" + scriptname;
-			_pyblankscriptname = subloc + "scripts\\" + "blank.py";
-			while (_callpyloc != "")
-				Sleep(0);
+			_strid = strid;
+			//while (_callpyloc != "")
+			//	Sleep(0);
 			_callpyloc = loc;
-			try
-			{
+			//try
+			//{
 				_pyscriptname = scriptname;
 				thread* thptr = nullptr;
-				scriptthreads.push_back(thptr = new thread (&controls::callpyscript,this));
-			}
+				UI->argmodmutex->lock();
+				scriptthreads.push_back(make_pair(boost::any_cast<thread*>(UI->args[strid][12] = thptr = new thread (&controls::callpyscript,this, strid, loc, scriptname)), bp));
+				UI->argmodmutex->unlock();
+				//callpyscript();
+#if PYWRITESCRIPTDATA == true
+				cout << scriptname << " has started (ID: " << strid << ")" << endl;
+#endif
+	/*		}
 			catch (...)
-			{
-				cout << "\b";
-				cout << "Critical Error has occured..." << endl << ">";
-			}
+			{*/
+				//cout << "\b";
+				//cout << "Critical Error has occured..." << endl << ">";
+			//}
 			//if (MapFind(UI->args, strid))
 			//	DebugBreak();
 			loc = "";

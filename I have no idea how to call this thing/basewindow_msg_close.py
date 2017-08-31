@@ -1,5 +1,9 @@
 import sys
 import GUI
-strid = sys.argv[0]
+strid = GUI.GetSTRID()
 wnd = GUI.GetArg(strid, 0)
-GUI.DestroyWndAndExit(strid,wnd)
+msg = GUI.GetArg(strid, 3)
+if msg == "LBUTTONUP":
+    GUI.DestroyWndAndExit(strid,wnd)
+else:
+    GUI.Exit(strid)

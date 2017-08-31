@@ -1,8 +1,11 @@
 #include "GUI.h"
 #define corruptioncheck 0
-
+mutex _py_refmutex;
+#define Py_INCREFTS(obj) _py_refmutex.lock(); Py_INCREF(obj); _py_refmutex.unlock()
+#define Py_DECREFTS(obj) _py_refmutex.lock(); Py_DECREF(obj); _py_refmutex.unlock()
 namespace GAME
 {
+	extern mutex detachUIthmutex;
 	extern int4 camrect;
 	extern GUI::core* UI;
 	namespace GUI
@@ -14,6 +17,7 @@ namespace GAME
 				vecbreaker <PyObject*(*)(PyObject*, PyObject*)> vb;
 				//----------------------------------------------------------------------------------------------------------------------------
 				//MODULE: GUI 
+				PyObject* hError = NULL;
 				PYFUNC(NewWindow)
 				{
 					ui flags, parentid;
@@ -69,7 +73,7 @@ namespace GAME
 				{
 					ui ID;
 					int n;
-					PyArg_ParseTuple(args, "I", "i", &ID, &n);
+					PyArg_ParseTuple(args, "I|i", &ID, &n);
 					UI->wnds[ID]->pos->x = n;
 					return PyBool_FromLong(0);
 				}
@@ -77,7 +81,7 @@ namespace GAME
 				{
 					ui ID;
 					int n;
-					PyArg_ParseTuple(args, "I", "i", &ID, &n);
+					PyArg_ParseTuple(args, "I|i", &ID, &n);
 					UI->wnds[ID]->pos->y = n;
 					return PyBool_FromLong(0);
 				}
@@ -85,7 +89,7 @@ namespace GAME
 				{
 					ui ID;
 					int n;
-					PyArg_ParseTuple(args, "I", "i", &ID, &n);
+					PyArg_ParseTuple(args, "I|i", &ID, &n);
 					int2 old = *UI->wnds[ID]->pos;
 					UI->wnds[ID]->pos->x = n;
 					UI->wnds[ID]->updatepos(old);
@@ -96,7 +100,7 @@ namespace GAME
 				{
 					ui ID;
 					int n;
-					PyArg_ParseTuple(args, "I", "i", &ID, &n);
+					PyArg_ParseTuple(args, "I|i", &ID, &n);
 					int2 old = *UI->wnds[ID]->pos;
 					UI->wnds[ID]->pos->y = n;
 					UI->wnds[ID]->updatepos(old);
@@ -106,7 +110,7 @@ namespace GAME
 				{
 					ui ID;
 					int n;
-					PyArg_ParseTuple(args, "I", "i", &ID, &n);
+					PyArg_ParseTuple(args, "I|i", &ID, &n);
 					UI->wnds[ID]->size.x = n;
 					return PyBool_FromLong(0);
 				}
@@ -114,7 +118,7 @@ namespace GAME
 				{
 					ui ID;
 					int n;
-					PyArg_ParseTuple(args, "I", "i", &ID, &n);
+					PyArg_ParseTuple(args, "I|i", &ID, &n);
 					UI->wnds[ID]->size.y = n;
 					return PyBool_FromLong(0);
 				}
@@ -201,8 +205,8 @@ namespace GAME
 					PyArg_ParseTuple(args, "I|f|f|f|f|s", &ID, &r, &g, &b, &a, &ch0);
 					name = ch0;
 					common::RGBA col(r, g, b, a);
-					auto ptr = malloc(sizeof common::RGBA);
-					ptr = new common::RGBA(col);
+					//auto ptr = malloc(sizeof common::RGBA);
+					void* ptr = new common::RGBA(col);
 					if (ID != 0)
 						UI->wnds[ID]->otherobjts.push_back(ptr);
 					return PyLong_FromVoidPtr(ptr);
@@ -211,18 +215,35 @@ namespace GAME
 				{
 					ui ID;
 					int2 old;
+					_UpdatePosMutex.lock();
 					PyArg_ParseTuple(args, "I|i|i", &ID, &old.x, &old.y);
 					UI->wnds[ID]->updatepos(old);
+					_UpdatePosMutex.unlock();
 					return PyLong_FromLong(0);
 				}
 				PYFUNC(GetArg)
 				{
+					_GetArgMutex.lock();
 					string strid;
 					char* stridch = NULL;
 					int it;
 					PyArg_ParseTuple(args, "s|i", &stridch, &it);
 					strid = stridch;
+					//cout << strid << " has reached GetArg(" << to_string(it) << ")\n";
+					if (!MapFind(UI->args, strid))
+					{
+						PyErr_SetString(hError, "GetArg error: Arguments were deleted before the call");
+						_GetArgMutex.unlock();
+						return NULL;
+					}
+					if (UI->args[strid].size() == 0)
+					{
+						PyErr_SetString(hError, "GetArg error: No arguments");
+						_GetArgMutex.unlock();
+						return NULL;
+					}
 					vector<boost::any> bargs = UI->args[strid];
+					_GetArgMutex.unlock();
 					switch (it)
 					{
 					case 0:
@@ -271,31 +292,56 @@ namespace GAME
 				}
 				PYFUNC(Exit)
 				{
+					return Py_True;
 					string strid;
 					char*ch = NULL;
 					PyArg_ParseTuple(args, "s", &ch);
 					strid = ch;
-					while (UI->isargbmodified)
-						Sleep(0);
-					UI->isargbmodified = true;
+#if PYWRITESCRIPTDATA == true
+						cout << strid << " has exited" << endl;
+#endif
+					//while (UI->isargbmodified)
+					//	Sleep(0);
+					//UI->isargbmodified = true;
+					UI->argmodmutex->lock();
+
 					if (MapFind(UI->args, strid))
 					{
 						auto bargs = UI->args[strid];
-						auto fargs = boost::any_cast<vector<wchar_t*>>(bargs[bargs.size() - 1]);
+						if (bargs.size() > 10)
+						{
+							UI->argmodmutex->unlock();
+							return Py_True;
+						}
+						auto fargs = boost::any_cast<vector<wchar_t*>>(bargs[(bargs.size() < 10)?1:8]);
 						int i = 0;
 						while (i < fargs.size())
 						{
 							delete[] fargs[i];
 							i++;
 						}
+						if (bargs.size() > 10)
+						{
+							*boost::any_cast<bool*>(bargs[13]) = true;
+						}
+						UI->idmapmutex.lock();
+						UI->processtridmap.erase(getpid());
+						UI->idmapmutex.unlock();
 						UI->args.erase(strid);
 					}
-					UI->isargbmodified = false;
+					else
+					{
+						//PyErr_SetString(hError, "Exit error: Exit has already been called or wrong strid has been passed");
+					}
+					//UI->isargbmodified = false;
+					UI->argmodmutex->unlock();
+					return Py_True;
 
 #if corruptioncheck == 1
 					auto _heap = malloc(sizeof(int));
 					free(_heap);
 #endif
+					return Py_True;
 					return PyLong_FromLong(0);
 				}
 				PYFUNC(MouseMoveDetB)
@@ -309,15 +355,17 @@ namespace GAME
 				}
 				PYFUNC(Memory_Set)
 				{
+					_Memory_SetMutex.lock();
 					string type, name, dummytype, dummyname;
 					ui ID;
 					char* ch0 = NULL, *ch1 = NULL;
 					bool b = false;
 					PyObject* obj;
 					PyArg_ParseTuple(args, "I|s|s|O", &ID, &ch0, &ch1, &obj);
+					Py_INCREFTS(obj);
 					name = ch0;
 					type = ch1;
-					int pid = getpid();
+					int pid = 0;
 					window* wnd = UI->wnds[ID];
 					if (!MapFind(wnd->memory, pid))
 					{
@@ -339,7 +387,6 @@ namespace GAME
 						bool val;
 						//PyArg_ParseTuple(args, string("I|s|s|" + 'p').c_str(), &ID, &ch0, &ch1, &val);
 						val = PyObject_IsTrue(obj);
-						::getpid();
 						MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
 					}
 					else if (type == "FLOAT")
@@ -353,6 +400,8 @@ namespace GAME
 					free(_heap);
 #endif
 					//Py_DECREF(obj);
+					Py_DECREFTS(obj);
+					_Memory_SetMutex.unlock();
 					return Py_True;
 
 				}
@@ -364,7 +413,7 @@ namespace GAME
 					PyArg_ParseTuple(args, "I|s", &ID, &ch0);
 					name = ch0;
 					window* wnd = UI->wnds[ID];
-					type = wnd->memory[getpid()][name].first;
+					type = wnd->memory[0][name].first;
 					return PyUnicode_FromStringAndSize(type.c_str(), type.size());
 				}
 				PYFUNC(Memory_Get)
@@ -375,23 +424,27 @@ namespace GAME
 					PyArg_ParseTuple(args, "I|s", &ID, &ch0);
 					name = ch0;
 					window* wnd = UI->wnds[ID];
-					auto var = wnd->memory[getpid()][name].second;
-					type = wnd->memory[getpid()][name].first;
+					auto var = wnd->memory[0][name].second;
+					type = wnd->memory[0][name].first;
 					if (type == "STR")
 					{
 						auto val = boost::any_cast<string>(var);
+						//cout << val << endl;
 						return PyUnicode_FromStringAndSize(val.c_str(), val.size());
 					}
 					else if (type == "INT")
 					{
+						//cout << boost::any_cast<int>(var) << endl;
 						return PyLong_FromLong(boost::any_cast<int>(var));
 					}
 					else if (type == "BOOL")
 					{
+						//cout << boost::any_cast<bool>(var) << endl;
 						return PyBool_FromLong((long)boost::any_cast<bool>(var));
 					}
 					else if (type == "FLOAT")
 					{
+						//cout << boost::any_cast<float>(var) << endl;
 						return PyFloat_FromDouble(boost::any_cast<float>(var));
 					}
 					return PyLong_FromLong(0);
@@ -405,7 +458,7 @@ namespace GAME
 					name = ch0;
 					//	if (name == "LBUTTONUP")
 				//			DebugBreak();
-					return PyBool_FromLong((long)MapFind(UI->wnds[ID]->memory[getpid()], name));
+					return PyBool_FromLong((long)MapFind(UI->wnds[ID]->memory[0], name));
 				}
 				PYFUNC(GetRealPosX)
 				{
@@ -448,15 +501,15 @@ namespace GAME
 				}
 				PYFUNC(CursorX)
 				{
-					LPPOINT p = NULL;
-					GetCursorPos(p);
-					return PyLong_FromLong(p->x);
+					POINT  p;
+					GetCursorPos(&p);
+					return PyLong_FromLong(p.x);
 				}
 				PYFUNC(CursorY)
 				{
-					LPPOINT p = NULL;
-					GetCursorPos(p);
-					return PyLong_FromLong(p->y);
+					POINT  p;
+					GetCursorPos(&p);
+					return PyLong_FromLong(p.y);
 				}
 				PYFUNC(File_GetVar)
 				{
@@ -548,75 +601,87 @@ namespace GAME
 				}
 				PYFUNC(DestroyWndAndExit)
 				{
-					return Py_True;
+					return Exit(self, args);;
 				}
 				PYFUNC(MinimizeWnd)
 				{
 					return Py_True;
 				}
+				PYFUNC(WaitFor)
+				{
+					ui ID;
+					string comm, strid;
+					char* ch0 = NULL, *ch1 = NULL;
+					PyArg_ParseTuple(args, "I|s|s", &ID,&ch0,&ch1);
+					comm = ch0;
+					strid = ch1;
+					auto wnd = UI->wnds[ID];
+					map<string,void*> signals;
+					int i = 0;
+					while (i < comm.size())
+					{
+						string str = "";
+						while (!isblank(comm[i]))
+							if (!(i + 1 < comm.size()))
+							{
+								str += comm[i];
+								break;
+							}
+							else
+							{
+								str += comm[i];
+								i++;
+							}
+						signals.insert(make_pair(str,nullptr));
+						i++;
+					}
+					i = 0;
+					auto bargs = wnd->coreptr->args[strid];
+					string scripttype = boost::any_cast<string>(bargs[9]);
+					mutex m;
+					unique_lock<std::mutex> lk(m);
+					condition_variable *mttw = new condition_variable;
+					wnd->waitmapmutex.lock();
+					wnd->waitmap.insert(make_pair(scripttype, make_pair(signals,(void*)mttw)));
+					wnd->waitmapmutex.unlock();
+					thread* th = boost::any_cast<thread*>(bargs[12]);
+					detachUIthmutex.lock();
+					th->detach();
+					*boost::any_cast<bool*>(bargs[13]) = true;
+					detachUIthmutex.unlock();
+					mttw->wait(lk);
+					wnd->waitmapmutex.lock();
+					delete mttw;
+					string *val = static_cast<string*>(wnd->waitmap[scripttype].second);
+					string _val = *val;
+					delete val;
+					wnd->waitmap.erase(scripttype);
+					wnd->waitmapmutex.unlock();
+					return PyUnicode_FromStringAndSize(_val.c_str(), _val.size());
+				}
+				PYFUNC(GetSTRID)
+				{
+					_GetSTRIDMutex.lock();
+					string strid = UI->processtridmap[getpid()];
+					//cout << strid << " has reached GetSTRID\n";
+					_GetSTRIDMutex.unlock();
+					return PyUnicode_FromStringAndSize (strid.c_str(), strid.size());
+				}
+				PYFUNC(GetFLoc)
+				{
+					_GetFLocMutex.lock();
+					string strid;
+					char* ch0 = NULL;
+					PyArg_ParseTuple(args, "s", &ch0);
+					strid = ch0;
+					auto loc = boost::any_cast<string>(UI->args[strid][(UI->args[strid].size() < 10)? 2:14]);
+					_GetFLocMutex.unlock();
+					return PyUnicode_FromStringAndSize(loc.c_str(), loc.size());
+				}
 				static  PyObject* test(PyObject *self, PyObject *args)
 				{
 					return NULL;
 				}
-				//static PyMethodDef GUIMethods[] =
-				//{
-				//	//{ "test",test,METH_VARARGS, "If I'd tell you I'd have to kill you" }
-				//	PYMETH(NewWindow),
-				//	PYMETH(HideWindow),
-				//	PYMETH(ShowWindow),
-				//	PYMETH(SwitchWinVis),
-				//	PYMETH(GetX),
-				//	PYMETH(GetY),
-				//	PYMETH(SetX),
-				//	PYMETH(SetY),
-				//	PYMETH(SetXu),
-				//	PYMETH(SetYu),
-				//	PYMETH(SetSX),
-				//	PYMETH(SetSY),
-				//	PYMETH(GetSX),
-				//	PYMETH(GetSY),
-				//	PYMETH(SetCol),
-				//	PYMETH(GetCol),
-				//	PYMETH(AddCol),
-				//	PYMETH(CreateColFromRGB),
-				//	PYMETH(GetCol),
-				//	PYMETH(AddColPtr),
-				//	PYMETH(UpdatePos),
-				//	PYMETH(GetArg),
-				//	PYMETH(Exit),
-				//	PYMETH(MouseMoveDetB),
-				//	PYMETH(Memory_Set),
-				//	PYMETH(Memory_GetType),
-				//	PYMETH(Memory_Get),
-				//	PYMETH(Memory_Find),
-				//	PYMETH(GetRealPosX),
-				//	PYMETH(GetRealPosY),
-				//	PYMETH(GetRealSizeX),
-				//	PYMETH(GetRealSizeY),
-				//	PYMETH(IsInside),
-				//	PYMETH(CursorX),
-				//	PYMETH(CursorY),
-				//	PYMETH(File_GetVar),
-				//	PYMETH(File_Find),
-				//	PYMETH(AddSpriteToShape),
-				//	PYMETH(GetName),
-				//	PYMETH(DestroyWnd),
-				//	PYMETH(DestroyWndAndExit),
-				//	PYMETH(MinimizeWnd),
-				//	{ NULL, NULL, 0, NULL } // note to self: NEVER DELETE THIS
-				//};
-				//static struct PyModuleDef GUImodule = {
-				//	PyModuleDef_HEAD_INIT,
-				//	"GUI",   /* name of module */
-				//	NULL, /* module documentation, may be NULL */
-				//	-1,       /* size of per-interpreter state of the module,
-				//						 or -1 if the module keeps state in global variables. */
-				//	GUIMethods
-				//};
-				//PyObject* test(PyObject *self, PyObject *args)
-				//{
-				//	return nullptr;
-				//}
 				PyMethodDef arr[__COUNTER__];
 				struct PyModuleDef GUImodule;
 				PyMODINIT_FUNC PyInit_GUI(void)
@@ -644,30 +709,38 @@ namespace GAME
 					m = PyModule_Create(&GUImodule);
 					if (m == NULL)
 						return NULL;
+					hError = PyErr_NewException("GUI.error", NULL, NULL);
+					Py_INCREF(hError);
+					PyModule_AddObject(m, "error", hError);
 					return m;
 				}
 			}
 			namespace AZFLIBMOD
 			{
+				vecbreaker <PyObject*(*)(PyObject*, PyObject*)> vb;
 				//----------------------------------------------------------------------------------------------------------------------------
 				//MODULE: AZflib
-				vecbreaker <PyObject*(*)(PyObject*, PyObject*)> vb;
+				PyObject* hError = NULL;
 				PYFUNC(Open)
 				{
+					_OpenMutex.lock();
 					char *ch0, *ch1;
 					string strid, name;
 					PyArg_ParseTuple(args, "s", &ch0);
 					//strid = ch0;
 					name = ch0;
 					auto ptr = new AZfile(name);
+					_OpenMutex.unlock();
 					return PyLong_FromVoidPtr(ptr);
 				}
 				PYFUNC(Release)
 				{
+					_ReleaseMutex.lock();
 					ulli ptr;
 					PyArg_ParseTuple(args, "K", &ptr);
 					auto file = static_cast<AZfile*>((void*)ptr);
 					delete file;
+					_ReleaseMutex.unlock();
 					return Py_True;
 				}
 				PYFUNC(GetVar)
@@ -683,25 +756,31 @@ namespace GAME
 				}
 				PYFUNC(SetVar)
 				{
+					_SetVarMutex.lock();
 					ulli ptr;
 					char *ch0, *ch1;
 					string type, name;
 					PyObject* val;
 					PyArg_ParseTuple(args, "K|s|s|O", &ptr, &ch0, &ch1, &val);
+					Py_INCREFTS(val);
 					name = ch1;
 					type = ch0;
 					auto file = static_cast<AZfile*>((void*)ptr);
 					file->SetVar(type, new boost::any(common::Python::AnyFromPyObj(val, type)), name);
+					Py_DECREFTS(val);
+					_SetVarMutex.unlock();
 					return Py_True;
 				}
 				PYFUNC(SaveFile)
 				{
+					_SaveFileMutex.lock();
 					ulli ptr;
 					char *ch0;
 					PyArg_ParseTuple(args, "K|s", &ptr, &ch0);
 					string dir = ch0;
 					auto file = static_cast<AZfile*>((void*)ptr);
 					file->SaveToFile(dir);
+					_SaveFileMutex.unlock();
 					return Py_True;
 				}
 				PYFUNC(FindVar)
@@ -767,6 +846,9 @@ namespace GAME
 					m = PyModule_Create(&AZflibmodule);
 					if (m == NULL)
 						return NULL;
+					hError = PyErr_NewException("GUI.error", NULL, NULL);
+					Py_INCREF(hError);
+					PyModule_AddObject(m, "error", hError);
 					return m;
 				}
 			}
@@ -1256,11 +1338,11 @@ namespace GAME
 				w->show();
 			ret.retval.push_back(w);
 			ret.retval.push_back(w->ID);
-			string strid;
-			do
-			{
-				strid = to_string(rand());
-			} while (UI->args.find(strid) != UI->args.end());
+			string strid = to_string(w->ID);
+			//do
+			//{
+			//	strid = to_string(rand());
+			//} while (UI->args.find(strid) != UI->args.end());
 			vector<boost::any> v;
 			/*		window* wnd = boost::any_cast<window*>(bt->anyvars[0]);
 			auto m = boost::any_cast<>bt->anyvars[2]*/;
@@ -1282,19 +1364,46 @@ namespace GAME
 			int argc = sizeof(_args) / sizeof(_args[0]);
 			vector<wchar_t*> w_tv = { ch0,ch1 };
 			v.push_back(w_tv);
-			while (UI->isargbmodified)
-				Sleep(0);
-			UI->isargbmodified = true;
+			//while (UI->isargbmodified)
+			//	Sleep(0);
+			//UI->isargbmodified = true;
+			UI->argmodmutex->lock();
+			v.push_back(bslink);
 			UI->args.insert(make_pair(strid, v));
-			UI->isargbmodified = false;
+			UI->argmodmutex->unlock();
+			UI->idmapmutex.lock();
+			if (MapFind(UI->processtridmap, getpid()))
+				UI->processtridmap.erase(getpid());
+			UI->processtridmap.insert(make_pair(getpid(), strid));
+			UI->idmapmutex.unlock();
+			//UI->isargbmodified = false;
 
-			PySys_SetArgv(argc, _args);
+			//PySys_SetArgv(argc, _args);
 			int ii = 0;
 			if (s.flagproc != "")
 			{
 				string loc = bslink + "scripts\\" + s.flagproc;
 				FILE* file = _Py_fopen(loc.c_str(), "r+");
 				auto pyret = PyRun_AnyFileEx(file, s.flagproc.c_str(),true);
+				UI->idmapmutex.lock();
+				UI->processtridmap.erase(getpid());
+				UI->idmapmutex.unlock();
+				auto fuckvs = UI;
+				UI->argmodmutex->lock();
+				auto bargs = UI->args[strid];
+				auto fargs = boost::any_cast<vector<wchar_t*>>(bargs[(bargs.size() < 10) ? 1 : 8]);
+				int i = 0;
+				while (i < fargs.size())
+				{
+					delete[] fargs[i];
+					i++;
+				}
+				if (bargs.size() > 10)
+				{
+					*boost::any_cast<bool*>(bargs[13]) = true;
+				}
+				UI->args.erase(strid);
+				UI->argmodmutex->unlock();
 			}
 			return ret;
 		}
@@ -1302,12 +1411,19 @@ namespace GAME
 		{
 			return NewWindow(parent, pos, size, styleids[stylename], flags,strname);
 		}
-		UIresult core::init(controls * con, camera * ncam, frame * mf, ui scenen)
+		UIresult core::init(controls * con, camera * ncam, frame * mf, ui scenen, string link)
 		{
 			int i = 0;
+			bslink = link;
 			PyImport_AppendInittab("GUI", Python::GUIMOD::PyInit_GUI);
 			PyImport_AppendInittab("AZflib", Python::AZFLIBMOD::PyInit_AZflib);
+			//PyEval_InitThreads();
 			Py_Initialize();
+			wstring wstr0 = STRtoWSTR((bslink + "scripts\\"));
+			wchar_t * ch0 = new wchar_t[wstr0.size() + 1];
+			wcsncpy(ch0, wstr0.c_str(), wstr0.size() + 1);
+			wchar_t* _args[] = { ch0 };
+			PySys_SetArgv(1, _args);
 			PyImport_ImportModule("GUI");
 			PyImport_ImportModule("AZflib");
 			conptr = con;

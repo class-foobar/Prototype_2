@@ -625,9 +625,10 @@ namespace classvariables
 #define defaultinterpolationmode D2D1_BITMAP_INTERPOLATION_MODE_LINEAR  //D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR
 #define advancedinterpolatonmode D2D1_INTERPOLATION_MODE::D2D1_INTERPOLATION_MODE_ANISOTROPIC
 #define PYFUNCD(name) static  PyObject* name(PyObject *self, PyObject *args)
-#define PYFUNC(name) static PyObject* name(PyObject *self, PyObject *args); vecbreaker<PyObject*(*)(PyObject*,PyObject*)> name ## generic_vbreaker(vb,name,#name,__COUNTER__); PYFUNCD(name)
+#define PYFUNC(name) mutex _ ## name ## Mutex; static PyObject* name(PyObject *self, PyObject *args); vecbreaker<PyObject*(*)(PyObject*,PyObject*)> name ## generic_vbreaker(vb,name,#name,__COUNTER__); PYFUNCD(name)
 #define BS(name) void name (string s); vecbreaker<void(*)(string s)> name ## vbreaker = vb + &name
 #define PYMETH(name) {#name,name,METH_VARARGS, "If I'd tell you I'd have to kill you"}
+#define PYWRITESCRIPTDATA false
 template<typename univar>
 class vecbreaker
 {

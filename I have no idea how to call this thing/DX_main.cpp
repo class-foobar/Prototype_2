@@ -45,7 +45,7 @@ namespace debugging
 }
 namespace GAME
 {
-	extern vector<thread*>scriptthreads;
+	extern vector<pair<thread*,bool*>>scriptthreads;
 	vector<entity> entitylist;
 	extern int4 camrect;
 	extern universe* uniclass;
@@ -62,6 +62,7 @@ namespace GAME
 		extern	physics pcshipclick;
 	}
 	GUI::core* UI;
+	mutex detachUIthmutex;
 }
 namespace DX2D
 {
@@ -1328,7 +1329,7 @@ namespace DX2D
 		uis.objectsvec.push_back(f);
 		uicam->scenes.push_back(uis);
 		uicam->isrendonscreen = true;
-		GAME::UI->init(&DXclass->con, uicam, f);
+		GAME::UI->init(&DXclass->con, uicam, f,0, bslink);
 		GAME::GUI::loadGUIdata(bslink, GAME::UI);
 		GAME::GUI::loadui(bslink, GAME::UI);
 	}
@@ -1515,8 +1516,12 @@ namespace DX2D
 				movetype = mt_mov;
 			int i = 0;
 			bool waspycalled = false;
-			if(UI != nullptr)
+			if (UI != nullptr)
+			{
+				//Py_BEGIN_ALLOW_THREADS
 				waspycalled = UI->MouseEvent(wParam, lParam, msg);
+				//Py_END_ALLOW_THREADS
+			}
 			DXclass->con.waspycalled = waspycalled;
 			DXclass->con.MouseEvent(wParam, lParam, msg);
 			DXclass->con.waspycalled = false;
@@ -1535,41 +1540,28 @@ namespace DX2D
 			{
 				while (i < scriptthreads.size())
 				{
-					if (scriptthreads[i]->joinable())
+					bool* b = scriptthreads[i].second;
+					while (!*b)
+						Sleep(0);
+					detachUIthmutex.lock();
+					if (scriptthreads[i].first->joinable())
 					{
 						try
 						{
-							scriptthreads[i]->join();
+							scriptthreads[i].first->join();
 						}
 						catch (...)
 						{
 
 						}
-						delete scriptthreads[i];
+						delete scriptthreads[i].first;
+						delete scriptthreads[i].second;
 						scriptthreads.erase(scriptthreads.begin() + i);
 					}
+					detachUIthmutex.unlock();
 					i++;
 				}
 				ii++;
-			}
-			i = 0;
-			if (!(ii < 2))
-			{
-				//Sleep(10);
-				while (i < scriptthreads.size())
-				{
-					try
-					{
-						scriptthreads[i]->join();
-						delete scriptthreads[i];
-					}
-					catch (...)
-					{
-
-					}
-					scriptthreads.erase(scriptthreads.begin() + i);
-					i++;
-				}
 			}
 			i = 0;
 			ii = 0;

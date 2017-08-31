@@ -2,9 +2,8 @@ import sys
 import GUI
 import AZflib
 import importlib
-args = sys.argv
-strid = sys.argv[0]
-loc = sys.argv[1]
+strid = GUI.GetSTRID()
+loc = GUI.GetFLoc(strid)
 wnd = GUI.GetArg(strid,0)
 GUI.Memory_Set(wnd,"hasmover","BOOL", False)
 floc = GUI.GetName(wnd)
@@ -21,4 +20,5 @@ for v in inputvec:
     b = AZflib.FindVar(file,floc + "@DATA@" + v)
     if b:
        GUI.Memory_Set(wnd,v,"STR",AZflib.GetVar(file,"STR",floc + "@DATA@" + v))
+AZflib.Release(file)
 GUI.Exit(strid)

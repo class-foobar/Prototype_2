@@ -168,6 +168,7 @@ namespace DX2D
 		physics pclass;
 		int2* pobjpos;
 		void callreinit();
+		//map<string, FILE*> files;
 	protected:
 		vector<frame*> defaultbutton_fv;
 		frame* defaultbutton_disabled;
@@ -179,39 +180,10 @@ namespace DX2D
 		string _callpyloc = "";
 		string _pyscriptname = "";
 		string _pyblankscriptname = "";
+		string _strid;
 		int _testi = 0;
 		ui _realtesti = 0;
-		void callpyscript()
-		{
-			auto localname = _pyscriptname;
-			string loccopy = _callpyloc;
-			FILE* _f = NULL;
-			_f = _Py_fopen(loccopy.c_str(), "r+");
-			_pyscriptname = "";
-			_callpyloc = "";
-			try
-			{
-				auto res = PyRun_AnyFileEx(_f, localname.c_str(), true);
-				//fclose(_f);
-				_testi++;
-				_realtesti++;
-			}
-			catch (std::exception& e)
-			{
-				cout << "\b";
-				cout << "Critical Error has occured..." << endl << ">";
-			}
-			//__try
-			//{
-			//	PyRun_AnyFile(_f, _pyscriptname.c_str());
-			//	_testi++;
-			//}
-			//__except (EXCEPTION_CONTINUE_EXECUTION)
-			//{
-			//	cout << "\b";
-			//	cout << "Critical Error has occured..." << endl << ">";
-			//}
-		}
+		void callpyscript(string strid, string loc, string fname);
 	public:
 		bool waspycalled = false;
 		inline physics* GetPhysP()

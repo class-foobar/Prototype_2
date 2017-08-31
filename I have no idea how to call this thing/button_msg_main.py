@@ -2,8 +2,8 @@ import sys
 import GUI
 import AZflib
 import importlib
-def main ():
-    strid = sys.argv[0]
+import os
+def main (strid):
     wnd = GUI.GetArg(strid,0)
     boxn = GUI.GetArg(strid,1)
     umsg = GUI.GetArg(strid,2)
@@ -45,14 +45,12 @@ def main ():
     if not isinside:
         return
     if(GUI.Memory_Find(wnd,msg)):
-        print(msg + " was found!")
+        os.chdir(sys.argv[0])
         pyf = GUI.Memory_Get(wnd,msg)
         npyf = pyf.replace(".py","")
         mod = importlib.import_module(npyf)
         met = getattr(mod,"main")
-        met(strid,0.1,0.1,0.1,0.1)
-    else: 
-        print(msg + " was not found")
+        met(strid,0.2,0.2,0.2,0.2)
     if msg == "MOUSEMOVE":
         if(not hasmover) and isinside:
             GUI.Memory_Set(wnd,"hasmover","BOOL",true)
@@ -73,6 +71,6 @@ def main ():
     elif msg == "DOUBLECLICK":
         pass
     return
-strid = sys.argv[0]
-main()
+strid = GUI.GetSTRID()
+main(strid)
 GUI.Exit(strid)
