@@ -9,7 +9,7 @@ GUI.Memory_Set(wnd,"hasmover","BOOL", False)
 floc = GUI.GetName(wnd)
 strv = floc + "@SHAPE0@ICON"
 if GUI.File_Find("gameui", strv):
-    GUI.AddSpriteToShape(wnd,GUI.File_GetVar("gameui",strv,"STR"),0)
+    GUI.AddSpriteToShape(wnd,GUI.File_GetVar("gameui",strv,"STR"),0,(1 << 3))
 INptr = GUI.GetCol(wnd,"IN")
 OUTptr = GUI.GetCol(wnd,"OUT")
 GUI.AddColPtr(wnd,INptr,"INcopy")
@@ -21,4 +21,3 @@ for v in inputvec:
     if b:
        GUI.Memory_Set(wnd,v,"STR",AZflib.GetVar(file,"STR",floc + "@DATA@" + v))
 AZflib.Release(file)
-GUI.Exit(strid)

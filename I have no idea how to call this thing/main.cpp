@@ -14,6 +14,7 @@ using namespace std;
 using namespace AZfilelib;
 namespace GAME
 {
+	extern mutex _globalrenmutex;
 	string version = "null";
 	ui build = 0;
 	universe* uniclass = nullptr;
@@ -154,7 +155,10 @@ int main(int argc, char *argv[])
 	MSG msg;
 	string vs = version;
 	ui bu = build;
-
+	mutex m;
+	unique_lock<mutex>lk(m);
+	condition_variable mttw;
+	thread* th;
 	do
 	{
 		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -164,18 +168,22 @@ int main(int argc, char *argv[])
 		}
 		if (wasstarted)
 		{
-			DX2D::Frame();
+			mttw.notify_one();
+			//DX2D::Frame(false);
 			if (pausemainth)
 			{
+				_globalrenmutex.lock();
 				ismainthpaused = true;
 				while (pausemainth)
 					;
+				_globalrenmutex.unlock();
 				ismainthpaused = false;
 			}
 		}
 		else
 		{
 			DX2D::init(style);
+			th = new thread(DX2D::Frame, true, &mttw, &lk);
 			wasstarted = true;
 		}
 	} while (msg.message != WM_QUIT);

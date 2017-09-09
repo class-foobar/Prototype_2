@@ -16,6 +16,12 @@ namespace GAME
 {
 	extern core* UI;
 	vector<pair<thread*,bool*>>scriptthreads;
+	mutex scriptthreadmutex;
+	deque<pycall*> calls;
+	namespace GUI
+	{
+		extern thread* curth;
+	}
 }
 namespace DX2D
 {
@@ -35,16 +41,11 @@ namespace DX2D
 	{
 		UI->reinit();
 	}
-	void controls::callpyscript(string strid, string loc, string fname )
+	void controls::callpyscript(string strid, string loc, string fname, void* callptr)
 	{
-		//auto localname = _pyscriptname;
-		//string loccopy = _callpyloc;
-		//string strid = _strid;
+		pycall* call = static_cast<pycall*>  (callptr);
 		FILE* _f = NULL;
 		_f = _Py_fopen(loc.c_str(), "r");
-		/*_pyscriptname = "";
-		_callpyloc = "";
-		_strid = "";*/
 		UI->argmodmutex->lock();
 		UI->idmapmutex.lock();
 		UI->processtridmap.insert(make_pair(getpid(), strid));
@@ -54,8 +55,6 @@ namespace DX2D
 		//{
 		if (fname == "basewindow_msg_move.py")
 			_testi++;
-		PyGILState_STATE gstate;
-		//gstate = PyGILState_Ensure();
 		auto res = PyRun_AnyFileEx(_f, fname.c_str(), true);
 		//PyGILState_Release(gstate);
 		UI->idmapmutex.lock();
@@ -76,8 +75,18 @@ namespace DX2D
 		{
 			*boost::any_cast<bool*>(bargs[13]) = true;
 		}
+		if (MapFind(UI->oncescmap[boost::any_cast<ui>(UI->args[strid][0])], fname))
+		{
+			UI->oncemutex.lock();
+			UI->oncescmap[boost::any_cast<ui>(UI->args[strid][0])].erase(fname);
+			UI->oncemutex.unlock();
+		}
 		UI->args.erase(strid);
 		UI->argmodmutex->unlock();
+		delete call;
+		/*GAME::scriptthreadmutex.lock();
+		int i = 0;
+		GAME::scriptthreadmutex.unlock();*/
 		//}
 		//catch (std::exception& e)
 		//{
@@ -118,6 +127,21 @@ namespace DX2D
 			wnd->waitmapmutex.unlock();
 			return;
 		}
+		try
+		{
+			auto ONMAP = UI->oncescmap;
+			//UI->oncemutex.lock();
+			if (MapFind(ONMAP, wnd->ID))
+				if (MapFind(ONMAP[wnd->ID], scriptname))
+				{
+					return;
+				}
+		}
+		catch (...)
+		{
+
+		}
+		//UI->oncemutex.unlock();
 		vector<boost::any> v;
 		v.push_back(wnd->ID);
 		v.push_back(bt->anyvars[1]);
@@ -154,7 +178,7 @@ namespace DX2D
 			v.push_back(scriptname); // 10(9)
 			v.push_back(vector<boost::any>()); // 11(10)
 			v.push_back(map<string,boost::any>()); // 12(11)
-			v.push_back((thread*)nullptr); // 13(12) placeholder
+			v.push_back((thread*)curth); // 13(12)
 			bool * bp;
 			v.push_back(bp = new bool (false)); // 14(13) isjoinable or isdetached
 			v.push_back(subloc); // 15(14) accessible from GUI.GetFLoc()
@@ -162,23 +186,37 @@ namespace DX2D
 			//PySys_SetArgv(argc-1, _args);
 			UI->argmodmutex->unlock();
 			UI->idmapmutex.lock();
-			UI->processtridmap.insert(make_pair(getpid(), strid));
+			//UI->processtridmap.insert(make_pair(getpid(), strid));
 			UI->idmapmutex.unlock();
 			//UI->isargbmodified = false;
 			int ii = 0;
 			string loc = subloc + "scripts\\" + scriptname;
-			_strid = strid;
-			//while (_callpyloc != "")
-			//	Sleep(0);
-			_callpyloc = loc;
-			//try
-			//{
-				_pyscriptname = scriptname;
-				thread* thptr = nullptr;
-				UI->argmodmutex->lock();
-				scriptthreads.push_back(make_pair(boost::any_cast<thread*>(UI->args[strid][12] = thptr = new thread (&controls::callpyscript,this, strid, loc, scriptname)), bp));
-				UI->argmodmutex->unlock();
-				//callpyscript();
+			//_strid = strid;
+			////while (_callpyloc != "")
+			////	Sleep(0);
+			//_callpyloc = loc;
+			////try
+			////{
+			//	_pyscriptname = scriptname;
+			//	thread* thptr = nullptr;
+			//	UI->argmodmutex->lock();
+			//	scriptthreads.push_back(make_pair(boost::any_cast<thread*>(UI->args[strid][12] = thptr = new thread (&controls::callpyscript,this, strid, loc, scriptname)), bp));
+			//UI->argmodmutex->unlock();
+			pycall call;
+			call.cancontinue = bp;
+			call.args = v;
+			call.c = UI;
+			call.scriptloc = loc;
+			call.scriptname = scriptname;
+			call.strid = strid;
+			call.wnd = wnd;
+			call.conptr = this;
+			UI->argmodmutex->lock();
+			GAME::calls.push_back(new pycall(call));
+			UI->argmodmutex->unlock();
+			if (calls.size() == 1)
+				UI->_mttw.notify_one();
+			//callpyscript();
 #if PYWRITESCRIPTDATA == true
 				cout << scriptname << " has started (ID: " << strid << ")" << endl;
 #endif

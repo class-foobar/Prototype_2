@@ -8,8 +8,14 @@ namespace GAME
 	extern mutex detachUIthmutex;
 	extern int4 camrect;
 	extern GUI::core* UI;
+	extern vector<pair<thread*, bool*>>scriptthreads;
+	extern deque<pycall*> calls;
+	extern mutex scriptthreadmutex;
 	namespace GUI
 	{
+		mutex GUIthmutex;
+		thread* curth;
+		map<thread*, bool*> scmap;
 		namespace Python
 		{
 			namespace GUIMOD
@@ -24,6 +30,7 @@ namespace GAME
 					uni2<float> pos, size;
 					char* chstylename = NULL, *chthisname = NULL;
 					PyArg_ParseTuple(args, "I|s|f|f|f|f|I|s", &parentid, &chstylename, &pos.x, &pos.y, &size.x, &size.y, &flags, &chthisname);
+					ui flagscopy = WF_SCALETO_V;
 					string stylename = chstylename;
 					string thisname = chthisname;
 					auto res = UI->NewWindow(UI->wnds[parentid], pos, size, stylename, (ui)flags);
@@ -292,10 +299,10 @@ namespace GAME
 				}
 				PYFUNC(Exit)
 				{
-					return Py_True;
 					string strid;
 					char*ch = NULL;
 					PyArg_ParseTuple(args, "s", &ch);
+					Py_RETURN_TRUE;
 					strid = ch;
 #if PYWRITESCRIPTDATA == true
 						cout << strid << " has exited" << endl;
@@ -311,7 +318,7 @@ namespace GAME
 						if (bargs.size() > 10)
 						{
 							UI->argmodmutex->unlock();
-							return Py_True;
+							Py_RETURN_TRUE;
 						}
 						auto fargs = boost::any_cast<vector<wchar_t*>>(bargs[(bargs.size() < 10)?1:8]);
 						int i = 0;
@@ -335,13 +342,13 @@ namespace GAME
 					}
 					//UI->isargbmodified = false;
 					UI->argmodmutex->unlock();
-					return Py_True;
+					Py_RETURN_TRUE;
 
 #if corruptioncheck == 1
 					auto _heap = malloc(sizeof(int));
 					free(_heap);
 #endif
-					return Py_True;
+					Py_RETURN_TRUE;
 					return PyLong_FromLong(0);
 				}
 				PYFUNC(MouseMoveDetB)
@@ -351,7 +358,7 @@ namespace GAME
 					PyArg_ParseTuple(args, "K|b", &ptr, &b);
 					auto bcptr = static_cast<pair<button*, controls*>*>((void*)ptr);
 					bcptr->first->callpyonanymmove = b;
-					return Py_True;
+					Py_RETURN_TRUE;
 				}
 				PYFUNC(Memory_Set)
 				{
@@ -402,7 +409,7 @@ namespace GAME
 					//Py_DECREF(obj);
 					Py_DECREFTS(obj);
 					_Memory_SetMutex.unlock();
-					return Py_True;
+					Py_RETURN_TRUE;
 
 				}
 				PYFUNC(Memory_GetType)
@@ -565,21 +572,53 @@ namespace GAME
 				{
 					string spritename;
 					ui ID;
+					ui flags;
 					int i;
 					char* ch0 = NULL;
-					PyArg_ParseTuple(args, "I|s|i", &ID, &ch0, &i);
+					PyArg_ParseTuple(args, "I|s|i|I", &ID, &ch0, &i,&flags);
+					int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
 					spritename = ch0;
 					window* wnd = UI->wnds[ID];
 					style s = UI->styles[wnd->styleid];
 					sprite sp = UI->icons[spritename];
+					uni2<float> mf;
+					uni2<float> pmf;
+					if (flags & WF_SCALETO_VH || flags == NULL)
+					{
+						mf.x = ((float)wsize.x)*wnd->size.x;
+						mf.y = ((float)wsize.y)*wnd->size.y;
+						pmf.x = ((float)wsize.x)*wnd->defpos.x;
+						pmf.y = ((float)wsize.y)*wnd->defpos.y;
+					}
+					else if (flags & WF_SCALETO_V)
+					{
+						mf.x = ((float)wsize.y)*wnd->size.x;
+						mf.y = ((float)wsize.y)*wnd->size.y;
+						pmf.x = ((float)wsize.y)*wnd->defpos.x;
+						pmf.y = ((float)wsize.y)*wnd->defpos.y;
+					}
+					else if (flags & WF_SCALETO_H)
+					{
+						mf.x = ((float)wsize.x)*wnd->size.x;
+						mf.y = ((float)wsize.x)*wnd->size.y;
+						pmf.x = ((float)wsize.x)*wnd->defpos.x;
+						pmf.y = ((float)wsize.x)*wnd->defpos.y;
+					}
+					uni2<float> rmf = mf;
+					if (s.shapes[i].lockh)
+						rmf.x = mf.x;
+					if (s.shapes[i].lockv)
+						rmf.y = mf.y;
 					sp.SetOffsetXYp(wnd->pos, true);
 					//bool* rb = new bool(true);
 					sp.render = wnd->shaperb[i];
 					sp.useidentp = true;
 					sp.identp = wnd->identp;
-					sp.size = (s.shapes[i].size * wnd->defmultip).toint2();
+					uni2<float> copy;
+					sp.size = (copy = s.shapes[i].size * rmf).toint2();
 					int2* i2sp;
-					sp.SyncPos(i2sp = new int2((s.shapes[i].pos * wnd->defmultip).toint2()), false);
+					sp.SyncPos(i2sp = new int2(pmf.toint2()+(s.shapes[i].pos * rmf).toint2()), false);
+					//*i2sp = *i2sp + (wnd->defpos*).toint2();
 					wnd->sf->sprites.push_back(sp);
 					wnd->posvec.push_back(make_pair(i2sp, *i2sp));
 #if corruptioncheck == 1
@@ -597,7 +636,7 @@ namespace GAME
 				}
 				PYFUNC(DestroyWnd)
 				{
-					return Py_True;
+					Py_RETURN_TRUE;
 				}
 				PYFUNC(DestroyWndAndExit)
 				{
@@ -605,7 +644,7 @@ namespace GAME
 				}
 				PYFUNC(MinimizeWnd)
 				{
-					return Py_True;
+					Py_RETURN_TRUE;
 				}
 				PYFUNC(WaitFor)
 				{
@@ -645,12 +684,24 @@ namespace GAME
 					wnd->waitmap.insert(make_pair(scripttype, make_pair(signals,(void*)mttw)));
 					wnd->waitmapmutex.unlock();
 					thread* th = boost::any_cast<thread*>(bargs[12]);
-					detachUIthmutex.lock();
-					th->detach();
+					scriptthreadmutex.lock();
 					*boost::any_cast<bool*>(bargs[13]) = true;
-					detachUIthmutex.unlock();
+					bool* rb = nullptr;
+					if (curth == th)
+					{
+						curth = new thread(pythreadqueue, rb = new bool(false));
+						scriptthreads.push_back(make_pair(curth, rb));
+						scmap.insert(make_pair(curth, rb));
+						curth->detach();
+					}
+					scriptthreadmutex.unlock();
+					//detachUIthmutex.lock();
+					
+					//detachUIthmutex.unlock();
+					GUIthmutex.unlock();
 					mttw->wait(lk);
 					wnd->waitmapmutex.lock();
+					GUIthmutex.lock();
 					delete mttw;
 					string *val = static_cast<string*>(wnd->waitmap[scripttype].second);
 					string _val = *val;
@@ -658,6 +709,28 @@ namespace GAME
 					wnd->waitmap.erase(scripttype);
 					wnd->waitmapmutex.unlock();
 					return PyUnicode_FromStringAndSize(_val.c_str(), _val.size());
+				}
+				PYFUNC(Detach)
+				{
+					ui ID = 0;
+					char* ch0 = NULL;
+					PyArg_ParseTuple(args, "I|s", &ID, &ch0);
+					string strid = ch0;
+					auto wnd = UI->wnds[ID];
+					auto bargs = wnd->coreptr->args[strid];
+					thread* th = boost::any_cast<thread*>(bargs[12]);
+					scriptthreadmutex.lock();
+					*boost::any_cast<bool*>(bargs[13]) = true;
+					bool* rb = nullptr;
+					if (curth == th)
+					{
+						curth = new thread(pythreadqueue, rb = new bool(false));
+						scriptthreads.push_back(make_pair(curth, rb));
+						scmap.insert(make_pair(curth, rb));
+						curth->detach();
+					}
+					scriptthreadmutex.unlock();
+					Py_RETURN_TRUE;
 				}
 				PYFUNC(GetSTRID)
 				{
@@ -677,6 +750,41 @@ namespace GAME
 					auto loc = boost::any_cast<string>(UI->args[strid][(UI->args[strid].size() < 10)? 2:14]);
 					_GetFLocMutex.unlock();
 					return PyUnicode_FromStringAndSize(loc.c_str(), loc.size());
+				}
+				PYFUNC(Once)
+				{
+					UI->oncemutex.lock();
+					ui ID = 0;
+					char* ch0 = NULL;
+					PyArg_ParseTuple(args, "I|s", &ID, &ch0);
+					string strid = ch0;
+					if (!MapFind(UI->oncescmap, ID))
+						UI->oncescmap.insert(make_pair(ID, map<string,string>()));
+					auto filename = boost::any_cast<string>(UI->args[strid][9]);
+					UI->oncescmap[ID].insert(make_pair(filename, strid));
+					UI->oncemutex.unlock();
+					Py_RETURN_TRUE;
+				}
+				PYFUNC(KeyState)
+				{
+					char* ch0 = NULL, *ch1 = NULL;
+					PyArg_ParseTuple(args, "s", &ch0);
+					string code = ch0;
+					map<string, ui>inputs = { { "LBUTTON",VK_LBUTTON },{ "RBUTTON",VK_RBUTTON },{ "MBUTTON",VK_MBUTTON } };
+					auto codei = VK_RETURN;
+					if (MapFind(inputs, code))
+						codei = inputs[code];
+					else if (code[0] == '0' && code[1] == 'x')
+					{
+						codei = stol(code, 0, 16);
+					}
+					else
+					{
+						codei = (int)(char)code[0];
+					}
+					if(GetKeyState(codei) & 0x8000)
+						Py_RETURN_TRUE;
+					Py_RETURN_FALSE;
 				}
 				static  PyObject* test(PyObject *self, PyObject *args)
 				{
@@ -741,7 +849,7 @@ namespace GAME
 					auto file = static_cast<AZfile*>((void*)ptr);
 					delete file;
 					_ReleaseMutex.unlock();
-					return Py_True;
+					Py_RETURN_TRUE;
 				}
 				PYFUNC(GetVar)
 				{
@@ -769,7 +877,7 @@ namespace GAME
 					file->SetVar(type, new boost::any(common::Python::AnyFromPyObj(val, type)), name);
 					Py_DECREFTS(val);
 					_SetVarMutex.unlock();
-					return Py_True;
+					Py_RETURN_TRUE;
 				}
 				PYFUNC(SaveFile)
 				{
@@ -781,7 +889,7 @@ namespace GAME
 					auto file = static_cast<AZfile*>((void*)ptr);
 					file->SaveToFile(dir);
 					_SaveFileMutex.unlock();
-					return Py_True;
+					Py_RETURN_TRUE;
 				}
 				PYFUNC(FindVar)
 				{
@@ -888,10 +996,104 @@ namespace GAME
 			i = 0;
 			while (i < wndparentv.size())
 			{
-				c->AttachTo(c->wnds[nnmap[wndparentv[i].first]],wndparentv[i].second,AT_STYLEPROPPOS | AT_VINIT);
+				c->AttachTo(c->wnds[nnmap[wndparentv[i].first]],wndparentv[i].second,AT_STYLEPROPPOS | AT_VINIT, WF_HIDE | WF_SCALETO_V);
 				wndparentv[i].second->show();
 				i++;
 			}
+		}
+		void pythreadqueue(bool* b)
+		{
+		restart:;
+			scriptthreadmutex.lock();
+			scriptthreadmutex.unlock();
+			int i = 0;
+			thread* thisth = curth;
+			int ii = 0;
+			UI->_mttw.wait(UI->_ulm);
+			while (calls.size() > 0)
+			{
+				UI->argmodmutex->lock();
+				auto call = calls.front();
+				UI->argmodmutex->unlock();
+				if (call->isbeingprocessed)
+				{
+					UI->argmodmutex->lock();
+					calls.pop_front();
+					UI->argmodmutex->unlock();
+					continue;
+				}
+				GUIthmutex.lock();
+				call->isbeingprocessed = true;
+				call->conptr->callpyscript(call->strid,call->scriptloc,call->scriptname,(void*)call);
+				if (curth != thisth)
+				{
+					i = 0;
+					//*call->cancontinue = true;
+					//delete call;
+					while (i < scriptthreads.size())
+					{
+						if (scriptthreads[i].first == curth)
+						{
+							*scriptthreads[i].second = true;
+							break;
+						}
+						i++;
+					}
+					GUIthmutex.unlock();
+					return;
+				}
+				UI->argmodmutex->lock();
+				//*call->cancontinue = true;
+				//delete call;
+				calls.pop_front();
+				UI->argmodmutex->unlock();
+				GUIthmutex.unlock();
+				
+				//if (calls[ii]->isbeingprocessed)
+				//{
+				//	//GAME::scriptthreadmutex.lock();
+				//	//calls.erase(calls.begin() + ii);
+				//	//GAME::scriptthreadmutex.unlock();
+				//	ii++;
+				//	continue;
+				//}
+				//GUIthmutex.lock();
+				//if (calls.size() == 0)
+				//	break;
+				//calls[ii]->isbeingprocessed = true;
+				//auto call = calls[ii];
+				////GAME::scriptthreadmutex.lock();
+				////calls.erase(calls.begin() + ii);
+				////GAME::scriptthreadmutex.unlock();
+				//call->conptr->callpyscript(call->strid,call->scriptloc,call->scriptname,(void*)call,&calls);
+				//if (curth != thisth)
+				//{
+				//	i = 0;
+				//	*call->cancontinue = true;
+				//	delete call;
+				//	while (i < scriptthreads.size())
+				//	{
+				//		if (scriptthreads[i].first == curth)
+				//		{
+				//			*scriptthreads[i].second = true;
+				//			break;
+				//		}
+				//		i++;
+				//	}
+				//	GUIthmutex.unlock();
+				//	return;
+				//}
+				//*call->cancontinue = true;
+				////UI->argmodmutex->lock();
+				///*GAME::scriptthreadmutex.lock();
+				//cout << calls[ii]->scriptname << endl;
+				//calls.erase(calls.begin() + ii);
+				//GAME::scriptthreadmutex.unlock();*/
+				//delete call;
+				////UI->argmodmutex->unlock();
+				//GUIthmutex.unlock();
+			}
+			goto restart;
 		}
 		ui core::PreAllocateStyle(string name)
 		{
@@ -928,13 +1130,13 @@ namespace GAME
 			}
 			return b;
 		}
-		UIresult core::AttachTo(window * parent, window * child, unsigned long int flags)
+		UIresult core::AttachTo(window * parent, window * child, unsigned long int flags, unsigned long int visflags)
 		{
 			UIresult ret;
 			window* oldparent = child->parent;
 			if (parent == oldparent && flags & AT_VINIT)
 			{
-				child->initvis(styles[child->ID], child->defpos, GAME::camrect.second().touni2<float>());
+				child->initvis(styles[child->styleid], child->defpos, GAME::camrect.second().touni2<float>()*child->size,visflags);
 				ret.code = UI_OK;
 				return ret;
 			}
@@ -987,7 +1189,7 @@ namespace GAME
 							child->nooffpos = (parent->size * multc).toint2();
 							*child->pos = (parent->pos->touni2<float>() + (parent->size * multc)).toint2();
 						}
-						child->initvis(styles[child->ID], child->defpos, GAME::camrect.second().touni2<float>());
+						child->initvis(styles[child->ID], child->defpos, GAME::camrect.second().touni2<float>()*child->size, visflags);
 					}
 					else
 					{
@@ -1088,7 +1290,7 @@ namespace GAME
 					sp.useidentp = true;
 					sp.identp = identp;
 					int2* i2sp;
-					if (s.shapes[i].lockh || s.shapes[i].lockv)
+					if (/*s.shapes[i].lockh || s.shapes[i].lockv*/true)
 					{
 						uni2<float> mf;
 						int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
@@ -1107,13 +1309,14 @@ namespace GAME
 							mf.x = ((float)wsize.x)*size.x;
 							mf.y = ((float)wsize.x)*size.y;
 						}
-						uni2<float> rmf = screenmultip;
+						uni2<float> rmf = mf;
 						if (s.shapes[i].lockh)
 							rmf.x = mf.x;
 						if (s.shapes[i].lockv)
 							rmf.y = mf.y;
 						sp.size = (s.shapes[i].size * rmf).toint2();
 						sp.SyncPos(i2sp = new int2((s.shapes[i].pos * rmf).toint2()), false);
+						*i2sp = *i2sp + (defpos*rmf).toint2();
 					}
 					else
 					{
@@ -1131,7 +1334,7 @@ namespace GAME
 					b.offset = pos;
 					b.useidentp = true;
 					b.identp = identp;
-					if (s.shapes[i].lockh || s.shapes[i].lockv)
+					if (/*s.shapes[i].lockh || s.shapes[i].lockv*/true)
 					{
 						uni2<float> mf;
 						int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
@@ -1150,13 +1353,14 @@ namespace GAME
 							mf.x = ((float)wsize.x)*size.x;
 							mf.y = ((float)wsize.x)*size.y;
 						}
-						uni2<float> rmf = screenmultip;
+						uni2<float> rmf = mf;
 						if (s.shapes[i].lockh)
 							rmf.x = mf.x;
 						if (s.shapes[i].lockv)
 							rmf.y = mf.y;
 						b.size = new int2((s.shapes[i].size * rmf).toint2());
 						b.pos = new int2((s.shapes[i].pos * rmf).toint2());
+						*b.pos = *b.pos + (defpos*wsize.touni2<float>()).toint2();
 					}
 					else
 					{
@@ -1166,7 +1370,7 @@ namespace GAME
 					posvec.push_back(make_pair(b.pos, *b.pos));
 					if (s.shapes[i].shape == 0)
 					{
-						b.size = new int2((s.shapes[i].size * screenmultip).toint2());
+						//b.size = new int2((s.shapes[i].size * screenmultip).toint2());
 						b.createrectfrompossize = true;
 					}
 					else
@@ -1209,10 +1413,32 @@ namespace GAME
 			con.GetPhysP()->offsetp = pos;
 			while (i < s.boxes.size())
 			{
-				int ii = 0;
-				int2* pos = new int2((s.boxes[i].sh.pos * screenmultip).toint2());
+				uni2<float> mf;
+				int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
+				if (flags & WF_SCALETO_VH || flags == NULL)
+				{
+					mf.x = ((float)wsize.x)*size.x;
+					mf.y = ((float)wsize.y)*size.y;
+				}
+				else if (flags & WF_SCALETO_V)
+				{
+					mf.x = ((float)wsize.y)*size.x;
+					mf.y = ((float)wsize.y)*size.y;
+				}
+				else if (flags & WF_SCALETO_H)
+				{
+					mf.x = ((float)wsize.x)*size.x;
+					mf.y = ((float)wsize.x)*size.y;
+				}
+				uni2<float> rmf = mf;
+				if (s.boxes[i].sh.lockh)
+					rmf.x = mf.x;
+				if (s.boxes[i].sh.lockv)
+					rmf.y = mf.y;
+				int2* pos = new int2((s.shapes[i].pos * rmf).toint2());
+				*pos = *pos + (defpos*wsize.touni2<float>()).toint2();
 				posvec.push_back(make_pair(pos,*pos));
-				int2 size = int2((s.boxes[i].sh.size * screenmultip).toint2());
+				int2 size = int2((s.shapes[i].size * rmf).toint2());
 				simpleshape sh = s.boxes[i].sh;
 				textclass tc;
 				tc.init(); 
@@ -1242,6 +1468,69 @@ namespace GAME
 			updatepos({ 0,0 });
 			ret.code = UI_OK;
 			f->ismactive = true;
+			vector<boost::any> v;
+			/*		window* wnd = boost::any_cast<window*>(bt->anyvars[0]);
+			auto m = boost::any_cast<>bt->anyvars[2]*/;
+			v.push_back(ID);
+			map<string, ui>inputs = { { "LBUTTONUP",WM_LBUTTONUP },{ "RBUTTONUP",WM_RBUTTONUP },{ "LBUTTONDOWN",WM_LBUTTONDOWN },{ "RBUTTONDOWN",WM_RBUTTONDOWN },
+			{ "MBUTTONUP" ,WM_MBUTTONUP },{ "MBUTTONDOWN",WM_MBUTTONDOWN },{ "MOUSEMOVE",WM_MOUSEMOVE } };
+			//vector<ui> inpotsuint = { };
+			i = 0;
+			string inputstr;
+		feachdone:;
+			string msgf = inputstr;
+			string strid = to_string(ID);
+			wstring wstr0 = STRtoWSTR(strid);
+			wchar_t * ch0 = new wchar_t[wstr0.size() + 1];
+			wcsncpy(ch0, wstr0.c_str(), wstr0.size() + 1);
+			wstring wstr1 = STRtoWSTR(coreptr->bslink);
+			wchar_t * ch1 = new wchar_t[wstr1.size() + 1];
+			wcsncpy(ch1, wstr1.c_str(), wstr1.size() + 1);
+			wchar_t* _args[] = { ch0, ch1 };
+			int argc = sizeof(_args) / sizeof(_args[0]);
+			vector<wchar_t*> w_tv = { ch0,ch1 };
+			v.push_back(w_tv);
+			//while (UI->isargbmodified)
+			//	Sleep(0);
+			//UI->isargbmodified = true;
+			UI->argmodmutex->lock();
+			v.push_back(coreptr->bslink);
+			UI->args.insert(make_pair(strid, v));
+			UI->argmodmutex->unlock();
+			UI->idmapmutex.lock();
+			if (MapFind(UI->processtridmap, getpid()))
+				UI->processtridmap.erase(getpid());
+			UI->processtridmap.insert(make_pair(getpid(), strid));
+			UI->idmapmutex.unlock();
+			//UI->isargbmodified = false;
+
+			//PySys_SetArgv(argc, _args);
+			int ii = 0;
+			if (s.flagproc != "")
+			{
+				string loc = coreptr->bslink + "scripts\\" + s.flagproc;
+				FILE* file = _Py_fopen(loc.c_str(), "r+");
+				auto pyret = PyRun_AnyFileEx(file, s.flagproc.c_str(), true);
+				UI->idmapmutex.lock();
+				UI->processtridmap.erase(getpid());
+				UI->idmapmutex.unlock();
+				auto fuckvs = UI;
+				UI->argmodmutex->lock();
+				auto bargs = UI->args[strid];
+				auto fargs = boost::any_cast<vector<wchar_t*>>(bargs[(bargs.size() < 10) ? 1 : 8]);
+				int i = 0;
+				while (i < fargs.size())
+				{
+					delete[] fargs[i];
+					i++;
+				}
+				if (bargs.size() > 10)
+				{
+					*boost::any_cast<bool*>(bargs[13]) = true;
+				}
+				UI->args.erase(strid);
+				UI->argmodmutex->unlock();
+			}
 			return ret;
 		}
 		UIresult window::scale(int2 nsize)
@@ -1313,7 +1602,10 @@ namespace GAME
 			uni2<float> mf;
 			int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
 			w->defpos = pos;
-			if (flags & WF_SCALETO_VH || flags == NULL)
+			mf.x = ((float)wsize.x)*size.x;
+			mf.y = ((float)wsize.y)*size.y;
+			w->size = size;
+		/*	if (flags & WF_SCALETO_VH || flags == NULL)
 			{
 				mf.x = ((float)wsize.x)*size.x;
 				mf.y = ((float)wsize.y)*size.y;
@@ -1327,7 +1619,7 @@ namespace GAME
 			{
 				mf.x = ((float)wsize.x)*size.x;
 				mf.y = ((float)wsize.x)*size.y;
-			}
+			}*/
 			if (!(flags & WF_NOVINIT))
 			{
 				ret = w->initvis(s, pos, mf,flags);
@@ -1343,68 +1635,68 @@ namespace GAME
 			//{
 			//	strid = to_string(rand());
 			//} while (UI->args.find(strid) != UI->args.end());
-			vector<boost::any> v;
-			/*		window* wnd = boost::any_cast<window*>(bt->anyvars[0]);
-			auto m = boost::any_cast<>bt->anyvars[2]*/;
-			v.push_back(w->ID);
-			map<string, ui>inputs = { { "LBUTTONUP",WM_LBUTTONUP },{ "RBUTTONUP",WM_RBUTTONUP },{ "LBUTTONDOWN",WM_LBUTTONDOWN },{ "RBUTTONDOWN",WM_RBUTTONDOWN },
-			{ "MBUTTONUP" ,WM_MBUTTONUP },{ "MBUTTONDOWN",WM_MBUTTONDOWN },{ "MOUSEMOVE",WM_MOUSEMOVE } };
-			//vector<ui> inpotsuint = { };
-			i = 0;
-			string inputstr;
-		feachdone:;
-			string msgf = inputstr;
-			wstring wstr0 = STRtoWSTR(strid);
-			wchar_t * ch0 = new wchar_t[wstr0.size() + 1];
-			wcsncpy(ch0, wstr0.c_str(), wstr0.size() + 1);
-			wstring wstr1 = STRtoWSTR(bslink);
-			wchar_t * ch1 = new wchar_t[wstr1.size() + 1];
-			wcsncpy(ch1, wstr1.c_str(), wstr1.size() + 1);
-			wchar_t* _args[] = { ch0, ch1 };
-			int argc = sizeof(_args) / sizeof(_args[0]);
-			vector<wchar_t*> w_tv = { ch0,ch1 };
-			v.push_back(w_tv);
-			//while (UI->isargbmodified)
-			//	Sleep(0);
-			//UI->isargbmodified = true;
-			UI->argmodmutex->lock();
-			v.push_back(bslink);
-			UI->args.insert(make_pair(strid, v));
-			UI->argmodmutex->unlock();
-			UI->idmapmutex.lock();
-			if (MapFind(UI->processtridmap, getpid()))
-				UI->processtridmap.erase(getpid());
-			UI->processtridmap.insert(make_pair(getpid(), strid));
-			UI->idmapmutex.unlock();
-			//UI->isargbmodified = false;
+		//	vector<boost::any> v;
+		//	/*		window* wnd = boost::any_cast<window*>(bt->anyvars[0]);
+		//	auto m = boost::any_cast<>bt->anyvars[2]*/;
+		//	v.push_back(w->ID);
+		//	map<string, ui>inputs = { { "LBUTTONUP",WM_LBUTTONUP },{ "RBUTTONUP",WM_RBUTTONUP },{ "LBUTTONDOWN",WM_LBUTTONDOWN },{ "RBUTTONDOWN",WM_RBUTTONDOWN },
+		//	{ "MBUTTONUP" ,WM_MBUTTONUP },{ "MBUTTONDOWN",WM_MBUTTONDOWN },{ "MOUSEMOVE",WM_MOUSEMOVE } };
+		//	//vector<ui> inpotsuint = { };
+		//	i = 0;
+		//	string inputstr;
+		//feachdone:;
+		//	string msgf = inputstr;
+		//	wstring wstr0 = STRtoWSTR(strid);
+		//	wchar_t * ch0 = new wchar_t[wstr0.size() + 1];
+		//	wcsncpy(ch0, wstr0.c_str(), wstr0.size() + 1);
+		//	wstring wstr1 = STRtoWSTR(bslink);
+		//	wchar_t * ch1 = new wchar_t[wstr1.size() + 1];
+		//	wcsncpy(ch1, wstr1.c_str(), wstr1.size() + 1);
+		//	wchar_t* _args[] = { ch0, ch1 };
+		//	int argc = sizeof(_args) / sizeof(_args[0]);
+		//	vector<wchar_t*> w_tv = { ch0,ch1 };
+		//	v.push_back(w_tv);
+		//	//while (UI->isargbmodified)
+		//	//	Sleep(0);
+		//	//UI->isargbmodified = true;
+		//	UI->argmodmutex->lock();
+		//	v.push_back(bslink);
+		//	UI->args.insert(make_pair(strid, v));
+		//	UI->argmodmutex->unlock();
+		//	UI->idmapmutex.lock();
+		//	if (MapFind(UI->processtridmap, getpid()))
+		//		UI->processtridmap.erase(getpid());
+		//	UI->processtridmap.insert(make_pair(getpid(), strid));
+		//	UI->idmapmutex.unlock();
+		//	//UI->isargbmodified = false;
 
-			//PySys_SetArgv(argc, _args);
-			int ii = 0;
-			if (s.flagproc != "")
-			{
-				string loc = bslink + "scripts\\" + s.flagproc;
-				FILE* file = _Py_fopen(loc.c_str(), "r+");
-				auto pyret = PyRun_AnyFileEx(file, s.flagproc.c_str(),true);
-				UI->idmapmutex.lock();
-				UI->processtridmap.erase(getpid());
-				UI->idmapmutex.unlock();
-				auto fuckvs = UI;
-				UI->argmodmutex->lock();
-				auto bargs = UI->args[strid];
-				auto fargs = boost::any_cast<vector<wchar_t*>>(bargs[(bargs.size() < 10) ? 1 : 8]);
-				int i = 0;
-				while (i < fargs.size())
-				{
-					delete[] fargs[i];
-					i++;
-				}
-				if (bargs.size() > 10)
-				{
-					*boost::any_cast<bool*>(bargs[13]) = true;
-				}
-				UI->args.erase(strid);
-				UI->argmodmutex->unlock();
-			}
+		//	//PySys_SetArgv(argc, _args);
+		//	int ii = 0;
+		//	if (s.flagproc != "")
+		//	{
+		//		string loc = bslink + "scripts\\" + s.flagproc;
+		//		FILE* file = _Py_fopen(loc.c_str(), "r+");
+		//		auto pyret = PyRun_AnyFileEx(file, s.flagproc.c_str(),true);
+		//		UI->idmapmutex.lock();
+		//		UI->processtridmap.erase(getpid());
+		//		UI->idmapmutex.unlock();
+		//		auto fuckvs = UI;
+		//		UI->argmodmutex->lock();
+		//		auto bargs = UI->args[strid];
+		//		auto fargs = boost::any_cast<vector<wchar_t*>>(bargs[(bargs.size() < 10) ? 1 : 8]);
+		//		int i = 0;
+		//		while (i < fargs.size())
+		//		{
+		//			delete[] fargs[i];
+		//			i++;
+		//		}
+		//		if (bargs.size() > 10)
+		//		{
+		//			*boost::any_cast<bool*>(bargs[13]) = true;
+		//		}
+		//		UI->args.erase(strid);
+		//		UI->argmodmutex->unlock();
+		//	}
 			return ret;
 		}
 		UIresult core::NewWindow(window * parent, uni2<float> pos, uni2<float> size, string stylename, unsigned long int flags,string strname)
@@ -1432,6 +1724,15 @@ namespace GAME
 			UIresult result;
 			result.code = UI_OK;
 			cam = ncam;
+			scriptthreadmutex.lock();
+			bool* rb = nullptr;				
+			mutex m;
+			UI->_ulm = unique_lock<std::mutex>(m);
+			curth = new thread(pythreadqueue,rb = new bool(false));
+			scriptthreads.push_back(make_pair(curth, rb));
+			scriptthreadmutex.unlock();
+			curth->detach();
+			Sleep(10);
 			return result;
 		}
 		void core::reinit()

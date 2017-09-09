@@ -73,4 +73,3 @@ def main (strid):
     return
 strid = GUI.GetSTRID()
 main(strid)
-GUI.Exit(strid)

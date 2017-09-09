@@ -52,6 +52,9 @@
 #include <d2d1effecthelpers.h>
 #include <Mmsystem.h>
 #include <excpt.h>
+#include <deque>
+#include <signal.h>
+#include <tchar.h>
 #define DETECTMEMORYLEAKS 0
 #ifdef _DEBUG
 #if DETECTMEMORYLEAKS == 1
@@ -82,6 +85,13 @@ using namespace DirectX;
 #else 
 #pragma comment(lib, "X:\\PROJECTS\\AM_uberlib\\x64\\Release\\AM_uberlib.lib")
 #endif // DEBUG
+#define forever while(true)
+inline void SignalHandler(int signal)
+{
+	printf("Signal %d", signal);
+	throw "!Access Violation!";
+}
+
 inline std::string INTtoSTR(int i)
 {
 	return std::to_string(i);
@@ -1102,7 +1112,7 @@ namespace DX2D
 	class main;
 	void init(mainwins style);
 	void Release();
-	void Frame();
+	void Frame(bool ismth = false,condition_variable* _mttw = nullptr, unique_lock<mutex>* _lk = nullptr);
 	LRESULT EmulateLEwinproc(HWND hwndwin, UINT msg, WPARAM wParam, LPARAM lParam);
 }
 using namespace std;

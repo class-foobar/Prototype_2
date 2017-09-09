@@ -41,6 +41,7 @@ namespace GAME
 		{
 			extern map<string, void (*)(int2&)> list;
 		}
+		void pythreadqueue(bool* b);
 		class UImain;
 		class window;
 		struct simplewindow;
@@ -92,6 +93,7 @@ namespace GAME
 			int2* pos;
 			int2 nooffpos;
 			vector<pair<int2*,int2>> posvec;
+			vector<pair<int2, int2>> defshapepossize;
 			vector<int2> cufoffsets;
 			frame* f = nullptr;
 			frame* sf = nullptr;
@@ -213,6 +215,11 @@ namespace GAME
 			ui PreAllocateStyle(string name);
 			UIresult addstyle(style st, string name);
 		public:
+			mutex oncemutex;
+			mutex _m;
+			unique_lock<std::mutex> _ulm;
+			condition_variable _mttw;
+			map<ui, map<string, string>> oncescmap;
 			void reinit();
 			map<string, vector<boost::any>> args;
 			AZfile gameuif;
@@ -234,7 +241,7 @@ namespace GAME
 			//uni2<float> screensizemultip;
 			map<string, ui> styleids;
 			bool MouseEvent(WPARAM wParam, LPARAM lParam, UINT msg);
-			UIresult AttachTo(window* parent, window* child, unsigned long int flags = AT_NULL);
+			UIresult AttachTo(window* parent, window* child, unsigned long int flags = AT_NULL, unsigned long int visflags = 0);
 			//UIresult NewWindow(window*parent, int2 pos, int2 size, ui styleid, unsigned long int flags = 0x00000000L);
 			//UIresult NewWindow(window*parent, int2 pos, int2 size, string stylename, unsigned long int flags = 0x00000000L);
 			UIresult NewWindow(window*parent, uni2<float> pos, uni2<float> size, ui styleid, unsigned long int flags = 0x00000000L, string strname = "NULL");
@@ -252,4 +259,16 @@ namespace GAME
 			}
 		};
 	}
+	struct pycall
+	{
+		GUI::core* c;
+		string strid;
+		string scriptname;
+		string scriptloc;
+		vector<boost::any> args;
+		controls* conptr;
+		GUI::window* wnd;
+		bool* cancontinue = nullptr;
+		bool isbeingprocessed = false;
+	};
 }

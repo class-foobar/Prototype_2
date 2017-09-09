@@ -183,8 +183,8 @@ namespace DX2D
 		string _strid;
 		int _testi = 0;
 		ui _realtesti = 0;
-		void callpyscript(string strid, string loc, string fname);
 	public:
+		void callpyscript(string strid, string loc, string fname, void* call);
 		bool waspycalled = false;
 		inline physics* GetPhysP()
 		{

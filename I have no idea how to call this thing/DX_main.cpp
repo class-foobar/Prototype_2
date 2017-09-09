@@ -45,7 +45,10 @@ namespace debugging
 }
 namespace GAME
 {
-	extern vector<pair<thread*,bool*>>scriptthreads;
+	mutex _globalrenmutex;
+	extern vector<pair<thread*, bool*>>scriptthreads;
+	extern deque<pycall*> calls;
+	extern mutex scriptthreadmutex;
 	vector<entity> entitylist;
 	extern int4 camrect;
 	extern universe* uniclass;
@@ -114,7 +117,7 @@ namespace DX2D
 	void subbutton(int2& pos);
 	class main
 	{
-		friend inline void DX2D::Frame();
+		friend inline void DX2D::Frame(bool ismth, condition_variable* _mttw, unique_lock<mutex>* _lk);
 	private:
 		ID2D1RenderTarget *RTp;
 		void Render(camera* cam)
@@ -445,12 +448,12 @@ namespace DX2D
 			D2D1_FACTORY_OPTIONS options;
 			ZeroMemory(&options, sizeof(D2D1_FACTORY_OPTIONS));
 			options.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
-			hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory1), &options, reinterpret_cast<void **>(&pD2DFactory));
+			hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(ID2D1Factory1), &options, reinterpret_cast<void **>(&pD2DFactory));
 #else
 			D2D1_FACTORY_OPTIONS options;
 			ZeroMemory(&options, sizeof(D2D1_FACTORY_OPTIONS));
 
-			hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory1), &options, reinterpret_cast<void **>(&pD2DFactory));
+			hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(ID2D1Factory1), &options, reinterpret_cast<void **>(&pD2DFactory));
 #endif
 			D3D_FEATURE_LEVEL featureLevels[] =
 			{
@@ -662,11 +665,15 @@ namespace DX2D
 	}
 	bool bbg = false;
 	ID2D1SolidColorBrush* placeholderscb = NULL;
-	void Frame()
+	void Frame(bool ismth, condition_variable* _mttw, unique_lock<mutex>* _lk)
 	{
+	restart:;
 		int i = 0;
 		//if (DXclass->maincam->scale.x > 2.0f)
 		//	return;
+		if (ismth)
+			//_mttw->wait(*_lk);
+			_globalrenmutex.lock();
 		if (!isppaused)
 		{
 			DXclass->pclass.tick();
@@ -889,7 +896,9 @@ namespace DX2D
 
 		hr = DXGISwapChain->Present1(1, 0, &parameters);
 		displayHRerrors(hr, hwnd, __LINE__ - 1, false, "DXGISwapChain->Present1 has failed");
-
+		if (ismth)
+			_globalrenmutex.unlock();
+			goto restart;
 	}
 	bool wp = false;
 	bool sp = false;
@@ -1510,12 +1519,36 @@ namespace DX2D
 		{
 			if (DXclass == nullptr)
 				break;
+			int i = 0;
+//			GAME::scriptthreadmutex.lock();
+//			while (i < calls.size())
+//			{
+//				GAME::scriptthreadmutex.unlock();
+//				GAME::scriptthreadmutex.lock();
+//#ifdef _DEBUG
+//				auto callscopy = calls;
+//#endif // !_DEBUG
+//				if (calls.size() == 0)
+//					break;
+//
+//				bool* b = calls[i]->cancontinue;
+//				auto call = calls[i];
+//				GAME::scriptthreadmutex.unlock();
+//				while (!*b)
+//					Sleep(0);
+//				GAME::scriptthreadmutex.lock();
+//				i++;
+//			}
+//			GAME::scriptthreadmutex.unlock();
+			while (calls.size() > 0)
+				UI->_mttw.notify_one();
+				Sleep(0);
 			if (GetKeyState(VK_SHIFT))
 				movetype = mt_movnext;
 			else
 				movetype = mt_mov;
-			int i = 0;
 			bool waspycalled = false;
+			i = 0;
 			if (UI != nullptr)
 			{
 				//Py_BEGIN_ALLOW_THREADS
@@ -1536,7 +1569,7 @@ namespace DX2D
 			}
 			i = 0;
 			int ii = 0;
-			while (ii < 2 && scriptthreads.size() != 0)
+			/*while (ii < 2 && scriptthreads.size() != 0)
 			{
 				while (i < scriptthreads.size())
 				{
@@ -1562,7 +1595,7 @@ namespace DX2D
 					i++;
 				}
 				ii++;
-			}
+			}*/
 			i = 0;
 			ii = 0;
 			break;

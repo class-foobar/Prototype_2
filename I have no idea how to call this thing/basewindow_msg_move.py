@@ -4,6 +4,7 @@ import AZflib
 import importlib
 strid = GUI.GetSTRID()
 wnd = GUI.GetArg(strid, 0)
+GUI.Once(wnd,strid)
 boxn = GUI.GetArg(strid, 1)
 umsg = GUI.GetArg(strid, 2)
 msg = GUI.GetArg(strid, 3)
@@ -32,8 +33,13 @@ def mov(wnd,strid):
             GUI.UpdatePos(wnd,GUI.Memory_Get(wnd,"mouseXtop"),GUI.Memory_Get(wnd,"mouseYtop"))
             GUI.Memory_Set(wnd,"mouseXtop","INT",point.x)
             GUI.Memory_Set(wnd,"mouseYtop","INT",point.y)
+            if(GUI.KeyState("LBUTTON") == False):
+                ispressed = False
         if nmsg == "LBUTTONUP":
             ispressed = False
+            print("buttonup")
+            GUI.Memory_Set(wnd,"istopmoving","BOOL",False)
+            GUI.MouseMoveDetB(btptr,False)
 point = int2()
 point.x = GUI.GetArg(strid, 6)
 point.y = GUI.GetArg(strid, 7)
@@ -46,6 +52,4 @@ if msg == "LBUTTONUP":
     GUI.Memory_Set(wnd,"istopmoving","BOOL",False)
     GUI.MouseMoveDetB(btptr,False)
 if msg == "MOUSEMOVE" and GUI.Memory_Get(wnd,"istopmoving"):
-    print ("the window is moving")
     mov(wnd,strid)
-GUI.Exit(strid)
