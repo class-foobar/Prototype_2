@@ -41,6 +41,7 @@ namespace GAME
 		{
 			extern map<string, void (*)(int2&)> list;
 		}
+		void pythreadqueue(bool* b);
 		class UImain;
 		class window;
 		struct simplewindow;
@@ -64,14 +65,18 @@ namespace GAME
 		protected:
 			bool hidden = false;
 		public:
+			list<pair<string, string>> activescripts;
+			string strname = "NULL"; // optional
 			void updatenesting();
 			void updatepos(int2 oldpos);
 			void(*buttonpressfunc)(int2&) = nullptr;
 			void(*rbuttonpressfunc)(int2&) = nullptr;
 			void(*mbuttonpressfunc)(int2&) = nullptr;
+			map<string, pair<ID2D1SolidColorBrush*, ID2D1SolidColorBrush*>*> colnodes;
 			button* bt;
 			vector<button*> btts;
 			controls con;
+			uni2<float> defmultip;
 			map<ui, window*> children;
 			ui ID;
 			int nestingc = 0;
@@ -88,14 +93,20 @@ namespace GAME
 			int2* pos;
 			int2 nooffpos;
 			vector<pair<int2*,int2>> posvec;
+			vector<pair<int2, int2>> defshapepossize;
 			vector<int2> cufoffsets;
 			frame* f = nullptr;
+			frame* sf = nullptr;
 			vector<bool*> shaperb;
-			UIresult initvis(style& s, uni2<float> npos, uni2<float> screenmultip);
+			UIresult initvis(style& s, uni2<float> npos, uni2<float> screenmultip, ulli flags = 0);
 			UIresult scale(int2 nsize);
 			UIresult show();
 			UIresult hide();
 			UIresult switchvis();
+			vector<void*> otherobjts;
+			mutex waitmapmutex;
+			map<int,map<string, pair<string, boost::any>>> memory;
+			map<string, pair<map<string,void*>,void*>> waitmap;
 		};
 		struct simpleshape
 		{
@@ -105,6 +116,8 @@ namespace GAME
 			common::RGBA* seccol = nullptr;
 			bool hassprite = false;
 			sprite ico;
+			bool lockh = false;
+			bool lockv = false;
 			union /*shapesize*/
 			{
 				float radius = 0.0f;
@@ -156,6 +169,7 @@ namespace GAME
 				}
 				
 			};
+			map<string, string> inputmap;
 			map<string,change*> rootnode; // first value is action
 			simpleshape sh;
 			string message = "NULL";
@@ -173,11 +187,18 @@ namespace GAME
 			void(*rbuttonpressfunc)(int2&) = nullptr;
 			void(*mbuttonpressfunc)(int2&) = nullptr;
 			uni2<float> size = {1.0f,1.0f};
-			unsigned long int defaultflags;
+			//map<string, ui> flags;
+			//unsigned long int defaultflags;
+			map<string, bool> flags;
+			map<string, string> msgproc;
+			map<string, bool> defaultflags;
+			bool procondefault = false;
 			vector<simpleshape> shapes;
 			vector<subwindow> subs;
 			vector<box> boxes;
 			vector<textpiece*> textboxes;
+			string flagproc = "";
+			string initproc = "";
 		};
 		struct UIresult
 		{
@@ -194,24 +215,60 @@ namespace GAME
 			ui PreAllocateStyle(string name);
 			UIresult addstyle(style st, string name);
 		public:
+			mutex oncemutex;
+			mutex _m;
+			unique_lock<std::mutex> _ulm;
+			condition_variable _mttw;
+			map<ui, map<string, string>> oncescmap;
+			void reinit();
+			map<string, vector<boost::any>> args;
+			AZfile gameuif;
+			AZfile stylef;
 			camera* cam;
+			string bslink;
 			controls* conptr;
 			frame* mainframe = nullptr;
 			window* root;
 			ui scenenum;
+			//bool isargbmodified = false;
+			mutex *argmodmutex;
 			map<ui, window*> wnds;
 			map<string, ui> wndnamemap;
 			map<ui, style> styles;
 			map<string, sprite> icons;
+			map<int, string>processtridmap;
+			mutex idmapmutex;
+			//uni2<float> screensizemultip;
 			map<string, ui> styleids;
-			UIresult AttachTo(window* parent, window* child, unsigned long int flags = AT_NULL);
+			bool MouseEvent(WPARAM wParam, LPARAM lParam, UINT msg);
+			UIresult AttachTo(window* parent, window* child, unsigned long int flags = AT_NULL, unsigned long int visflags = 0);
 			//UIresult NewWindow(window*parent, int2 pos, int2 size, ui styleid, unsigned long int flags = 0x00000000L);
 			//UIresult NewWindow(window*parent, int2 pos, int2 size, string stylename, unsigned long int flags = 0x00000000L);
-			UIresult NewWindow(window*parent, uni2<float> pos, uni2<float> size, ui styleid, unsigned long int flags = 0x00000000L);
-			UIresult NewWindow(window*parent, uni2<float> pos, uni2<float> size, string stylename, unsigned long int flags = 0x00000000L);
-			UIresult init(controls* con, camera* ncam, frame* mf = nullptr, ui scenen = 0);
+			UIresult NewWindow(window*parent, uni2<float> pos, uni2<float> size, ui styleid, unsigned long int flags = 0x00000000L, string strname = "NULL");
+			UIresult NewWindow(window*parent, uni2<float> pos, uni2<float> size, string stylename, unsigned long int flags = 0x00000000L, string strname = "NULL");
+			UIresult init(controls* con, camera* ncam, frame* mf = nullptr, ui scenen = 0, string link = "");
 			UIresult addstyle(style st);
 			UIresult createstyles(AZfile& f, string binloc,bool add=true);
+			core()
+			{
+				argmodmutex = new mutex();
+			}
+			~core()
+			{
+				delete argmodmutex;
+			}
 		};
 	}
+	struct pycall
+	{
+		GUI::core* c;
+		string strid;
+		string scriptname;
+		string scriptloc;
+		vector<boost::any> args;
+		controls* conptr;
+		GUI::window* wnd;
+		bool* cancontinue = nullptr;
+		bool isbeingprocessed = false;
+	};
 }

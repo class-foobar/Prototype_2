@@ -3,6 +3,7 @@
 #include "sprite.h"
 #include "physics.h"
 #include "text.hpp"
+#include "GUI.h"
 #include "ships.h"
 #include "universe.h"
 #include "button.h"
@@ -33,12 +34,22 @@ extern const float SCREEN_NEAR;
 RECT clientsize;
 namespace debugging
 {
+	namespace sharedv
+	{
+		extern	camera** maincam;
+	}
+	extern int2** debugpos;
 	debugmain* dbm = nullptr;
 	debugging::debugwindow* pdebugdata = nullptr;
 	debugwindow*  maincamdebg = nullptr;
 }
 namespace GAME
 {
+	mutex _globalrenmutex;
+	extern vector<pair<thread*, bool*>>scriptthreads;
+	extern deque<pycall*> calls;
+	extern mutex scriptthreadmutex;
+	vector<entity> entitylist;
 	extern int4 camrect;
 	extern universe* uniclass;
 	map<ui, void(*)(int2&)> funcidmap;
@@ -53,6 +64,8 @@ namespace GAME
 	{
 		extern	physics pcshipclick;
 	}
+	GUI::core* UI;
+	mutex detachUIthmutex;
 }
 namespace DX2D
 {
@@ -70,13 +83,11 @@ namespace DX2D
 	bool isppaused = false;
 	bool isfscreentoud = false;
 	bool iscurrentlyfscreened = false;
-	int score = 0;
 	bool callfunc = false;
 	int powupcreated = 0;
 	int difficulty = 0;
 	frame* backgroundframe;
 	frame* pf = nullptr;
-	vector<frame*> ssfvec; // shield storage vec;
 	int projinfly = 0;
 	int curprojnum = 0;
 	vector <clock_t> projectilefiredate;
@@ -84,30 +95,21 @@ namespace DX2D
 	vector <ship*> shipsvec;
 	vector<camera*>*shipcamvec;
 	vector <bool*> projrenbp;
-	//
 	void initships();
-	//engine-specific ( mostly ) 
 	struct physreactonset;
-	ID2D1HwndRenderTarget *hwndRT = nullptr;
-	ID2D1Factory* pD2DFactory = nullptr;
-
+	ID2D1DeviceContext *hwndRT = nullptr;
+	ID2D1Factory1* pD2DFactory = nullptr;
+	ID3D11Device1 *Direct3DDevice;
+	ID3D11DeviceContext1 *Direct3DContext;
+	ID2D1Device *Direct2DDevice;
+	IDXGISwapChain1 *DXGISwapChain;
+	ID2D1Bitmap1 *Direct2DBackBuffer;
 	void(*fformaintocall)(physobj*, physobj*);
 	physobj* objtc1;
 	physobj* objtc2;
-
 	class main;
 	main* DXclass = nullptr;
 	class scene;
-
-	//class renderobj
-	//{
-	//public:
-	//	int currentframe;
-
-
-
-	//	map <string, vector<frame*> > f;
-	//};
 	class scene;
 	string bslink;
 	void initgame(int2& bs);
@@ -115,14 +117,12 @@ namespace DX2D
 	void subbutton(int2& pos);
 	class main
 	{
-		friend inline void DX2D::Frame();
+		friend inline void DX2D::Frame(bool ismth, condition_variable* _mttw, unique_lock<mutex>* _lk);
 	private:
 		ID2D1RenderTarget *RTp;
 		void Render(camera* cam)
 		{
 
-			//cam->SetX(cam->GetX() + cam->GetOffsetX());
-			//cam->SetY(cam->GetY() + cam->GetOffsetY());
 			/*ID2D1RenderTarget **//*RTp = *cam->GetRenderTargetP();*/
 			ID2D1BitmapRenderTarget *RT = *cam->GetRenderTargetP();
 			//RTp->CreateCompatibleRenderTarget(&RT);
@@ -137,7 +137,7 @@ namespace DX2D
 			D2D_MATRIX_3X2_F trans;
 			if (!cam->ignoreXYforrendering)
 			{
-				trans = Matrix3x2F::Translation(cam->GetX(), cam->GetY());
+				trans = Matrix3x2F::Translation(-cam->GetX(), -cam->GetY());
 			}
 			else
 				trans = Matrix3x2F::Translation(0, 0);
@@ -173,7 +173,7 @@ namespace DX2D
 		}
 	public:
 		debugging::debugmain dbmain;
-
+		
 		factions facclass;
 		map<string, module*> modtemps;
 		map<string, AZfile> modules;
@@ -190,7 +190,7 @@ namespace DX2D
 			return apploc + elemloc;
 		}
 		physics pclass;
-		ID2D1HwndRenderTarget* RenderTarget = nullptr;
+		ID2D1DeviceContext* RenderTarget = nullptr;
 		camera* maincam;
 		int GetpoX(float perc)
 		{
@@ -222,8 +222,9 @@ namespace DX2D
 				trans = Matrix3x2F::Translation(0, 0);
 			}
 			else 
-				trans = Matrix3x2F::Translation(cam->GetX(), cam->GetY());
+				trans = Matrix3x2F::Translation(-cam->GetX(), -cam->GetY());
 			RT->GetTransform(&oldtransform);
+			RT->SetTransform(trans);
 			D2D_SIZE_F SZ = RT->GetSize();
 			while (i < f.size())
 			{
@@ -269,20 +270,63 @@ namespace DX2D
 								continue;
 							}
 						}
+						if (f[i]->sprites[ii].forceoverridepos)
+						{
+							if (f[i]->sprites[ii].overridepos != nullptr)
+							{
+								f[i]->sprites[ii].SyncPos(new int2(*f[i]->sprites[ii].overridepos),false);
+								f[i]->sprites[ii].forceoverridepos = false;
+							}
+						}
 						D2D_RECT_F loc;
 						loc.top = (f[i]->sprites[ii].GetY() + f[i]->sprites[ii].GetOffSetp()->y);
 						loc.left = (f[i]->sprites[ii].GetX() + f[i]->sprites[ii].GetOffSetp()->x+0);
 						loc.bottom = (f[i]->sprites[ii].GetY() + f[i]->sprites[ii].size.height + f[i]->sprites[ii].GetOffSetp()->y)/**cam->scale.y*/;
 						loc.right = (f[i]->sprites[ii].GetX() + f[i]->sprites[ii].size.width + f[i]->sprites[ii].GetOffSetp()->x)/**cam->scale.x*/;
+						if (f[i]->sprites[ii].breakonrender)
+							DebugBreak();
+						if (f[i]->sprites[ii].savelastloc)
+						{
+							if (f[i]->sprites[ii].lastlochaststarted)
+							{
+								if (f[i]->sprites[ii].breakonlocchange)
+								{
+									if ((int4)loc != (int4)f[i]->sprites[ii].lastloc)
+									{
+										DebugBreak();
+									}
+								}
+								f[i]->sprites[ii].lastloc = loc;
+							}
+							else
+							{
+								f[i]->sprites[ii].lastloc = loc;
+							}
+						}
 						D2D_MATRIX_3X2_F oldtransform2;
 						RT->GetTransform(&oldtransform2);
 						D2D_POINT_2F p;
 						if (!cam->usecustomrenderrotpoint)
 						{
-							p = { (f[i]->sprites[ii].GetX() + f[i]->sprites[ii].GetOffSetp()->x + (f[i]->sprites[ii].size.width / 2))/**cam->scale.x*/,
-							(f[i]->sprites[ii].GetY() + f[i]->sprites[ii].GetOffSetp()->y + (f[i]->sprites[ii].size.height / 2))/**cam->scale.y*/ };
-							RT->SetTransform(trans/*Matrix3x2F::Translation(cam->GetX(), cam->GetY())*/*Matrix3x2F::Rotation(f[i]->sprites[ii].GetRot(), p));
+							int2 rotpoint;
+							if (!f[i]->sprites[ii].usecustompoint)
+							{
+								rotpoint = int2((f[i]->sprites[ii].size.width / 2), (f[i]->sprites[ii].size.height / 2));
+							}
+							else
+							{
+								rotpoint = f[i]->sprites[ii].customrpoint;
+								//f[i]->sprites[ii].Rotate(0.5);
+							}
+							
+							p = { (-cam->GetX())+(f[i]->sprites[ii].GetX() + f[i]->sprites[ii].GetOffSetp()->x + rotpoint.x)/**cam->scale.x*/,
+							(-cam->GetY())+(f[i]->sprites[ii].GetY() + f[i]->sprites[ii].GetOffSetp()->y + rotpoint.y)/**cam->scale.y*/ };
+							RT->SetTransform(trans*/*Matrix3x2F::Translation(cam->GetX(), cam->GetY())**/Matrix3x2F::Rotation(f[i]->sprites[ii].GetRot(), p));
 						}
+						//else
+						//{
+						//	RT->SetTransform(trans*Matrix3x2F::Rotation(f[i]->sprites[ii].GetRot(), cam->customrotpoint));
+						//}
 						RT->DrawBitmap(f[i]->sprites[ii].GetBitmap(), loc, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
 						RT->SetTransform(oldtransform2);
 						ii++;
@@ -330,6 +374,8 @@ namespace DX2D
 								continue;
 							}
 						}
+						if (f[i]->brushes[ii].breakonrender)
+							DebugBreak();
 						if (f[i]->brushes[ii].createrectfrompossize)
 						{
 							f[i]->brushes[ii].rect.left = f[i]->brushes[ii].pos->x;
@@ -360,14 +406,16 @@ namespace DX2D
 						}
 						case brushtypes::solidbrush:
 						{
-							RT->FillRectangle(f[i]->brushes[ii].rect, f[i]->brushes[ii].b.solidbrush.first);
-							RT->DrawRectangle(f[i]->brushes[ii].rect, f[i]->brushes[ii].b.solidbrush.second);
+							if(f[i]->brushes[ii].b.solidbrush->first != nullptr)
+								RT->FillRectangle(f[i]->brushes[ii].rect, f[i]->brushes[ii].b.solidbrush->first);
+							if(f[i]->brushes[ii].b.solidbrush->second != nullptr)
+								RT->DrawRectangle(f[i]->brushes[ii].rect, f[i]->brushes[ii].b.solidbrush->second);
 							break;
 						}
 						case brushtypes::radialgradient:
 						{
-							RT->FillEllipse(f[i]->brushes[ii].elipse, f[i]->brushes[ii].b.radialgradient.first);
-							RT->DrawEllipse(f[i]->brushes[ii].elipse, f[i]->brushes[ii].b.radialgradient.second);
+							RT->FillEllipse(f[i]->brushes[ii].elipse, f[i]->brushes[ii].b.radialgradient->first);
+							RT->DrawEllipse(f[i]->brushes[ii].elipse, f[i]->brushes[ii].b.radialgradient->second);
 							break;
 						}
 						}
@@ -382,52 +430,77 @@ namespace DX2D
 			}
 			RT->SetTransform(oldtransform);
 		}
+		IDXGIFactory2 *dxgiFactory;
+		IDXGIAdapter *dxgiAdapter;
+		IDXGIDevice *dxgiDevice;
+		ID3D11Device *device;
+		ID3D11DeviceContext *context;
+		IDXGISurface *dxgiBackBuffer;
 		void init(mainwins style)
 		{
 			int i = 0;		
 			RECT rc;
 			GetClientRect(hwnd, &rc);
 			debugging::dbm = &dbmain;
+			//
+			HRESULT hr = NULL;
 #if defined(DEBUG) || defined(_DEBUG)
 			D2D1_FACTORY_OPTIONS options;
+			ZeroMemory(&options, sizeof(D2D1_FACTORY_OPTIONS));
 			options.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
-
-			HRESULT hr = D2D1CreateFactory(
-				D2D1_FACTORY_TYPE_SINGLE_THREADED,
-				options,
-				&pD2DFactory
-			);
+			hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(ID2D1Factory1), &options, reinterpret_cast<void **>(&pD2DFactory));
 #else
-			HRESULT hr = D2D1CreateFactory(
-				D2D1_FACTORY_TYPE_SINGLE_THREADED,
-				&pD2DFactory
-			);
-#endif
+			D2D1_FACTORY_OPTIONS options;
+			ZeroMemory(&options, sizeof(D2D1_FACTORY_OPTIONS));
 
-			// Create a Direct2D render target	
-			hr = pD2DFactory->CreateHwndRenderTarget(
-				D2D1::RenderTargetProperties(),
-				D2D1::HwndRenderTargetProperties(
-					hwnd,
-					D2D1::SizeU(
-						rc.right - rc.left,
-						rc.bottom - rc.top)
-				),
-				&RenderTarget
-			);
-			D2D1_RENDER_TARGET_PROPERTIES rtpnc = D2D1::RenderTargetProperties(
-				D2D1_RENDER_TARGET_TYPE_DEFAULT,
-				D2D1::PixelFormat(
-					DXGI_FORMAT_UNKNOWN,
-					D2D1_ALPHA_MODE_IGNORE),
-				0,
-				0,
-				D2D1_RENDER_TARGET_USAGE_NONE,
-				D2D1_FEATURE_LEVEL_DEFAULT
-			);
-			const D2D1_RENDER_TARGET_PROPERTIES rtp = rtpnc;
-			hwndRT = RenderTarget;
+			hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(ID2D1Factory1), &options, reinterpret_cast<void **>(&pD2DFactory));
+#endif
+			D3D_FEATURE_LEVEL featureLevels[] =
+			{
+				D3D_FEATURE_LEVEL_11_1,
+				D3D_FEATURE_LEVEL_11_0,
+				D3D_FEATURE_LEVEL_10_1,
+				D3D_FEATURE_LEVEL_10_0,
+				D3D_FEATURE_LEVEL_9_3,
+				D3D_FEATURE_LEVEL_9_2,
+				D3D_FEATURE_LEVEL_9_1
+			};
+			UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+			D3D_FEATURE_LEVEL returnedFeatureLevel;
+			D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, 0, creationFlags, featureLevels, ARRAYSIZE(featureLevels), D3D11_SDK_VERSION,
+				&device, &returnedFeatureLevel, &context);
+			device->QueryInterface(__uuidof(ID3D11Device1), (void **)&Direct3DDevice);
+			context->QueryInterface(__uuidof(ID3D11DeviceContext1), (void **)&Direct3DContext);
+			Direct3DDevice->QueryInterface(__uuidof(IDXGIDevice), (void **)&dxgiDevice);
+			pD2DFactory->CreateDevice(dxgiDevice, &Direct2DDevice);
+			Direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &hwndRT);
+			dxgiDevice->GetAdapter(&dxgiAdapter);
+			dxgiAdapter->GetParent(IID_PPV_ARGS(&dxgiFactory));
+			DXGI_SWAP_CHAIN_DESC1 swapChainDesc = { 0 };
+			swapChainDesc.Width = rc.right-rc.left;
+			swapChainDesc.Height = rc.bottom-rc.top;
+			swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			swapChainDesc.Stereo = false;
+			//swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
+			swapChainDesc.SampleDesc.Count = 1;
+			swapChainDesc.SampleDesc.Quality = 0;
+			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+			swapChainDesc.BufferCount = 2;
+			swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+			swapChainDesc.Flags = 0;
+			hr = dxgiFactory->CreateSwapChainForHwnd(Direct3DDevice, hwnd, &swapChainDesc, nullptr, nullptr, &DXGISwapChain);
+			DXGISwapChain->GetBuffer(0, IID_PPV_ARGS(&dxgiBackBuffer));
+			FLOAT dpiX, dpiY;
+			pD2DFactory->GetDesktopDpi(&dpiX, &dpiY);
+			D2D1_BITMAP_PROPERTIES1 bitmapProperties =
+				D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+					D2D1::PixelFormat(DXGI_FORMAT_R8G8B8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), dpiX, dpiY);
+
+			hr = hwndRT->CreateBitmapFromDxgiSurface(dxgiBackBuffer, &bitmapProperties, &Direct2DBackBuffer);
+			hwndRT->SetTarget(Direct2DBackBuffer);
 			maincam = new camera;
+			DXclass->RenderTarget = hwndRT;
 			if (!SUCCEEDED(hr))
 			{
 				DebugBreak();
@@ -485,6 +558,7 @@ namespace DX2D
 				string fontname = menu.GetVar<string>("MAINMENU@" + buttons[i] + "@FONTNAME");
 				float fontsize = menu.GetVar<float>("MAINMENU@" + buttons[i] + "@FONTSIZE");
 				bool novis = menu.GetVar<bool>("MAINMENU@" + buttons[i] + "@NOVISUALS");
+				bool isbackground = menu.GetVar<bool>("MAINMENU@" + buttons[i] + "@ISBACKGROUND");
 				if (!novis)
 					con.addbutton(btext, new int2(bpos), bsize, GAME::funcidmap[ID], mf, maincam, false, textc, fontsize, fontname);
 				else
@@ -498,6 +572,8 @@ namespace DX2D
 					butt->anyvars.push_back(start);
 					butt->hassubbtns = true;
 				}
+				button* butt = DXclass->con.latestcreation;
+				butt->backgroundbutton = isbackground;
 				i++;
 			}
 			programdata = new debugging::debugwindow;
@@ -516,6 +592,10 @@ namespace DX2D
 			dbmain.subwindows.push_back(camdata);
 			debugging::maincamdebg = camdata;
 			dbmain.startmt();
+			if (dbmain.console == nullptr)
+				dbmain.console = new debugging::debugconsole;
+			dbmain.console->init(true);
+			dbmain.console->start();
 		}
 		void Release()
 		{
@@ -585,11 +665,15 @@ namespace DX2D
 	}
 	bool bbg = false;
 	ID2D1SolidColorBrush* placeholderscb = NULL;
-	void Frame()
+	void Frame(bool ismth, condition_variable* _mttw, unique_lock<mutex>* _lk)
 	{
+	restart:;
 		int i = 0;
 		//if (DXclass->maincam->scale.x > 2.0f)
 		//	return;
+		if (ismth)
+			//_mttw->wait(*_lk);
+			_globalrenmutex.lock();
 		if (!isppaused)
 		{
 			DXclass->pclass.tick();
@@ -602,13 +686,27 @@ namespace DX2D
 					//cout << "ship " << i << " pos is " << "X=" << ships[i].pos->x << " Y=" << ships[i].pos->y << endl;
 					i++;
 				}
+				i = 0;
+				if (uniclass != nullptr)
+				{
+					while (i < uniclass->sysvec.size())
+					{
+						int ii = 0;
+						while (ii < uniclass->sysvec[i]->statvec.size())
+						{
+							station* stat = uniclass->sysvec[i]->statvec[ii];
+							stat->tick();
+							ii++;
+						}
+						i++;
+					}
+				}
 				t = clock();
 			}
 		}
 		i = 0;
 		DXclass->RenderTarget->BeginDraw();
 		DXclass->RenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::Black));
-		//DXclass->RenderTarget->Clear();
 		int2 offsetmc = { 0,0 };
 		if (DXclass->maincam->usescale && DXclass->maincam->scale.x > 1 && DXclass->maincam->scale.y > 1)
 		{
@@ -673,10 +771,10 @@ namespace DX2D
 						rf.top += DXclass->cams[i]->GetY();
 						rf.bottom += DXclass->cams[i]->GetY();
 					//}
-					rf.left += DXclass->maincam->GetX() /*+ offsetmc.x + DXclass->maincam->GetOffsetX()*/;
-					rf.right += DXclass->maincam->GetX()/* + offsetmc.x + DXclass->maincam->GetOffsetX()*/;
-					rf.top += DXclass->maincam->GetY()/* + offsetmc.y + DXclass->maincam->GetOffsetY()*/;
-					rf.bottom += DXclass->maincam->GetY()/* + offsetmc.y + DXclass->maincam->GetOffsetY()*/;
+					rf.left += -DXclass->maincam->GetX() /*+ offsetmc.x + DXclass->maincam->GetOffsetX()*/;
+					rf.right += -DXclass->maincam->GetX()/* + offsetmc.x + DXclass->maincam->GetOffsetX()*/;
+					rf.top += -DXclass->maincam->GetY()/* + offsetmc.y + DXclass->maincam->GetOffsetY()*/;
+					rf.bottom += -DXclass->maincam->GetY()/* + offsetmc.y + DXclass->maincam->GetOffsetY()*/;
 					D2D1_SIZE_F _sz = bmcopy->GetSize();
 					Matrix3x2F ot;
 					D2D1_POINT_2F p2f;
@@ -686,8 +784,8 @@ namespace DX2D
 						p2f = DXclass->cams[i]->customrotpoint;
 						p2f.x += DXclass->cams[i]->GetX();
 						p2f.y += DXclass->cams[i]->GetY();
-						p2f.x += DXclass->maincam->GetX()/* + DXclass->maincam->GetOffsetX()*/;
-						p2f.y += DXclass->maincam->GetY()/* + DXclass->maincam->GetOffsetY()*/;
+						p2f.x += -DXclass->maincam->GetX()/* + DXclass->maincam->GetOffsetX()*/;
+						p2f.y += -DXclass->maincam->GetY()/* + DXclass->maincam->GetOffsetY()*/;
 					}
 					else
 						p2f = { rf.left + (_sz.width / 2) + DXclass->cams[i]->rotpointoffset.x,rf.top + (_sz.height / 2) + DXclass->cams[i]->rotpointoffset.y };
@@ -703,7 +801,9 @@ namespace DX2D
 					bmcopy->Release();
 				}
 				else
-					BRT->DrawBitmap(bm, DXclass->cams[i]->loc, 1.0, defaultinterpolationmode);
+				{
+					BRT->DrawBitmap(bm, d2r, 1.0, defaultinterpolationmode);
+				}
 				wasBRTenddrawc = true;
 				BRT->EndDraw();
 				bm->Release();
@@ -772,7 +872,7 @@ namespace DX2D
 			DXclass->RenderTarget->SetTransform(Matrix3x2F::Translation(addoffset.x, addoffset.y)*
 				Matrix3x2F::Rotation((DXclass->maincam->GetRot()), p2f));
 
-			DXclass->RenderTarget->DrawBitmap(bmcopy, oldRECT, 1.0, defaultinterpolationmode);
+			DXclass->RenderTarget->DrawBitmap(bmcopy, oldRECT, 1.0, advancedinterpolatonmode);
 			DXclass->RenderTarget->SetTransform(ot);
 			bmcopy->Release();
 			//}
@@ -783,9 +883,22 @@ namespace DX2D
 			//}
 		}
 		else
-			scaleend:DXclass->RenderTarget->DrawBitmap(bm1, d2r, 1.0, defaultinterpolationmode);
+			scaleend:DXclass->RenderTarget->DrawBitmap(bm1, d2r, 1.0, advancedinterpolatonmode);
 		//bm1->Release();
 		hr = DXclass->RenderTarget->EndDraw();
+		displayHRerrors(hr, hwnd, __LINE__ - 1, false, "ID2D1DeviceContext->EndDraw has failed");
+
+		DXGI_PRESENT_PARAMETERS parameters = { 0 };
+		parameters.DirtyRectsCount = 0;
+		parameters.pDirtyRects = nullptr;
+		parameters.pScrollRect = nullptr;
+		parameters.pScrollOffset = nullptr;
+
+		hr = DXGISwapChain->Present1(1, 0, &parameters);
+		displayHRerrors(hr, hwnd, __LINE__ - 1, false, "DXGISwapChain->Present1 has failed");
+		if (ismth)
+			_globalrenmutex.unlock();
+			goto restart;
 	}
 	bool wp = false;
 	bool sp = false;
@@ -812,6 +925,7 @@ namespace DX2D
 		}
 		bslink += "bin\\";
 		camera* maincam = DXclass->maincam;
+		debugging::sharedv::maincam = &maincam;
 		frame* mf = maincam->scenes[0].objectsvec[0];
 		int2 a= maincam->GetBitmapSize();
 		camrect = int4{ 0,0,a.x,a.y };
@@ -854,6 +968,7 @@ namespace DX2D
 			string fontname = menu.GetVar<string>("GAME@" + buttons[i] + "@FONTNAME");
 			float fontsize = menu.GetVar<float>("GAME@" + buttons[i] + "@FONTSIZE");
 			bool novis = menu.GetVar<bool>("GAME@" + buttons[i] + "@NOVISUALS");
+			bool isbackground = menu.GetVar<bool>("GAME@" + buttons[i] + "@ISBACKGROUND");
 			if (!novis)
 				DXclass->con.addbutton(btext, new int2(bpos), bsize, GAME::funcidmap[ID], mf, maincam, false, DXclass->textc, fontsize, fontname);
 			else
@@ -863,6 +978,7 @@ namespace DX2D
 			{
 				DXclass->con.buttons[DXclass->con.buttons.size()-1]->rbuttonpressfunc = GAME::select;
 			}
+			DXclass->con.latestcreation->backgroundbutton = isbackground;
 			i++;
 		}
 		mcam = DXclass->maincam;
@@ -1131,7 +1247,10 @@ namespace DX2D
 			player.crewphys.GetLastObj()->rectID = 666;
 			entity ent;
 			ent.selectf = nullptr;
+			ent.pos = cm->pos;
+			ent.entname = "crewman";
 			ent.datav.push_back(cm);
+			entitylist.push_back(ent);
 			player.crewphys.GetLastObj()->anyvars.push_back(ent);
 			player.fr->sprites.push_back(cs);
 			player.crewmap.insert(make_pair(cm->name, cm));
@@ -1168,6 +1287,9 @@ namespace DX2D
 		mainshipen.datav.push_back(conship);
 		conship->pobj->anyvars.push_back(mainshipen);
 		selecting::pcshipclick.objmap["playership"]->anyvars.push_back(mainshipen);
+		mainshipen.pos = conship->pos;
+		mainshipen.entname = "Ship";
+		entitylist.push_back(mainshipen);
 		c->isrendonscreen = true;
 		c->isonlyrectrendered = true;
 		c->renderRECT.left = 0;
@@ -1203,7 +1325,22 @@ namespace DX2D
 		conship->resdwnd = shipresdbd;
 		loadsector(maincam,mf,*player.universepos,uniclass,uniclass->eco,player.sys,player.sys->s,player);
 		maincam->SetXY(*player.pos + int2(-100,-100));
-		
+		GAME::UI = new GUI::core;
+		f = new frame;
+		//mf->f[mf->wchiac].push_back(f);
+		camera* uicam = new camera;
+		uicam->loc = maincam->loc;
+		DXclass->cams.push_back(uicam);
+		f->ismactive = true;
+		uicam->reconstruct();
+		scene uis;
+		uis.objectsmap.insert(make_pair("ui", f));
+		uis.objectsvec.push_back(f);
+		uicam->scenes.push_back(uis);
+		uicam->isrendonscreen = true;
+		GAME::UI->init(&DXclass->con, uicam, f,0, bslink);
+		GAME::GUI::loadGUIdata(bslink, GAME::UI);
+		GAME::GUI::loadui(bslink, GAME::UI);
 	}
 	bool isdbbshown = false;
 	bool isscrdwnon = false; // if true - scrolling will call scrollfunc and will not scale
@@ -1382,11 +1519,45 @@ namespace DX2D
 		{
 			if (DXclass == nullptr)
 				break;
+			int i = 0;
+//			GAME::scriptthreadmutex.lock();
+//			while (i < calls.size())
+//			{
+//				GAME::scriptthreadmutex.unlock();
+//				GAME::scriptthreadmutex.lock();
+//#ifdef _DEBUG
+//				auto callscopy = calls;
+//#endif // !_DEBUG
+//				if (calls.size() == 0)
+//					break;
+//
+//				bool* b = calls[i]->cancontinue;
+//				auto call = calls[i];
+//				GAME::scriptthreadmutex.unlock();
+//				while (!*b)
+//					Sleep(0);
+//				GAME::scriptthreadmutex.lock();
+//				i++;
+//			}
+//			GAME::scriptthreadmutex.unlock();
+			while (calls.size() > 0)
+				UI->_mttw.notify_one();
+				Sleep(0);
 			if (GetKeyState(VK_SHIFT))
 				movetype = mt_movnext;
 			else
 				movetype = mt_mov;
+			bool waspycalled = false;
+			i = 0;
+			if (UI != nullptr)
+			{
+				//Py_BEGIN_ALLOW_THREADS
+				waspycalled = UI->MouseEvent(wParam, lParam, msg);
+				//Py_END_ALLOW_THREADS
+			}
+			DXclass->con.waspycalled = waspycalled;
 			DXclass->con.MouseEvent(wParam, lParam, msg);
+			DXclass->con.waspycalled = false;
 			if (DXclass->programdata != nullptr)
 			{
 				int2 pos(GET_X_LPARAM((lParam)), GET_Y_LPARAM((lParam)));
@@ -1396,6 +1567,37 @@ namespace DX2D
 				posf2 = posf2* (uni2<float>)DXclass->maincam->scale;
 				DXclass->programdata->setvar((int2)posf2.toint2(),"mouseposrelative",true,"INT2");
 			}
+			i = 0;
+			int ii = 0;
+			/*while (ii < 2 && scriptthreads.size() != 0)
+			{
+				while (i < scriptthreads.size())
+				{
+					bool* b = scriptthreads[i].second;
+					while (!*b)
+						Sleep(0);
+					detachUIthmutex.lock();
+					if (scriptthreads[i].first->joinable())
+					{
+						try
+						{
+							scriptthreads[i].first->join();
+						}
+						catch (...)
+						{
+
+						}
+						delete scriptthreads[i].first;
+						delete scriptthreads[i].second;
+						scriptthreads.erase(scriptthreads.begin() + i);
+					}
+					detachUIthmutex.unlock();
+					i++;
+				}
+				ii++;
+			}*/
+			i = 0;
+			ii = 0;
 			break;
 		}
 		case WM_MOUSEWHEEL:
@@ -1434,6 +1636,7 @@ namespace DX2D
 		scaleset:;
 			if ((DXclass->maincam->scale.x >= 1.0f || b1) && !b)
 			{
+				HRESULT hr = NULL;
 				ID2D1BitmapRenderTarget** BRT = DXclass->maincam->GetRenderTargetP();
 				ID2D1Bitmap* BMTRL = NULL;
 				(*BRT)->GetBitmap(&BMTRL);
@@ -1447,11 +1650,44 @@ namespace DX2D
 				D2D1_SIZE_F drf = { clientsize.right,clientsize.bottom };
 				drf.width *= DXclass->maincam->scale.x;
 				drf.height *= DXclass->maincam->scale.y;
-				hwndRT->Resize({ (ui)drf.width,(ui)drf.height });
-				hwndRT->CreateCompatibleRenderTarget(drf, BRT);
-				//DXclass->maincam->SetOffset(((int2)drf / 2)*1);
+				//hwndRT->Resize({ (ui)drf.width,(ui)drf.height });
 				int2 i2 = ((((uni2<float>)DXclass->con.lastmousepos*DXclass->maincam->scale - ((uni2<float>)drf)/2)) / 10).toint2();
 				DXclass->maincam->SetXY(*DXclass->maincam->GetXYp()+i2);
+				DXGI_SWAP_CHAIN_DESC1 swapChainDesc = { 0 };
+				swapChainDesc.Width = drf.width;
+				swapChainDesc.Height = drf.height;
+				swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+				swapChainDesc.Stereo = false;
+				//swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
+				swapChainDesc.SampleDesc.Count = 1;
+				swapChainDesc.SampleDesc.Quality = 0;
+				swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+				swapChainDesc.BufferCount = 2;
+				swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+				swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+				swapChainDesc.Flags = 0;
+				DXGISwapChain->Release();
+				DXclass->dxgiBackBuffer->Release();
+				hr = DXclass->dxgiFactory->CreateSwapChainForHwnd(Direct3DDevice, hwnd, &swapChainDesc, nullptr, nullptr, &DXGISwapChain);
+				DXGISwapChain->GetBuffer(0, IID_PPV_ARGS(&DXclass->dxgiBackBuffer));
+				FLOAT dpiX, dpiY;
+				pD2DFactory->GetDesktopDpi(&dpiX, &dpiY);
+				D2D1_BITMAP_PROPERTIES1 bitmapProperties =
+					D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+						D2D1::PixelFormat(DXGI_FORMAT_R8G8B8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), dpiX, dpiY);
+				Direct2DBackBuffer->Release();
+				hr = hwndRT->CreateBitmapFromDxgiSurface(DXclass->dxgiBackBuffer, &bitmapProperties, &Direct2DBackBuffer);
+				hwndRT->SetTarget(Direct2DBackBuffer);
+				if (DXclass->maincam->scale > DXclass->maincam->oldscale)
+				{
+					DXclass->maincam->SetOffset(((int2)drf / 2) * 1);
+				}
+				else
+				{
+					DXclass->maincam->SetOffset(-(((int2)drf / 2) * 1));
+				}
+				DXclass->maincam->oldscale = DXclass->maincam->scale;
+				hwndRT->CreateCompatibleRenderTarget(drf, BRT);
 				int bulllshitbreakpoint = 0;
 			}
 			else

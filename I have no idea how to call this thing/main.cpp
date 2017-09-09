@@ -14,6 +14,7 @@ using namespace std;
 using namespace AZfilelib;
 namespace GAME
 {
+	extern mutex _globalrenmutex;
 	string version = "null";
 	ui build = 0;
 	universe* uniclass = nullptr;
@@ -47,18 +48,13 @@ bool isfullscreened = false;
 LRESULT CALLBACK MainWinProc(HWND hwndwin, UINT msg, WPARAM wParam, LPARAM lParam);
 int main(int argc, char *argv[])
 {
+	srand(time(NULL));
 	wchar_t *program = Py_DecodeLocale(argv[0], NULL);
 	if (program == NULL) {
 		fprintf(stderr, "Fatal error: cannot decode argv[0]\n");
 		exit(1);
 	}
 	Py_SetProgramName(program);  /* optional but recommended */
-	Py_Initialize();
-	PyRun_SimpleString("from time import time,ctime\n"
-		"print('Today is', ctime(time()))\n");
-	if (Py_FinalizeEx() < 0) {
-		exit(120);
-	}
 	bool ispoped = true;
 	bool isfullscreendefault = false;
 	style.programloc = argv[0];
@@ -159,7 +155,10 @@ int main(int argc, char *argv[])
 	MSG msg;
 	string vs = version;
 	ui bu = build;
-
+	mutex m;
+	unique_lock<mutex>lk(m);
+	condition_variable mttw;
+	thread* th;
 	do
 	{
 		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -169,22 +168,29 @@ int main(int argc, char *argv[])
 		}
 		if (wasstarted)
 		{
-			DX2D::Frame();
+			mttw.notify_one();
+			//DX2D::Frame(false);
 			if (pausemainth)
 			{
+				_globalrenmutex.lock();
 				ismainthpaused = true;
 				while (pausemainth)
 					;
+				_globalrenmutex.unlock();
 				ismainthpaused = false;
 			}
 		}
 		else
 		{
 			DX2D::init(style);
+			th = new thread(DX2D::Frame, true, &mttw, &lk);
 			wasstarted = true;
 		}
 	} while (msg.message != WM_QUIT);
 	DX2D::Release();
+	if (Py_FinalizeEx() < 0) {
+		exit(120);
+	}
 	PyMem_RawFree(program);
 	DebugSetProcessKillOnExit(true);
 	return 0;

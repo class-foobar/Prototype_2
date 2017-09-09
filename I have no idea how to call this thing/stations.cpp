@@ -470,7 +470,7 @@ namespace GAME
 		tx.useidentp = true;
 		nf->sprites.push_back(tx);
 		debugging::debugpos = nf->sprites[nf->sprites.size()-1].GetXYpp();
-		cout << pos->str() << endl;
+		//cout << pos->str() << endl;
 		//random_shuffle(nf->sprites.begin(), nf->sprites.end());
 		auto sptr = nf->sprites[nf->sprites.size() - 1].GetXYpp();
 		int i = 0;
