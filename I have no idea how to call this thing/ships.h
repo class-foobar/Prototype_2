@@ -747,9 +747,11 @@ namespace DX2D
 		vector<int2*> outlinepos;
 		void tick()
 		{
-			dwnd->setvar(*pos, "shippos", true, "INT2");
 			if (this == nullptr)
 				return;
+			if (dwnd == nullptr)
+				return;
+			dwnd->setvar(*pos, "shippos", true, "INT2");
 			int i = 0;
 			frame* f = fr;
 			while (i < modvec.size())

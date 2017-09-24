@@ -237,7 +237,7 @@ namespace GAME
 					PyArg_ParseTuple(args, "s|i", &stridch, &it);
 					strid = stridch;
 					//cout << strid << " has reached GetArg(" << to_string(it) << ")\n";
-					if (!MapFind(UI->args, strid))
+					if (!MapFind(UI->args.getref(), strid))
 					{
 						PyErr_SetString(hError, "GetArg error: Arguments were deleted before the call");
 						_GetArgMutex.unlock();
@@ -312,7 +312,7 @@ namespace GAME
 					//UI->isargbmodified = true;
 					UI->argmodmutex->lock();
 
-					if (MapFind(UI->args, strid))
+					if (MapFind(UI->args.getref(), strid))
 					{
 						auto bargs = UI->args[strid];
 						if (bargs.size() > 10)
@@ -617,7 +617,7 @@ namespace GAME
 					uni2<float> copy;
 					sp.size = (copy = s.shapes[i].size * rmf).toint2();
 					int2* i2sp;
-					sp.SyncPos(i2sp = new int2(pmf.toint2()+(s.shapes[i].pos * rmf).toint2()), false);
+					sp.SyncPos(i2sp = new int2(/*pmf.toint2()+*/(s.shapes[i].pos * rmf).toint2()), false);
 					//*i2sp = *i2sp + (wnd->defpos*).toint2();
 					wnd->sf->sprites.push_back(sp);
 					wnd->posvec.push_back(make_pair(i2sp, *i2sp));
@@ -1217,7 +1217,7 @@ namespace GAME
 				ch.second->updatenesting();
 			}
 		}
-		void window::updatepos(int2 oldpos)
+		void window::updatepos(int2 oldpos = { 0,0 })
 		{
 			if (children.size() == 0)
 			{
@@ -1267,8 +1267,9 @@ namespace GAME
 			proppos = npos;
 			//frame* f = new frame;
 			//styleid = s.id;
+			int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
 			int i = 0;
-			pos = new int2((npos*screenmultip).toint2());
+			pos = new int2((npos*wsize.touni2<float>()).toint2());
 			defmultip = screenmultip;
 			i = 0;
 			if (identp == nullptr)
@@ -1285,15 +1286,14 @@ namespace GAME
 				if (s.shapes[i].hassprite)
 				{
 					sprite sp = s.shapes[i].ico;
-					sp.SetOffsetXYp(pos, false);
+					//sp.SetOffsetXYp(pos, false);
 					sp.render = rb;
 					sp.useidentp = true;
 					sp.identp = identp;
 					int2* i2sp;
 					if (/*s.shapes[i].lockh || s.shapes[i].lockv*/true)
 					{
-						uni2<float> mf;
-						int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
+						/*uni2<float> mf;
 						if (flags & WF_SCALETO_VH || flags == NULL)
 						{
 							mf.x = ((float)wsize.x)*size.x;
@@ -1310,13 +1310,42 @@ namespace GAME
 							mf.y = ((float)wsize.x)*size.y;
 						}
 						uni2<float> rmf = mf;
-						if (s.shapes[i].lockh)
-							rmf.x = mf.x;
-						if (s.shapes[i].lockv)
-							rmf.y = mf.y;
 						sp.size = (s.shapes[i].size * rmf).toint2();
-						sp.SyncPos(i2sp = new int2((s.shapes[i].pos * rmf).toint2()), false);
-						*i2sp = *i2sp + (defpos*rmf).toint2();
+						if (s.shapes[i].lockh)
+							sp.size.width = (int)rmf.x;
+						if (s.shapes[i].lockv)
+							sp.size.height = (int)rmf.y;*/
+						uni2<float> mf;
+						if (flags & WF_SCALETO_VH || flags == NULL)
+						{
+							mf.x = ((float)wsize.x)*size.x;
+							mf.y = ((float)wsize.y)*size.y;
+						}
+						else if (flags & WF_SCALETO_V)
+						{
+							mf.x = ((float)wsize.y)*size.x;
+							mf.y = ((float)wsize.y)*size.y;
+						}
+						else if (flags & WF_SCALETO_H)
+						{
+							mf.x = ((float)wsize.x)*size.x;
+							mf.y = ((float)wsize.x)*size.y;
+						}
+						uni2<float> rmfp, rmfs;
+						if (s.shapes[i].lockh)
+							rmfs.x = ((float)wsize.x)*s.shapes[i].size.x;
+						else
+							rmfs.x = s.shapes[i].size.x * mf.x;
+						rmfp.x = s.shapes[i].pos.x * mf.x;
+						if (s.shapes[i].lockv)
+							rmfs.y = ((float)wsize.y)*s.shapes[i].size.y;
+						else
+							rmfs.y = s.shapes[i].size.y * mf.y;
+						rmfp.y = s.shapes[i].pos.y * mf.y;
+						sp.size =  int2((rmfs).toint2());
+						i2sp = new int2((rmfp).toint2());
+						sp.SyncPos(i2sp, false);
+						//*i2sp = *i2sp + (defpos*rmf).toint2();
 					}
 					else
 					{
@@ -1337,7 +1366,6 @@ namespace GAME
 					if (/*s.shapes[i].lockh || s.shapes[i].lockv*/true)
 					{
 						uni2<float> mf;
-						int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
 						if (flags & WF_SCALETO_VH || flags == NULL)
 						{
 							mf.x = ((float)wsize.x)*size.x;
@@ -1353,14 +1381,20 @@ namespace GAME
 							mf.x = ((float)wsize.x)*size.x;
 							mf.y = ((float)wsize.x)*size.y;
 						}
-						uni2<float> rmf = mf;
+						uni2<float> rmfp, rmfs;
 						if (s.shapes[i].lockh)
-							rmf.x = mf.x;
+							rmfs.x = ((float)wsize.x)*s.shapes[i].size.x;
+						else
+							rmfs.x = s.shapes[i].size.x * mf.x;
+						rmfp.x = s.shapes[i].pos.x * mf.x;
 						if (s.shapes[i].lockv)
-							rmf.y = mf.y;
-						b.size = new int2((s.shapes[i].size * rmf).toint2());
-						b.pos = new int2((s.shapes[i].pos * rmf).toint2());
-						*b.pos = *b.pos + (defpos*wsize.touni2<float>()).toint2();
+							rmfs.y = ((float)wsize.y)*s.shapes[i].size.y;
+						else
+							rmfs.y = s.shapes[i].size.y * mf.y;
+						rmfp.y = s.shapes[i].pos.y * mf.y;
+						b.size = new int2(( rmfs).toint2());
+						b.pos = new int2((rmfp).toint2());
+						//*b.pos = *b.pos + (defpos*wsize.touni2<float>()).toint2();
 					}
 					else
 					{
@@ -1414,7 +1448,6 @@ namespace GAME
 			while (i < s.boxes.size())
 			{
 				uni2<float> mf;
-				int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
 				if (flags & WF_SCALETO_VH || flags == NULL)
 				{
 					mf.x = ((float)wsize.x)*size.x;
@@ -1430,15 +1463,26 @@ namespace GAME
 					mf.x = ((float)wsize.x)*size.x;
 					mf.y = ((float)wsize.x)*size.y;
 				}
-				uni2<float> rmf = mf;
+				//uni2<float> rmf = mf;
+				//if (s.boxes[i].sh.lockh)
+				//	rmf.x = mf.x;
+				//if (s.boxes[i].sh.lockv)
+				//	rmf.y = mf.y;
+				uni2<float> rmfp, rmfs;
 				if (s.boxes[i].sh.lockh)
-					rmf.x = mf.x;
+					rmfs.x = ((float)wsize.x)*s.boxes[i].sh.size.x;
+				else
+					rmfs.x = s.boxes[i].sh.size.x * mf.x;
+				rmfp.x = s.boxes[i].sh.pos.x * mf.x;
 				if (s.boxes[i].sh.lockv)
-					rmf.y = mf.y;
-				int2* pos = new int2((s.shapes[i].pos * rmf).toint2());
-				*pos = *pos + (defpos*wsize.touni2<float>()).toint2();
+					rmfs.y = ((float)wsize.y)*s.shapes[i].size.y;
+				else
+					rmfs.y = s.boxes[i].sh.size.y * mf.y;
+				rmfp.y = s.boxes[i].sh.pos.y * mf.y;
+				int2* pos = new int2((rmfp).toint2());
+				//*pos = *pos + (defpos*wsize.touni2<float>()).toint2();
 				posvec.push_back(make_pair(pos,*pos));
-				int2 size = int2((s.shapes[i].size * rmf).toint2());
+				int2 size = rmfs.toint2();
 				simpleshape sh = s.boxes[i].sh;
 				textclass tc;
 				tc.init(); 

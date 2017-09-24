@@ -184,6 +184,7 @@ namespace DX2D
 		int _testi = 0;
 		ui _realtesti = 0;
 	public:
+		mutex conmutex;
 		void callpyscript(string strid, string loc, string fname, void* call);
 		bool waspycalled = false;
 		inline physics* GetPhysP()
@@ -213,6 +214,7 @@ namespace DX2D
 		void callpy(button* bt, UINT msg, int2 pos);
 		void clearbuttons(textclass& tc)
 		{
+			conmutex.lock();
 			int i = 0;
 			buttonsIDmap.clear();
 			buttonSTRmap.clear();
@@ -222,11 +224,12 @@ namespace DX2D
 				tc.deltext(buttons[i]->cam, buttons[i]->textnh, false);
 				i++;
 			}
-			
 			buttons.clear();
+			conmutex.unlock();
 		}
 		bool delbutton(string name, bool delpos = true, bool delframe = false )
 		{
+			conmutex.lock();
 			int i = 0;
 			while (i < buttons.size())
 			{
@@ -238,6 +241,7 @@ namespace DX2D
 				}
 				i++;
 			}
+			conmutex.unlock();
 			return false;
 		}
 		bool delbutton(button* btn,bool delpos = true, bool delframe = false)
@@ -435,7 +439,9 @@ namespace DX2D
 			butt->c = this;
 			buttonsIDmap.insert(make_pair(ID, butt));
 			buttonSTRmap.insert(make_pair(name, butt));
+			conmutex.lock();
 			buttons.push_back(butt);
+			conmutex.unlock();
 			pclass.addobj(name, new int2(size), pos, false, false);
 			pclass.objmap[name]->rectID = 666;
 			physreact pr;
@@ -474,7 +480,9 @@ namespace DX2D
 			string name = to_string(ID) + "b";
 			buttonsIDmap.insert(make_pair(butt->ID, butt));
 			buttonSTRmap.insert(make_pair(name, butt));
+			conmutex.lock();
 			buttons.push_back(butt);
+			conmutex.unlock();
 			pclass.addobj(name, new int2(butt->size), butt->pos, false, false);
 			pclass.objmap[name]->rectID = 666;
 			physreact pr;
@@ -495,7 +503,9 @@ namespace DX2D
 				fontsize = 10.0f;
 			bool b = addbutton(buttontext, pos, size, copyvecofptrs<frame>(defaultbutton_fv, &frame::getcopy), buttonpressfunc, defaultbutton_idlei, defaultbutton_pressi, defaultbutton_msi,
 				defaultbutton_disabled, callonrelease, main, cam, tcp, true, 0U, "", { 0,0 },nullptr,fontsize, fontname,col);
+			conmutex.lock();
 			buttons[buttons.size() - 1]->isdefbutton = true;
+			conmutex.unlock();
 			return b;
 		}
 		inline void MouseMove(button* b, int2 pos)
@@ -602,6 +612,7 @@ namespace DX2D
 			int i = 0;
 			controlclock.tick();
 			etime tm = controlclock.gettime();
+			conmutex.lock();
 			while (i < buttons.size())
 			{
 				if (buttons[i]->isenabled && buttons[i]->mainframe != nullptr)
@@ -618,6 +629,7 @@ namespace DX2D
 					buttons[i]->mainframe->wchiac = buttons[i]->disabledstrid;
 				i++;
 			}
+			conmutex.unlock();
 		}
 		controls()
 		{

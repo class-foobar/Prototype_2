@@ -118,6 +118,7 @@ namespace DX2D
 		if (MapFind(wnd->waitmap, scriptname))
 		{
 			wnd->waitmapmutex.lock();
+
 			auto mttw = static_cast<condition_variable*>(wnd->waitmap[scriptname].second);
 			if (MapFind(wnd->waitmap[scriptname].first, inputstr))
 			{
@@ -146,10 +147,12 @@ namespace DX2D
 		v.push_back(wnd->ID);
 		v.push_back(bt->anyvars[1]);
 		v.push_back(msg);
+		UI->args.lock();
 		do
 		{
 			strid = to_string(rand());
-		} while (MapFind(UI->args,strid));
+		} while (MapFind(UI->args.getref(),strid));
+		UI->args.unlock();
 		string msgf = inputstr;
 		v.push_back(msgf);
 		if (scriptname != "")

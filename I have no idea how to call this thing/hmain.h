@@ -664,6 +664,86 @@ public:
 #define stationsizemultip 2.0f
 namespace common
 {
+	template<class univar0, class univar1>
+	class safemap /*: public std::map*/
+	{
+	private:
+	protected:
+		map<univar0, univar1> sm;
+		mutex m;
+	public:
+		bool constaccess = true;
+		void lock()
+		{
+			m.lock();
+		}
+		void unlock()
+		{
+			m.unlock();
+		}
+		inline bool try_lock()
+		{
+			return m.try_lock();
+		}
+		inline auto insert(pair<univar0,univar1> val)->decltype(sm.insert(val))
+		{
+			m.lock();
+			auto & ret = sm.insert(val);
+			m.unlock();
+			return ret;
+		}
+	/*	inline auto insert(univar0 v0, univar1 v1)->decltype(sm.insert(v0,v1))
+		{
+			m.lock();
+			auto & ret = sm.insert(make_pair(v0,v1));
+			m.unlock();
+			return ret;
+		}*/
+		inline auto erase(univar0 key)->decltype(sm.erase(key))
+		{
+			m.lock();
+			auto ret = sm.erase(key);
+			m.unlock();
+			return ret;
+		}
+		inline univar1 operator[](univar0& key)
+		{
+			if (constaccess)
+				return sm.at(key);
+			m.lock();
+			auto& val = sm[key];
+			m.unlock();
+			return val;
+		}
+		map<univar0, univar1> getcopy()
+		{
+			return sm;
+		}
+		map<univar0, univar1>& getref()
+		{
+			return sm;
+		}
+		map<univar0, univar1>* getptr()
+		{
+			return &sm;
+		}
+		bool find(univar0 key)
+		{
+			return sm.find(key) != sm.end();
+		}
+		inline size_t size()
+		{
+			return sm.size();
+		}
+		safemap(map<univar0, univar1> m)
+		{
+			sm = m;
+		}
+		safemap()
+		{
+			sm = {};
+		}
+	};
 	struct RGBA
 	{
 		int r;

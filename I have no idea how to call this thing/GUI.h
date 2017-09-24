@@ -221,7 +221,8 @@ namespace GAME
 			condition_variable _mttw;
 			map<ui, map<string, string>> oncescmap;
 			void reinit();
-			map<string, vector<boost::any>> args;
+			//mutex argmutex;
+			common::safemap<string, vector<boost::any>> args;
 			AZfile gameuif;
 			AZfile stylef;
 			camera* cam;

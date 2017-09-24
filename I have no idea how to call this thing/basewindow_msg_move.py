@@ -10,8 +10,11 @@ umsg = GUI.GetArg(strid, 2)
 msg = GUI.GetArg(strid, 3)
 btptr = GUI.GetArg(strid, 5)
 class int2 :
-	x = 0
-	y = 0
+    x = 0
+    y = 0
+    def __init__(self,nx = 0,ny = 0):
+        self.x = nx
+        self.y = ny
 class int4 :
 	x = 0
 	y = 0
@@ -24,12 +27,15 @@ def mov(wnd,strid):
     ispressed = True
     while ispressed:
         nmsg = GUI.WaitFor(wnd,"MOUSEMOVE LBUTTONUP",strid)
+        oldpos = int2 (GUI.Memory_Get(wnd,"mouseXtop"), GUI.Memory_Get(wnd,"mouseYtop"))
         if nmsg == "MOUSEMOVE":
             point = int2()
             point.x = GUI.CursorX()
             point.y = GUI.CursorY()
-            GUI.SetX(wnd,point.x)
-            GUI.SetY(wnd,point.y)
+            nposX = GUI.GetX(wnd) + point.x - oldpos.x;
+            nposY = GUI.GetY(wnd) +  point.y - oldpos.y;
+            GUI.SetX(wnd,nposX)
+            GUI.SetY(wnd,nposY)
             GUI.UpdatePos(wnd,GUI.Memory_Get(wnd,"mouseXtop"),GUI.Memory_Get(wnd,"mouseYtop"))
             GUI.Memory_Set(wnd,"mouseXtop","INT",point.x)
             GUI.Memory_Set(wnd,"mouseYtop","INT",point.y)
