@@ -16,15 +16,22 @@ class int2 :
         self.x = nx
         self.y = ny
 class int4 :
-	x = 0
-	y = 0
-	z = 0
-	w = 0
+    x = 0
+    y = 0
+    z = 0
+    w = 0
+    def __init__(self,nx = 0,ny = 0,nz = 0,nw = 0):
+        self.x = nx
+        self.y = ny
+        self.z = nz
+        self.w = nw
 class float2 :
 	x = 0.0
 	y = 0.0
 def mov(wnd,strid):
     ispressed = True
+    GUI.Memory_Set(1,"BOOL","isdragging",True)
+    GUI.Memory_Set(1,"UINT","dragged",wnd)
     while ispressed:
         nmsg = GUI.WaitFor(wnd,"MOUSEMOVE LBUTTONUP",strid)
         oldpos = int2 (GUI.Memory_Get(wnd,"mouseXtop"), GUI.Memory_Get(wnd,"mouseYtop"))
@@ -36,16 +43,16 @@ def mov(wnd,strid):
             nposY = GUI.GetY(wnd) +  point.y - oldpos.y;
             GUI.SetX(wnd,nposX)
             GUI.SetY(wnd,nposY)
-            GUI.UpdatePos(wnd,GUI.Memory_Get(wnd,"mouseXtop"),GUI.Memory_Get(wnd,"mouseYtop"))
+            GUI.UpdatePos(wnd)
             GUI.Memory_Set(wnd,"mouseXtop","INT",point.x)
             GUI.Memory_Set(wnd,"mouseYtop","INT",point.y)
             if(GUI.KeyState("LBUTTON") == False):
                 ispressed = False
         if nmsg == "LBUTTONUP":
             ispressed = False
-            print("buttonup")
             GUI.Memory_Set(wnd,"istopmoving","BOOL",False)
             GUI.MouseMoveDetB(btptr,False)
+            GUI.Memory_Set(0,"BOOL","isdragging",False)
 point = int2()
 point.x = GUI.GetArg(strid, 6)
 point.y = GUI.GetArg(strid, 7)

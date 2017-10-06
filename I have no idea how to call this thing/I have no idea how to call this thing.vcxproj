@@ -132,6 +132,7 @@
     <ClCompile Include="DX_main.cpp" />
     <ClCompile Include="factions.cpp" />
     <ClCompile Include="game.cpp" />
+    <ClCompile Include="GAPI.cpp" />
     <ClCompile Include="GUI.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pathfinding.cpp" />
@@ -166,7 +167,12 @@
     <None Include="blank.py" />
     <None Include="button_flagproc.py" />
     <None Include="button_msg_main.py" />
+    <None Include="empty_flagproc.py" />
+    <None Include="empty_msg_main.py" />
+    <None Include="game_ui_select.py" />
+    <None Include="window_switchvis.py" />
     <None Include="packages.config" />
+    <None Include="game_ui_panelcreate.py" />
     <None Include="window_createempty.py" />
   </ItemGroup>
   <ItemGroup>

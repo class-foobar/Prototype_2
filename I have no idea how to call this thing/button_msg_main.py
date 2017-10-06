@@ -50,7 +50,7 @@ def main (strid):
         npyf = pyf.replace(".py","")
         mod = importlib.import_module(npyf)
         met = getattr(mod,"main")
-        met(strid,0.2,0.2,0.2,0.2)
+        met(strid)
     if msg == "MOUSEMOVE":
         if(not hasmover) and isinside:
             GUI.Memory_Set(wnd,"hasmover","BOOL",true)

@@ -32,7 +32,9 @@ namespace GAME
 					PyArg_ParseTuple(args, "I|s|f|f|f|f|I|s", &parentid, &chstylename, &pos.x, &pos.y, &size.x, &size.y, &flags, &chthisname);
 					ui flagscopy = WF_SCALETO_V;
 					string stylename = chstylename;
-					string thisname = chthisname;
+					string thisname = "NULL";
+					if(chthisname != NULL)
+						thisname = chthisname;
 					auto res = UI->NewWindow(UI->wnds[parentid], pos, size, stylename, (ui)flags);
 					auto wnd = boost::any_cast<window*>(res.retval[0]);
 					wnd->strname = thisname;
@@ -97,9 +99,9 @@ namespace GAME
 					ui ID;
 					int n;
 					PyArg_ParseTuple(args, "I|i", &ID, &n);
-					int2 old = *UI->wnds[ID]->pos;
+					//int2 old = *UI->wnds[ID]->pos;
 					UI->wnds[ID]->pos->x = n;
-					UI->wnds[ID]->updatepos(old);
+					UI->wnds[ID]->updatepos();
 					return PyBool_FromLong(0);
 
 				}
@@ -108,9 +110,9 @@ namespace GAME
 					ui ID;
 					int n;
 					PyArg_ParseTuple(args, "I|i", &ID, &n);
-					int2 old = *UI->wnds[ID]->pos;
+					//int2 old = *UI->wnds[ID]->pos;
 					UI->wnds[ID]->pos->y = n;
-					UI->wnds[ID]->updatepos(old);
+					UI->wnds[ID]->updatepos();
 					return PyBool_FromLong(0);
 				}
 				PYFUNC(SetSX)
@@ -221,10 +223,9 @@ namespace GAME
 				PYFUNC(UpdatePos)
 				{
 					ui ID;
-					int2 old;
 					_UpdatePosMutex.lock();
-					PyArg_ParseTuple(args, "I|i|i", &ID, &old.x, &old.y);
-					UI->wnds[ID]->updatepos(old);
+					PyArg_ParseTuple(args, "I", &ID);
+					UI->wnds[ID]->updatepos();
 					_UpdatePosMutex.unlock();
 					return PyLong_FromLong(0);
 				}
@@ -249,7 +250,16 @@ namespace GAME
 						_GetArgMutex.unlock();
 						return NULL;
 					}
-					vector<boost::any> bargs = UI->args[strid];
+					vector<boost::any> bargs = {};
+				retry:;
+					try
+					{
+						bargs = UI->args[strid];
+					}
+					catch (...)
+					{
+						goto retry;
+					}
 					_GetArgMutex.unlock();
 					switch (it)
 					{
@@ -370,6 +380,8 @@ namespace GAME
 					PyObject* obj;
 					PyArg_ParseTuple(args, "I|s|s|O", &ID, &ch0, &ch1, &obj);
 					Py_INCREFTS(obj);
+					if (ID == 0)
+						ID = 1;
 					name = ch0;
 					type = ch1;
 					int pid = 0;
@@ -378,7 +390,12 @@ namespace GAME
 					{
 						wnd->memory[pid];
 					}
-					if (type == "STR")
+					if (type == "PYOBJ")
+					{
+						Py_INCREFTS(obj);
+						MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) obj)));
+					}
+					else if (type == "STR")
 					{
 						string val = PyBytes_AsString(PyUnicode_AsUTF8String(obj));
 						MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
@@ -386,6 +403,12 @@ namespace GAME
 					else if (type == "INT")
 					{
 						int val = PyLong_AsLong(obj);
+						//PyArg_ParseTuple(args, string("I|s|s|" + 'i').c_str(), &ID, &dummyname, &dummytype, &val);
+						MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
+					}
+					else if (type == "UINT")
+					{
+						ui val = PyLong_AsUnsignedLong(obj);
 						//PyArg_ParseTuple(args, string("I|s|s|" + 'i').c_str(), &ID, &dummyname, &dummytype, &val);
 						MapSet(wnd->memory[pid], make_pair(name, make_pair(type, (boost::any) val)));
 					}
@@ -418,6 +441,8 @@ namespace GAME
 					ui ID;
 					char* ch0 = NULL;
 					PyArg_ParseTuple(args, "I|s", &ID, &ch0);
+					if (ID == 0)
+						ID = 1;
 					name = ch0;
 					window* wnd = UI->wnds[ID];
 					type = wnd->memory[0][name].first;
@@ -429,11 +454,18 @@ namespace GAME
 					ui ID;
 					char* ch0 = NULL;
 					PyArg_ParseTuple(args, "I|s", &ID, &ch0);
+					if (ID == 0)
+						ID = 1;
 					name = ch0;
 					window* wnd = UI->wnds[ID];
 					auto var = wnd->memory[0][name].second;
 					type = wnd->memory[0][name].first;
-					if (type == "STR")
+					if (type == "PYOBJ")
+					{
+						auto val = boost::any_cast<PyObject*>(var);
+						return val;
+					}
+					else if (type == "STR")
 					{
 						auto val = boost::any_cast<string>(var);
 						//cout << val << endl;
@@ -443,6 +475,11 @@ namespace GAME
 					{
 						//cout << boost::any_cast<int>(var) << endl;
 						return PyLong_FromLong(boost::any_cast<int>(var));
+					}
+					else if (type == "UINT")
+					{
+						//cout << boost::any_cast<int>(var) << endl;
+						return PyLong_FromLong(boost::any_cast<ui>(var));
 					}
 					else if (type == "BOOL")
 					{
@@ -462,6 +499,8 @@ namespace GAME
 					ui ID;
 					char* ch0 = NULL;
 					PyArg_ParseTuple(args, "I|s", &ID, &ch0);
+					if (ID == 0)
+						ID = 1;
 					name = ch0;
 					//	if (name == "LBUTTONUP")
 				//			DebugBreak();
@@ -636,6 +675,9 @@ namespace GAME
 				}
 				PYFUNC(DestroyWnd)
 				{
+					ui ID;
+					PyArg_ParseTuple(args, "I", &ID);
+
 					Py_RETURN_TRUE;
 				}
 				PYFUNC(DestroyWndAndExit)
@@ -786,6 +828,114 @@ namespace GAME
 						Py_RETURN_TRUE;
 					Py_RETURN_FALSE;
 				}
+				PYFUNC(GetParent)
+				{
+					ui ID = 0;
+					PyArg_ParseTuple(args, "I", &ID);
+					return PyLong_FromUnsignedLong(UI->wnds[ID]->parent->ID);
+				}
+				PYFUNC(GetWndByName)
+				{
+					char* ch0 = NULL;
+					PyArg_ParseTuple(args, "s", &ch0);
+					if (!MapFind(UI->wndnamemap, (string)ch0))
+						return PyLong_FromUnsignedLong(0);
+					return PyLong_FromUnsignedLong(UI->wndnamemap.at((string)ch0));
+				}
+				PYFUNC(GetFlags)
+				{
+					ui ID = 0;
+					PyArg_ParseTuple(args, "I", &ID);
+					return PyLong_FromUnsignedLong(UI->wnds[ID]->flags);
+				}
+				PYFUNC(ProjectWindow)
+				{
+					ui wndid, target;
+					uni2<float> proppos, propsize;
+					int shapen;
+					PyArg_ParseTuple(args, "I|I|f|f|f|f|i", &target, &wndid,&proppos.x,&proppos.y,&propsize.x,&propsize.y,&shapen);
+					int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
+					_ProjectWindowMutex.lock();
+					window* wnd = UI->wnds[wndid];
+					window* projwnd = new window;
+					window* twnd = UI->wnds[target];
+					memcpy(projwnd, wnd, sizeof(window));
+					projwnd->resize(twnd->defpos,propsize,true);
+					int4 rect(*wnd->pos,wnd->realsize + *wnd->pos);
+					projwnd->f->capturerect = rect;
+					projwnd->f->renderaftercapture = false;
+					projwnd->f->capture = true;
+					while (projwnd->f->capture)
+						Sleep(0);
+					projwnd->f->ismactive = false;
+					projwnd->f->ischfact = false;
+					sprite sp = UI->wnds[target]->f->capturetarget;
+					_ProjectWindowMutex.unlock();
+					delete projwnd;
+
+					style s = UI->styles[twnd->styleid];
+					uni2<float> mf;
+					uni2<float> pmf;
+					ui flags = twnd->flags;
+					if (flags & WF_SCALETO_VH || flags == NULL)
+					{
+						mf.x = ((float)wsize.x)*twnd->size.x;
+						mf.y = ((float)wsize.y)*twnd->size.y;
+						pmf.x = ((float)wsize.x)*twnd->defpos.x;
+						pmf.y = ((float)wsize.y)*twnd->defpos.y;
+					}
+					else if (flags & WF_SCALETO_V)
+					{
+						mf.x = ((float)wsize.y)*twnd->size.x;
+						mf.y = ((float)wsize.y)*twnd->size.y;
+						pmf.x = ((float)wsize.y)*twnd->defpos.x;
+						pmf.y = ((float)wsize.y)*twnd->defpos.y;
+					}
+					else if (flags & WF_SCALETO_H)
+					{
+						mf.x = ((float)wsize.x)*twnd->size.x;
+						mf.y = ((float)wsize.x)*twnd->size.y;
+						pmf.x = ((float)wsize.x)*twnd->defpos.x;
+						pmf.y = ((float)wsize.x)*twnd->defpos.y;
+					}
+					uni2<float> rmf = mf;
+					if (s.shapes[shapen].lockh)
+						rmf.x = mf.x;
+					if (s.shapes[shapen].lockv)
+						rmf.y = mf.y;
+					sp.SetOffsetXYp(twnd->pos, true);
+					//bool* rb = new bool(true);
+					sp.render = twnd->shaperb[shapen];
+					sp.useidentp = true;
+					sp.identp = twnd->identp;
+					uni2<float> copy;
+					sp.size = (copy = s.shapes[shapen].size * rmf).toint2();
+					int2* i2sp;
+					sp.SyncPos(i2sp = new int2(/*pmf.toint2()+*/(s.shapes[shapen].pos * rmf).toint2()), false);
+					//*i2sp = *i2sp + (twnd->defpos*).toint2();
+					twnd->sf->sprites.push_back(sp);
+					twnd->posvec.push_back(make_pair(i2sp, *i2sp));
+					return PyLong_FromVoidPtr(sp.render = new bool(true));
+				}
+				PYFUNC(ChangeBoolPtr)
+				{
+					bool* ptr;
+					bool state;
+					PyObject* obj;
+					PyArg_ParseTuple(args, "O|b", &obj,&state );
+					Py_INCREFTS(obj);
+					ptr = (bool*)(void*)PyLong_AsVoidPtr(obj);
+					Py_DECREFTS(obj);
+					*ptr = state;
+					Py_RETURN_TRUE;
+				}
+				PYFUNC(AttachTo)
+				{
+					ui pid, chid, flags;
+					PyArg_ParseTuple(args, "I|I|I", &pid,&chid,&flags);
+					UI->AttachTo(UI->wnds[pid], UI->wnds[chid], flags);
+					Py_RETURN_TRUE;
+				}
 				static  PyObject* test(PyObject *self, PyObject *args)
 				{
 					return NULL;
@@ -837,9 +987,30 @@ namespace GAME
 					PyArg_ParseTuple(args, "s", &ch0);
 					//strid = ch0;
 					name = ch0;
+					WIN32_FIND_DATAA fdata;
+					HANDLE hFind = (HANDLE)FindFirstFileA(name.c_str(), &fdata);
+					if ((LONG)hFind == ERROR_FILE_NOT_FOUND)
+					{
+						FindClose(hFind);
+						return PyLong_FromLong(0);
+					}
 					auto ptr = new AZfile(name);
 					_OpenMutex.unlock();
 					return PyLong_FromVoidPtr(ptr);
+				}
+				PYFUNC(FindFile)
+				{
+					char* ch0;
+					PyArg_ParseTuple(args, "s", &ch0);
+					string name = ch0;
+					WIN32_FIND_DATAA fdata;
+					HANDLE hFind = (HANDLE)FindFirstFileA(name.c_str(), &fdata);
+					if ((LONG)hFind == ERROR_FILE_NOT_FOUND)
+					{
+						FindClose(hFind);
+						Py_RETURN_FALSE;
+					}
+					Py_RETURN_TRUE;
 				}
 				PYFUNC(Release)
 				{
@@ -899,6 +1070,10 @@ namespace GAME
 					PyArg_ParseTuple(args, "K|s", &ptr, &ch0);
 					name = ch0;
 					auto file = static_cast<AZfile*>((void*)ptr);
+					if (file == nullptr || name == "NULL")
+						Py_RETURN_FALSE;
+					if (name.find("NULL") != string::npos)
+						Py_RETURN_FALSE;
 					return PyBool_FromLong(file->findvar(name));
 				}
 				//static PyMethodDef AZMethods[] =
@@ -960,6 +1135,10 @@ namespace GAME
 					return m;
 				}
 			}
+			namespace GAPIMOD
+			{
+				extern struct PyModuleDef GAPImodule;;
+			}
 		}
 		namespace deffunc
 		{
@@ -971,6 +1150,7 @@ namespace GAME
 			AZfile file(link);
 			string str;
 			vector < pair<string, window*>> wndparentv;
+			vector<ui> flagvec;
 			auto nnmap = c->wndnamemap;
 			int i = 0;
 			c->gameuif = file;
@@ -978,8 +1158,12 @@ namespace GAME
 			{
 				string name = str;
 				str = str + "@";
-				auto res = ((file.GetVar<bool>(str + "W@PARENTPOSSIZE")?c->NewWindow(c->root, uni2<float>{file.GetVar<float>(str + "W@POSX" ),file.GetVar<float>(str + "W@POSY") },uni2<float>{ file.GetVar<float>(str + "W@SIZEX"), file.GetVar<float>(str + "W@SIZEY")}, file.GetVar<string>(str + "W@STYLE"), WF_NOVINIT | WF_HIDE | WF_SCALETO_V,name)
-				: c->NewWindow(c->root, uni2<float>{ file.GetVar<float>(str + "W@POSX"),file.GetVar<float>(str + "W@POSY") }, uni2<float>{ file.GetVar<float>(str + "W@SIZEX"), file.GetVar<float>(str + "W@SIZEY")}, file.GetVar<string>(str + "W@STYLE"), WF_HIDE | WF_SCALETO_V,name)));
+				ui wflags = 0;
+				auto res = ((file.GetVar<bool>(str + "W@PARENTPOSSIZE")?c->NewWindow(c->root, uni2<float>{file.GetVar<float>(str + "W@POSX" ),file.GetVar<float>(str + "W@POSY") },uni2<float>{ file.GetVar<float>(str + "W@SIZEX"), file.GetVar<float>(str + "W@SIZEY")}, file.GetVar<string>(str + "W@STYLE"), 
+					wflags = (WF_NOVINIT | WF_HIDE | WF_SCALETO_V | ((file.GetVar<bool>(str + "W@POSBASERIGHT")) ? WF_POSBASERIGHT : WF_POSBASELEFT)) ,name)
+				: c->NewWindow(c->root, uni2<float>{ file.GetVar<float>(str + "W@POSX"),file.GetVar<float>(str + "W@POSY") }, uni2<float>{ file.GetVar<float>(str + "W@SIZEX"), file.GetVar<float>(str + "W@SIZEY")}, file.GetVar<string>(str + "W@STYLE"),
+					wflags = (WF_HIDE | WF_SCALETO_V | ((file.GetVar<bool>(str + "W@POSBASERIGHT")) ? WF_POSBASERIGHT : WF_POSBASELEFT)),name)));
+				flagvec.push_back(wflags);
 				if (res.code == UI_OK)
 				{
 					auto wnd = boost::any_cast<window*>(res.retval[0]);
@@ -996,7 +1180,9 @@ namespace GAME
 			i = 0;
 			while (i < wndparentv.size())
 			{
-				c->AttachTo(c->wnds[nnmap[wndparentv[i].first]],wndparentv[i].second,AT_STYLEPROPPOS | AT_VINIT, WF_HIDE | WF_SCALETO_V);
+				if (flagvec[i] & WF_NOVINIT)
+					flagvec[i] &= ~(WF_NOVINIT);
+				c->AttachTo(c->wnds[nnmap[wndparentv[i].first]],wndparentv[i].second,AT_STYLEPROPPOS | AT_VINIT, /*WF_HIDE | WF_SCALETO_V*/flagvec[i]);
 				wndparentv[i].second->show();
 				i++;
 			}
@@ -1132,6 +1318,9 @@ namespace GAME
 		}
 		UIresult core::AttachTo(window * parent, window * child, unsigned long int flags, unsigned long int visflags)
 		{
+			if (parent != nullptr)
+				if (parent->isnull)
+					parent == nullptr;
 			UIresult ret;
 			window* oldparent = child->parent;
 			if (parent == oldparent && flags & AT_VINIT)
@@ -1140,26 +1329,56 @@ namespace GAME
 				ret.code = UI_OK;
 				return ret;
 			}
-			else if (parent == oldparent)
+			else if (parent == oldparent && ! flags & AT_FORCE)
 			{
 				ret.code = UI_OK;
 				return ret;
 			}
 			if (parent != nullptr)
-			{
-				child->parent->children.erase(child->ID);
+			{	
+				if (child->pos == nullptr)
+					child->pos = new int2(0, 0);
+				if(child->parent != nullptr )
+					child->parent->children.erase(child->ID);
 				child->parent = parent;
 				parent->children.insert(make_pair(child->ID, child));
-				//child->updatepos();
-				int2 oldpos = *child->pos;
 				if (!(flags & AT_NULL))
+				{
+					if (flags & AT_VINIT)
+					{
+						uni2<float> surf = parent->size;
+						uni2<float> pos = child->proppos;
+						if (flags & AT_PROPPOS)
+						{
+							pos = ((child->parent == nullptr)? GAME::camrect.second().touni2<float>() : oldparent->size) / child->pos->touni2<float>();
+							
+						}
+						else if (flags & AT_SAMEPOS)
+						{
+							surf = GAME::camrect.second().touni2<float>();
+						}
+						else if (flags & AT_STYLEPROPPOS)
+						{
+							pos = child->defpos;
+						}
+						if (!(visflags & WF_POSBASELEFT) && !(visflags & WF_POSBASERIGHT))
+						{
+							if (parent->flags & WF_POSBASERIGHT)
+								visflags |= WF_POSBASERIGHT;
+							else
+								visflags |= WF_POSBASELEFT;
+						}
+						child->initvis(styles[child->styleid], pos,surf, visflags);
+					}
+				}
+				child->updatenesting();
+				//child->updatepos();
+	/*			if (!(flags & AT_NULL))
 				{
 					if (flags & AT_VINIT)
 					{
 						if (flags & AT_PROPPOS)
 						{
-							uni2<float> psize = oldparent->size;
-							auto ppos = oldparent->proppos;
 							auto size = child->size;
 							auto pos = child->proppos;
 							auto wsize = GAME::camrect.second().touni2<float>();
@@ -1176,8 +1395,6 @@ namespace GAME
 						}
 						else if (flags & AT_STYLEPROPPOS)
 						{
-							uni2<float> psize = oldparent->size;
-							auto ppos = oldparent->proppos;
 							auto size = child->size;
 							auto pos = child->proppos;
 							auto wsize = GAME::camrect.second().touni2<float>();
@@ -1199,12 +1416,11 @@ namespace GAME
 						}
 					}
 				}
-				child->updatepos(oldpos);
-				child->updatenesting();
+				child->updatepos();*/
 			}
 			else if (flags & AT_VINIT)
 			{
-				child->initvis(styles[child->ID], child->defpos, GAME::camrect.second().touni2<float>());
+				child->initvis(styles[child->styleid], child->defpos, GAME::camrect.second().touni2<float>(),visflags);
 			}
 			ret.code = UI_OK;
 			return ret;
@@ -1217,7 +1433,7 @@ namespace GAME
 				ch.second->updatenesting();
 			}
 		}
-		void window::updatepos(int2 oldpos = { 0,0 })
+		void window::updatepos()
 		{
 			if (children.size() == 0)
 			{
@@ -1247,7 +1463,7 @@ namespace GAME
 				int ii = 0;
 				while (ii < posvec.size())
 				{
-					*posvec[ii].first = posvec[ii].second + *pos + ((parent != nullptr)?*parent->pos:int2(0,0));
+					*posvec[ii].first = posvec[ii].second + *pos + ((parent != nullptr)?((parent->flags & WF_POSBASELEFT)?*parent->pos:*parent->pos-parent->realsize):int2(0,0));
 					ii++;
 				}
 			}
@@ -1256,7 +1472,7 @@ namespace GAME
 				int i = 0;
 				while (i < children.size())
 				{
-					children[i]->updatepos(oldpos);
+					children[i]->updatepos();
 					i++;
 				}
 			}
@@ -1265,11 +1481,25 @@ namespace GAME
 		{
 			UIresult ret;
 			proppos = npos;
-			//frame* f = new frame;
-			//styleid = s.id;
 			int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
 			int i = 0;
 			pos = new int2((npos*wsize.touni2<float>()).toint2());
+			if (flags & WF_POSBASERIGHT)
+			{
+				pos->x = wsize.x - pos->x;
+			}
+			//if (flags & WF_SCALETO_VH || flags == NULL)
+			//{
+			//	pos = new int2((npos*wsize.touni2<float>()).toint2());
+			//}
+			//else if (flags & WF_SCALETO_V)
+			//{
+			//	pos = new int2((npos*wsize.x).toint2());
+			//}
+			//else if (flags & WF_SCALETO_H)
+			//{
+			//	pos = new int2((npos*wsize.y).toint2());
+			//}
 			defmultip = screenmultip;
 			i = 0;
 			if (identp == nullptr)
@@ -1278,8 +1508,25 @@ namespace GAME
 			}
 			*identp = true;
 			ui start = f->brushes.size();
-			//if (start == -1)
-			//	start = 0;
+			{
+				uni2<float> mf;
+				if (flags & WF_SCALETO_VH || flags == NULL)
+				{
+					mf.x = ((float)wsize.x)*size.x;
+					mf.y = ((float)wsize.y)*size.y;
+				}
+				else if (flags & WF_SCALETO_V)
+				{
+					mf.x = ((float)wsize.y)*size.x;
+					mf.y = ((float)wsize.y)*size.y;
+				}
+				else if (flags & WF_SCALETO_H)
+				{
+					mf.x = ((float)wsize.x)*size.x;
+					mf.y = ((float)wsize.x)*size.y;
+				}
+				realsize = mf.toint2();
+			}
 			while (i < s.shapes.size())
 			{
 				bool* rb = new bool(true);
@@ -1293,28 +1540,6 @@ namespace GAME
 					int2* i2sp;
 					if (/*s.shapes[i].lockh || s.shapes[i].lockv*/true)
 					{
-						/*uni2<float> mf;
-						if (flags & WF_SCALETO_VH || flags == NULL)
-						{
-							mf.x = ((float)wsize.x)*size.x;
-							mf.y = ((float)wsize.y)*size.y;
-						}
-						else if (flags & WF_SCALETO_V)
-						{
-							mf.x = ((float)wsize.y)*size.x;
-							mf.y = ((float)wsize.y)*size.y;
-						}
-						else if (flags & WF_SCALETO_H)
-						{
-							mf.x = ((float)wsize.x)*size.x;
-							mf.y = ((float)wsize.x)*size.y;
-						}
-						uni2<float> rmf = mf;
-						sp.size = (s.shapes[i].size * rmf).toint2();
-						if (s.shapes[i].lockh)
-							sp.size.width = (int)rmf.x;
-						if (s.shapes[i].lockv)
-							sp.size.height = (int)rmf.y;*/
 						uni2<float> mf;
 						if (flags & WF_SCALETO_VH || flags == NULL)
 						{
@@ -1344,6 +1569,8 @@ namespace GAME
 						rmfp.y = s.shapes[i].pos.y * mf.y;
 						sp.size =  int2((rmfs).toint2());
 						i2sp = new int2((rmfp).toint2());
+						if (flags & WF_POSBASERIGHT)
+							i2sp->x -= rmfs.x;
 						sp.SyncPos(i2sp, false);
 						//*i2sp = *i2sp + (defpos*rmf).toint2();
 					}
@@ -1394,6 +1621,8 @@ namespace GAME
 						rmfp.y = s.shapes[i].pos.y * mf.y;
 						b.size = new int2(( rmfs).toint2());
 						b.pos = new int2((rmfp).toint2());
+						if (flags & WF_POSBASERIGHT)
+							b.pos->x -= rmfs.x;
 						//*b.pos = *b.pos + (defpos*wsize.touni2<float>()).toint2();
 					}
 					else
@@ -1483,6 +1712,8 @@ namespace GAME
 				//*pos = *pos + (defpos*wsize.touni2<float>()).toint2();
 				posvec.push_back(make_pair(pos,*pos));
 				int2 size = rmfs.toint2();
+				if (flags & WF_POSBASERIGHT)
+					pos->x -= rmfs.x;
 				simpleshape sh = s.boxes[i].sh;
 				textclass tc;
 				tc.init(); 
@@ -1509,7 +1740,7 @@ namespace GAME
 				i++;
 			}
 			i = 0;
-			updatepos({ 0,0 });
+			updatepos();
 			ret.code = UI_OK;
 			f->ismactive = true;
 			vector<boost::any> v;
@@ -1581,6 +1812,61 @@ namespace GAME
 		{
 			return UIresult();
 		}
+		UIresult GAME::GUI::window::resize(uni2<float> npos, uni2<float> screenmultip, bool copypointers)
+		{
+			UIresult ret;
+			ret.code = UI_OK;
+			int i = 0;
+			otherobjts = {};
+			nooffpos = {};
+			cufoffsets = {};
+			if (copypointers)
+			{
+				
+				initvis(coreptr->styles[styleid], npos, screenmultip, flags);
+				i = 0;
+				posvec = {};
+				defshapepossize = {};
+				btts = {};
+				shaperb = {};
+				for each (auto p in children)
+				{
+					coreptr->AttachTo(this, p.second, AT_VINIT | AT_FORCE | AT_PROPPOS);
+					colnodes = {};
+				}
+				
+				return ret;
+			}
+			while (i < posvec.size())
+			{
+				delete posvec[i].first;
+				i++;
+			}
+			i = 0;
+			posvec = {};
+			defshapepossize = {};
+			while (i < btts.size())
+			{
+				delete btts[i];
+				i++;
+			}
+			btts = {};
+			i = 0;
+			for each (auto var in colnodes)
+			{
+				delete var.second;
+			}
+			colnodes = {};
+			i = 0;
+			while (i < shaperb.size())
+			{
+				delete shaperb[i];
+				i++;
+			}
+			shaperb = {};
+			delete pos;
+			return ret;
+		}
 		UIresult window::show()
 		{
 			int i = 0;
@@ -1649,21 +1935,6 @@ namespace GAME
 			mf.x = ((float)wsize.x)*size.x;
 			mf.y = ((float)wsize.y)*size.y;
 			w->size = size;
-		/*	if (flags & WF_SCALETO_VH || flags == NULL)
-			{
-				mf.x = ((float)wsize.x)*size.x;
-				mf.y = ((float)wsize.y)*size.y;
-			}
-			else if (flags & WF_SCALETO_V)
-			{
-				mf.x = ((float)wsize.y)*size.x;
-				mf.y = ((float)wsize.y)*size.y;
-			}
-			else if (flags & WF_SCALETO_H)
-			{
-				mf.x = ((float)wsize.x)*size.x;
-				mf.y = ((float)wsize.x)*size.y;
-			}*/
 			if (!(flags & WF_NOVINIT))
 			{
 				ret = w->initvis(s, pos, mf,flags);
@@ -1675,72 +1946,7 @@ namespace GAME
 			ret.retval.push_back(w);
 			ret.retval.push_back(w->ID);
 			string strid = to_string(w->ID);
-			//do
-			//{
-			//	strid = to_string(rand());
-			//} while (UI->args.find(strid) != UI->args.end());
-		//	vector<boost::any> v;
-		//	/*		window* wnd = boost::any_cast<window*>(bt->anyvars[0]);
-		//	auto m = boost::any_cast<>bt->anyvars[2]*/;
-		//	v.push_back(w->ID);
-		//	map<string, ui>inputs = { { "LBUTTONUP",WM_LBUTTONUP },{ "RBUTTONUP",WM_RBUTTONUP },{ "LBUTTONDOWN",WM_LBUTTONDOWN },{ "RBUTTONDOWN",WM_RBUTTONDOWN },
-		//	{ "MBUTTONUP" ,WM_MBUTTONUP },{ "MBUTTONDOWN",WM_MBUTTONDOWN },{ "MOUSEMOVE",WM_MOUSEMOVE } };
-		//	//vector<ui> inpotsuint = { };
-		//	i = 0;
-		//	string inputstr;
-		//feachdone:;
-		//	string msgf = inputstr;
-		//	wstring wstr0 = STRtoWSTR(strid);
-		//	wchar_t * ch0 = new wchar_t[wstr0.size() + 1];
-		//	wcsncpy(ch0, wstr0.c_str(), wstr0.size() + 1);
-		//	wstring wstr1 = STRtoWSTR(bslink);
-		//	wchar_t * ch1 = new wchar_t[wstr1.size() + 1];
-		//	wcsncpy(ch1, wstr1.c_str(), wstr1.size() + 1);
-		//	wchar_t* _args[] = { ch0, ch1 };
-		//	int argc = sizeof(_args) / sizeof(_args[0]);
-		//	vector<wchar_t*> w_tv = { ch0,ch1 };
-		//	v.push_back(w_tv);
-		//	//while (UI->isargbmodified)
-		//	//	Sleep(0);
-		//	//UI->isargbmodified = true;
-		//	UI->argmodmutex->lock();
-		//	v.push_back(bslink);
-		//	UI->args.insert(make_pair(strid, v));
-		//	UI->argmodmutex->unlock();
-		//	UI->idmapmutex.lock();
-		//	if (MapFind(UI->processtridmap, getpid()))
-		//		UI->processtridmap.erase(getpid());
-		//	UI->processtridmap.insert(make_pair(getpid(), strid));
-		//	UI->idmapmutex.unlock();
-		//	//UI->isargbmodified = false;
-
-		//	//PySys_SetArgv(argc, _args);
-		//	int ii = 0;
-		//	if (s.flagproc != "")
-		//	{
-		//		string loc = bslink + "scripts\\" + s.flagproc;
-		//		FILE* file = _Py_fopen(loc.c_str(), "r+");
-		//		auto pyret = PyRun_AnyFileEx(file, s.flagproc.c_str(),true);
-		//		UI->idmapmutex.lock();
-		//		UI->processtridmap.erase(getpid());
-		//		UI->idmapmutex.unlock();
-		//		auto fuckvs = UI;
-		//		UI->argmodmutex->lock();
-		//		auto bargs = UI->args[strid];
-		//		auto fargs = boost::any_cast<vector<wchar_t*>>(bargs[(bargs.size() < 10) ? 1 : 8]);
-		//		int i = 0;
-		//		while (i < fargs.size())
-		//		{
-		//			delete[] fargs[i];
-		//			i++;
-		//		}
-		//		if (bargs.size() > 10)
-		//		{
-		//			*boost::any_cast<bool*>(bargs[13]) = true;
-		//		}
-		//		UI->args.erase(strid);
-		//		UI->argmodmutex->unlock();
-		//	}
+			MapSet(UI->wndnamemap, make_pair(strname, w->ID));
 			return ret;
 		}
 		UIresult core::NewWindow(window * parent, uni2<float> pos, uni2<float> size, string stylename, unsigned long int flags,string strname)
@@ -1753,6 +1959,7 @@ namespace GAME
 			bslink = link;
 			PyImport_AppendInittab("GUI", Python::GUIMOD::PyInit_GUI);
 			PyImport_AppendInittab("AZflib", Python::AZFLIBMOD::PyInit_AZflib);
+			PyImport_AppendInittab("GAPI", Python::GAPIMOD::PyInit_GAPI);
 			//PyEval_InitThreads();
 			Py_Initialize();
 			wstring wstr0 = STRtoWSTR((bslink + "scripts\\"));
@@ -1762,6 +1969,7 @@ namespace GAME
 			PySys_SetArgv(1, _args);
 			PyImport_ImportModule("GUI");
 			PyImport_ImportModule("AZflib");
+			PyImport_ImportModule("GAPI");
 			conptr = con;
 			mainframe = mf;
 			scenenum = scenen;
@@ -1776,6 +1984,10 @@ namespace GAME
 			scriptthreads.push_back(make_pair(curth, rb));
 			scriptthreadmutex.unlock();
 			curth->detach();
+			window* rootptr;
+			wnds.insert(make_pair(1, rootptr = new window));
+			rootptr->isnull = true;
+			wnds.insert(make_pair(0, nullptr));
 			Sleep(10);
 			return result;
 		}

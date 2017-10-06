@@ -21,6 +21,10 @@ namespace DX2D
 	};
 	struct frame
 	{
+		bool capture = false;
+		bool renderaftercapture = true;
+		int4 capturerect;
+		sprite capturetarget;
 		bool ismactive = true; // is main frame active
 		vector <sprite> sprites;
 		vector <pixel> freepixels;

@@ -26,15 +26,27 @@
 #define WF_PROPORTIONALPOS		(1 << 5)
 #define WF_SAMEPOS				(1 << 6)
 #define WF_NOVINIT				(1 << 7)
+#define WF_DRAGHAND				(2 << 0)
+#define WF_PROJECTION			(2 << 1)
+#define WF_POSBASELEFT			(2 << 2)
+#define WF_POSBASERIGHT			(2 << 3)
 #define AT_NULL					(0 << 0)
 #define AT_VINIT				(1 << 0)
 #define AT_STYLEPROPPOS			(1 << 1)
 #define AT_PROPPOS				(1 << 2)
 #define AT_SAMEPOS				(1 << 3)
+#define AT_FORCE				(1 << 5)
 
 using namespace std;
 namespace GAME
 {
+	namespace Python
+	{
+		namespace GAPIMOD
+		{
+			PyMODINIT_FUNC PyInit_GAPI(void);
+		}
+	}
 	namespace GUI
 	{
 		namespace deffunc
@@ -65,10 +77,12 @@ namespace GAME
 		protected:
 			bool hidden = false;
 		public:
+			bool isnull = false;
 			list<pair<string, string>> activescripts;
+			int2 realsize = { 0,0 };
 			string strname = "NULL"; // optional
 			void updatenesting();
-			void updatepos(int2 oldpos);
+			void updatepos();
 			void(*buttonpressfunc)(int2&) = nullptr;
 			void(*rbuttonpressfunc)(int2&) = nullptr;
 			void(*mbuttonpressfunc)(int2&) = nullptr;
@@ -100,6 +114,7 @@ namespace GAME
 			vector<bool*> shaperb;
 			UIresult initvis(style& s, uni2<float> npos, uni2<float> screenmultip, ulli flags = 0);
 			UIresult scale(int2 nsize);
+			UIresult resize(uni2<float> npos, uni2<float> screenmultip,bool copypointers = false);
 			UIresult show();
 			UIresult hide();
 			UIresult switchvis();

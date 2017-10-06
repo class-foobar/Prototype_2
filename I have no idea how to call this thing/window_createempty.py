@@ -1,6 +1,7 @@
 import sys
 import GUI
 import AZflib
-def main(strid, posx,posy,sizex,sizey, flags = (1 << 3)):
+def main(strid):
     wnd = GUI.GetArg(strid,0)
-    GUI.NewWindow(0,"BASEWINDOW",posx,posy,sizex,sizey,flags,"NULL")
+    flags = (1 << 3)
+    GUI.NewWindow(0,"BASEWINDOW",0.2,0.2,0.2,0.2,flags,"NULL")

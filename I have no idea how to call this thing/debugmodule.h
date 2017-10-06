@@ -138,6 +138,8 @@ namespace debugging
 		mutex m;
 		condition_variable mttw;
 		bool winconmode = false;
+		mutex wmutex;
+	public:
 		inline void write(string text,bool forceenter = true)
 		{
 			if (text.size() == 0)
@@ -146,6 +148,7 @@ namespace debugging
 				return;
 			if (text[text.size() - 1] != '\n' && forceenter)
 				text += '\n';
+			wmutex.lock();
 			if (winconmode)
 			{
 				printf(text.c_str());
@@ -154,6 +157,7 @@ namespace debugging
 			{
 				//TODO: BUILD IN CONSOLE
 			}
+			wmutex.unlock();
 		}
 		inline string read()
 		{
@@ -215,5 +219,7 @@ namespace debugging
 		CONSOLEFUNCTION(setcamx);
 		CONSOLEFUNCTION(getdbpos);
 		CONSOLEFUNCTION(getdbhex);
+		CONSOLEFUNCTION(showfps);
+		CONSOLEFUNCTION(hidefps);
 	}
 }

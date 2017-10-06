@@ -25,6 +25,18 @@
     <Filter Include="Scripts\Utillity">
       <UniqueIdentifier>{1977001d-1ae7-4065-a7f2-eac9dbdc2564}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Scripts\Game">
+      <UniqueIdentifier>{ce326b1c-a950-4a39-98e5-618518fc6ecb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scripts\Game\Docking">
+      <UniqueIdentifier>{fe8bd878-6688-4f3a-9d8b-3b58debb1f87}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scripts\Game\UI">
+      <UniqueIdentifier>{d8cc19fe-2202-4fab-abd7-78873c992a0e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scripts\empty">
+      <UniqueIdentifier>{97d5057b-f51b-470e-aabf-4ee8b299a6b2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -61,6 +73,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GUI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GAPI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -142,6 +157,21 @@
     </None>
     <None Include="window_createempty.py">
       <Filter>Scripts\Utillity</Filter>
+    </None>
+    <None Include="game_ui_panelcreate.py">
+      <Filter>Scripts\Game\UI</Filter>
+    </None>
+    <None Include="empty_flagproc.py">
+      <Filter>Scripts\empty</Filter>
+    </None>
+    <None Include="empty_msg_main.py">
+      <Filter>Scripts\empty</Filter>
+    </None>
+    <None Include="window_switchvis.py">
+      <Filter>Scripts\Utillity</Filter>
+    </None>
+    <None Include="game_ui_select.py">
+      <Filter>Scripts\Game\UI</Filter>
     </None>
   </ItemGroup>
 </Project>

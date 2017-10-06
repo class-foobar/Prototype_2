@@ -672,7 +672,7 @@ namespace common
 		map<univar0, univar1> sm;
 		mutex m;
 	public:
-		bool constaccess = true;
+		bool constaccess = false;
 		void lock()
 		{
 			m.lock();
@@ -1442,7 +1442,6 @@ map<univar, univar2>SumMaps(map<univar, univar2> m0, map<univar, univar2> m1)
 {
 	for (auto it = m1.begin(); it != m1.end(); ++it) m0[it->first] += it->second;
 	return m0;
-
 }
 template<typename univar, typename univar2>
 map<univar, univar2>_SumMaps(map<univar, univar2> m0, map<univar, univar2> m1) // slower, use when normal SumMaps throws an error

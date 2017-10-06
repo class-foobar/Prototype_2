@@ -14,9 +14,21 @@ namespace GAME
 {
 	extern vector<entity> entitylist;
 }
+namespace DX2D
+{
+	extern ulli frames;
+}
 namespace debugging
 {
 	int2** debugpos = nullptr;
+	namespace fdata
+	{
+		namespace _showfps
+		{
+			thread* th;
+			bool stop = false;
+		}
+	}
 	namespace sharedv
 	{
 		camera** maincam;
@@ -37,7 +49,9 @@ namespace debugging
 			{ "getdbpos",&getdbpos},
 			{ "getdbhex",&getdbhex},
 			{ "mdbx",&mdbx },
-			{ "mdby",&mdby }
+			{ "mdby",&mdby },
+			{ "showfps",&showfps },
+			{ "hidefps",&hidefps }
 		};
 		map<string, vector<string>> customdef = {};
 		vector<string> getconfuncdata(string name)
@@ -305,6 +319,41 @@ namespace debugging
 				i++;
 			}
 			result->message = str;
+			result->ID = CON_OK;
+		}
+		CONSOLEFUNCTION(showfps)
+		{
+			PREPCFUNC;
+			if (fdata::_showfps::th == nullptr)
+			{
+				result->message = "already started";
+				result->ID = CON_NULL;
+			}
+			fdata::_showfps::th = new thread([]() 
+			{
+				ulli lf = DX2D::frames;
+				string str;
+				while (!fdata::_showfps::stop)
+				{
+					Sleep(1000);
+					ulli f = DX2D::frames - lf;
+					lf = DX2D::frames;
+					::system("cls");
+					debugging::dbm->console->write("frames: " + to_string(DX2D::frames) + "\n" + "FPS: " + to_string(f) + "\n");
+				}
+			});
+			result->message = "started";
+			result->ID = CON_OK;
+		}
+		CONSOLEFUNCTION(hidefps)
+		{
+			PREPCFUNC;
+			fdata::_showfps::stop = true;
+			fdata::_showfps::th->join();
+			delete fdata::_showfps::th;
+			::system("cls");
+			printf(">");
+			result->message = "";
 			result->ID = CON_OK;
 		}
 	}

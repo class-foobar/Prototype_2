@@ -6,6 +6,7 @@
 #include "text.hpp"
 #include "ships.h"
 #include "universe.h"
+#include "GUI.h"
 #include "button.h"
 #include "text.hpp"
 using namespace std;
@@ -16,6 +17,8 @@ using namespace AZfilelib;
 namespace GAME
 {
 	extern pathsystem mainpaths;
+	extern GUI::core* UI;
+	extern deque<pycall*> calls;;
 }
 namespace debugging
 {
@@ -542,6 +545,25 @@ namespace GAME
 		if(ent.selectf != nullptr)
 			ent.selectf(pos,ent);
 		//selecting::pcshipclick.delOBJ(m->nameindex);
+		pycall call;
+		vector<boost::any> v;
+		v.push_back(1);
+		string strid;
+		UI->args.lock();
+		do
+		{
+			strid = to_string(rand());
+		} while (MapFind(UI->args.getref(), strid));
+		UI->args.unlock();
+		v.push_back((void*)obj);
+		bool* bp;
+		v.push_back(bp = new bool(false));
+		call.strid = strid;
+		call.args = v;
+		call.scriptloc = bslink + "scripts\\game_ui_select.py";
+		GAME::UI->argmodmutex->lock();
+		calls.push_back(new pycall(call));
+		GAME::UI->argmodmutex->unlock();
 		return;
 	}
 	int2 oldcampos = {0,0};

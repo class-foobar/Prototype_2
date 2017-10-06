@@ -69,6 +69,7 @@ namespace GAME
 }
 namespace DX2D
 {
+	ulli frames = 0;
 	map<string, species*> specmap;
 	//inline LPCWSTR STRtoLPCW(std::string &str)
 	//{
@@ -228,6 +229,15 @@ namespace DX2D
 			D2D_SIZE_F SZ = RT->GetSize();
 			while (i < f.size())
 			{
+				ID2D1BitmapRenderTarget *RTCP = RT;
+				if (f[i]->capture)
+				{
+					ID2D1BitmapRenderTarget* RTNEW = NULL;
+					DXclass->RenderTarget->CreateCompatibleRenderTarget(&RTNEW);
+					RT = RTNEW;
+					RT->BeginDraw();
+					RT->Clear();
+				}
 				if (f[i]->ismactive)
 				{
 					//render
@@ -425,6 +435,27 @@ namespace DX2D
 				if (f[i]->ischfact)
 				{
 					renderframevec(f[i]->f[f[i]->wchiac], cam, RT);
+				}
+				if (f[i]->capture)
+				{
+					RT->EndDraw();
+					ID2D1Bitmap* rbm = NULL;
+					RT->GetBitmap(&rbm);
+					ID2D1Bitmap* targetbmp; // I'd recommend using the RPG-7
+					D2D1_BITMAP_PROPERTIES dbp;
+					dbp.pixelFormat = rbm->GetPixelFormat();
+					int2 capsize = f[i]->capturerect.second();
+					D2D_SIZE_U nonsense = { capsize.x,capsize.y };
+					RT->CreateBitmap(nonsense, dbp, &targetbmp);
+					D2D1_POINT_2U whydoineedarefernce = { 0,0 };
+					targetbmp->CopyFromRenderTarget(&whydoineedarefernce, RT, &f[i]->capturerect.operator D2D1_RECT_U());
+					sprite sp;
+					sp.SetBitmap(targetbmp);
+					f[i]->capturetarget = sp;
+					RT->Release();
+					RT = RTCP;
+					f[i]->capture = false;
+					continue;
 				}
 				i++;
 			}
@@ -668,6 +699,7 @@ namespace DX2D
 	void Frame(bool ismth, condition_variable* _mttw, unique_lock<mutex>* _lk)
 	{
 	restart:;
+		DX2D::frames++;
 		int i = 0;
 		//if (DXclass->maincam->scale.x > 2.0f)
 		//	return;
@@ -1520,26 +1552,6 @@ namespace DX2D
 			if (DXclass == nullptr)
 				break;
 			int i = 0;
-//			GAME::scriptthreadmutex.lock();
-//			while (i < calls.size())
-//			{
-//				GAME::scriptthreadmutex.unlock();
-//				GAME::scriptthreadmutex.lock();
-//#ifdef _DEBUG
-//				auto callscopy = calls;
-//#endif // !_DEBUG
-//				if (calls.size() == 0)
-//					break;
-//
-//				bool* b = calls[i]->cancontinue;
-//				auto call = calls[i];
-//				GAME::scriptthreadmutex.unlock();
-//				while (!*b)
-//					Sleep(0);
-//				GAME::scriptthreadmutex.lock();
-//				i++;
-//			}
-//			GAME::scriptthreadmutex.unlock();
 			while (calls.size() > 0)
 				UI->_mttw.notify_one();
 				Sleep(0);
@@ -1569,33 +1581,6 @@ namespace DX2D
 			}
 			i = 0;
 			int ii = 0;
-			/*while (ii < 2 && scriptthreads.size() != 0)
-			{
-				while (i < scriptthreads.size())
-				{
-					bool* b = scriptthreads[i].second;
-					while (!*b)
-						Sleep(0);
-					detachUIthmutex.lock();
-					if (scriptthreads[i].first->joinable())
-					{
-						try
-						{
-							scriptthreads[i].first->join();
-						}
-						catch (...)
-						{
-
-						}
-						delete scriptthreads[i].first;
-						delete scriptthreads[i].second;
-						scriptthreads.erase(scriptthreads.begin() + i);
-					}
-					detachUIthmutex.unlock();
-					i++;
-				}
-				ii++;
-			}*/
 			i = 0;
 			ii = 0;
 			break;
