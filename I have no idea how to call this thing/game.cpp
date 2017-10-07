@@ -360,12 +360,14 @@ namespace DX2D
 			while (i < output.size())
 			{
 				AddToMap(sh.res, output[i]);
+				AddToMap(sh.resproductionlt, output[i]);
 				i++;
 			}
 			i = 0;
 			while (i < input.size())
 			{
 				sh.res[input[i].first] -= input[i].second;
+				AddToMap(sh.resusagelt, input[i]);
 				i++;
 			}
 			i = 0;

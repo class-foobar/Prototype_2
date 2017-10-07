@@ -697,7 +697,10 @@ namespace DX2D
 	void mousehit(physobj* pobj1, physobj* pobj2);
 	class ship
 	{
+		friend class module;
 	protected:
+		map<shipres, float> resproductionlt; // use the ones below. those two are here for multithreating reasons and will act as buffers
+		map<shipres, float> resusagelt;
 	public:
 		GAME::system* sys = nullptr;
 		GAME::universe* uniclass = nullptr;
@@ -745,6 +748,8 @@ namespace DX2D
 		vector<eng> fronteng;
 		vector<eng> backeng;
 		vector<int2*> outlinepos;
+		map<shipres, float> resproductionpt; // per tick
+		map<shipres, float> resusagept;
 		void tick()
 		{
 			if (this == nullptr)
@@ -754,11 +759,15 @@ namespace DX2D
 			dwnd->setvar(*pos, "shippos", true, "INT2");
 			int i = 0;
 			frame* f = fr;
+			resproductionlt = {};
+			resusagelt = {};
 			while (i < modvec.size())
 			{
 				modvec[i].second->tick(*this);
 				i++;
 			}
+			resusagept = resusagelt;
+			resproductionpt = resproductionlt;
 			auto cmv = MaptoVec(crewmap);
 			i = 0;
 			while (i < cmv.size())
@@ -1031,6 +1040,11 @@ namespace DX2D
 			backr = new bool(false);
 			rightr = new bool(false);
 			leftr = new bool(false);
+		}
+		bool isdummy = false;
+		void makedummy()
+		{
+			isdummy = true;
 		}
 		camera* linecam = nullptr;
 		frame* lineframe= nullptr;

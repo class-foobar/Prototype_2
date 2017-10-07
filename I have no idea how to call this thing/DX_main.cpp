@@ -1317,11 +1317,13 @@ namespace DX2D
 		conship->name = curship;
 		mainshipen.selectf = GAME::selectship;
 		mainshipen.datav.push_back(conship);
-		conship->pobj->anyvars.push_back(mainshipen);
-		selecting::pcshipclick.objmap["playership"]->anyvars.push_back(mainshipen);
+		mainshipen.datav.push_back(conship); // yes this is supposed to happen twice
+		mainshipen.datav.push_back(entitytype::ship);
 		mainshipen.pos = conship->pos;
 		mainshipen.entname = "Ship";
 		entitylist.push_back(mainshipen);
+		conship->pobj->anyvars.push_back(mainshipen);
+		selecting::pcshipclick.objmap["playership"]->anyvars.push_back(mainshipen);
 		c->isrendonscreen = true;
 		c->isonlyrectrendered = true;
 		c->renderRECT.left = 0;

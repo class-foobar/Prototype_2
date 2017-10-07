@@ -575,6 +575,31 @@ namespace classvariables
 	};
 	
 }
+namespace boost
+{
+	template <typename T>
+	bool try_any_cast(T& v)
+	{
+		try
+		{
+			boost::any_cast<t>(v);
+			return true;
+		}
+		catch (...)
+			return false;
+	}
+	template <typename T>
+	bool try_any_cast(T& v,T& ret)
+	{
+		try
+		{
+			ret = boost::any_cast<t>(v);
+			return true;
+		}
+		catch (...)
+			return false;
+	}
+}
 #define stype					shadertypes
 #define float2					XMFLOAT2
 #define float3					XMFLOAT3
@@ -1185,6 +1210,17 @@ namespace GAME
 	class universe;
 	class stationmodIN;
 	class stationmodOUT;
+	enum class entitytype
+	{
+		empty = 0,
+		statcore,
+		statmout,
+		statmin,
+		statcore, // not used ( for now )
+		ship,
+		star,
+		planet
+	};
 }
 namespace DX2D
 {

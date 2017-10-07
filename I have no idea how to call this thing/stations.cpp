@@ -1,5 +1,6 @@
 #include "universe.h"
 //#include "hmain.h"
+#include "ships.h"
 #include "X:\PROJECTS\economy\economy\economy.h"
 namespace debugging
 {
@@ -14,6 +15,7 @@ namespace DX2D
 using namespace DX2D;
 namespace GAME
 {
+	extern vector<entity> entitylist;
 	template<typename univar>
 	void station::addtostorage(univar* mod)
 	{
@@ -79,6 +81,47 @@ namespace GAME
 			sOUTv[i]->tick();
 			i++;
 		}
+	}
+	void stationmodOUT::PhysInit(physics& pclass, string s)
+	{
+		if (dummyship != nullptr)
+		{
+			dummyship = new ship();
+			dummyship->makedummy();
+		}
+		if (s == "")
+		{
+			s = stationname + name;
+		}
+		else
+			s += name;
+		int2* pos;
+		pclass.addobj(s,pos = new int2(size), pos, false, false);
+		pobj = pclass.GetLastObj();
+		physreact ph;
+		ph.callfunc = true;
+		ph.ftocall = shipselecthit;
+		ph.callfuncinstant = true;
+		entity ent;
+		ent.selectf = GAME::selectship;
+		ent.datav.push_back(dummyship);
+		dummyship->pobj = pobj;
+		pobj->IDreactionmap.insert(make_pair(mousephysid, ph));
+		ent.pos = pos;
+		ent.entname = "station module";
+		ent.datav.push_back(this);
+		ent.datav.push_back(entitytype::statmout);
+		entitylist.push_back(ent);
+		pobj->anyvars.push_back(ent);
+		pobj->anyvars.push_back(this);
+		int i = 0;
+		i = 0;
+		while (i < slotsout.size())
+		{
+			slotsout[i]->mod->PhysInit(pclass, s);
+			i++;
+		}
+		i = 0;
 	}
 	void station::RenderInit(frame* mf, camera* cam)
 	{
@@ -444,6 +487,7 @@ namespace GAME
 	}
 	void stationmodOUT::RenderInit (camera* ncam, frame* nf, string nstationname, stationmodOUTslot* slot, station* stat, bool iscore)
 	{
+		statptr = stat;
 		stationname = "";
 		stationname = nstationname;
 		cam = ncam;
@@ -491,6 +535,7 @@ namespace GAME
 	}
 	void stationmodIN::RenderInit(camera* ncam, frame* nf, string nstationname, stationmodINslot* slot, GAME::station* stat, bool iscore )
 	{
+		statptr = stat;
 		stationname = "";
 		stationname = nstationname;
 		cam = ncam;

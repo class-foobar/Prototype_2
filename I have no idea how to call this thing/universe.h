@@ -601,6 +601,7 @@ namespace GAME
 		vector<pair<stationres, float>> OUTPUTl;
 		bool hpdstatel = false;
 	public:
+		ship* dummyship = nullptr;
 		string name = "";
 		string textureloc = "";
 		string outsideloc = "NULL";
@@ -670,28 +671,11 @@ namespace GAME
 		ui curcrew = 0;
 		bool* identp = nullptr;
 		string stationname = "";
+		station* statptr = nullptr;
 		physobj* pobj;
 		bool ison = true;
 		void tick();
-		void PhysInit(physics& pclass,string s = ""/*do not use*/)
-		{
-			if (s == "")
-			{
-				s = stationname + name;
-			}
-			else
-				s += name;
-			pclass.addobj(s, new int2 (size), pos, false, false);
-			pobj = pclass.GetLastObj();
-			int i = 0;
-			i = 0;
-			while (i < slotsout.size())
-			{
-				slotsout[i]->mod->PhysInit(pclass, s);
-				i++;
-			}
-			i = 0;
-		}
+		void PhysInit(physics& pclass, string s = ""/*do not use*/);
 		void RenderInit(camera* ncam, frame* nf, string nstationname,stationmodOUTslot* slot,station* stat,bool iscore=false);
 		void  RenderRelease();
 	};
@@ -714,7 +698,7 @@ namespace GAME
 		vector<pair<stationres, float>> storagelimit;
 		map<stationres, float> storagelimitm;
 		map<stationres, float> STORAGE;
-
+		station* statptr = nullptr;
 		ui mincrew;
 		ui maxcrew;
 		ui curcrew = 0;
@@ -794,6 +778,10 @@ namespace GAME
 
 		void tick();
 		void RenderInit(camera* ncam, frame* nf, string nstationname, stationmodINslot* slot, GAME::station* stat, bool iscore = false);
+		void PhysInit(physics& pclass, string s = ""/*do not use*/)
+		{
+
+		}
 		void  RenderRelease()
 		{
 			*identp = false;
@@ -821,6 +809,7 @@ namespace GAME
 		void addtostorage(univar* mod);
 		template<>
 		void addtostorage(stationmodOUT* mod);
+		physics localphys;
 	public:
 		string datal;
 		vector<stationmodIN*> sINv;
@@ -840,6 +829,39 @@ namespace GAME
 		void createmods(AZfile& af, string datapos);
 		frame* f = nullptr;
 		void tick();
+		physics& getlocalphys()
+		{
+			if (!localphys.wasinit)
+				localphys.init({ false,0 },false);
+			return localphys;
+
+		}
+		void PhysInit(physics& global, physics& local)
+		{
+			int i = 0;
+			if (!localphys.wasinit)
+				localphys.init({ false,0 }, false);
+			while (i < core->slotsout.size())
+			{
+				stationmodOUT* mod = core->slotsout[i]->mod;
+				if (mod != nullptr)
+				{
+					mod->PhysInit(global);
+					mod->PhysInit(local);
+				}
+				i++;
+			}
+			i = 0;
+			while (i < core->slotsin.size())
+			{
+				stationmodIN* mod = core->slotsin[i]->mod;
+				if (mod != nullptr)
+				{
+					mod->PhysInit(local);
+				}
+				i++;
+			}
+		}
 		void RenderInit(frame* mf, camera* cam);
 		void RenderEnd();
 		//ID2D1Bitmap* bm;

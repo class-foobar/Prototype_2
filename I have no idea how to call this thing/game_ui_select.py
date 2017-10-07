@@ -2,7 +2,9 @@ import AZfile
 import GUI
 import GAPI
 selectedent = GAPI.GetSelectedEntity()
-oldselection = GUI.Memory_Get(1,"selected")
+oldfind = GUI.Memory_Find("selected")
+if oldfind:
+    oldselection = GUI.Memory_Get(1,"selected")
 if selectedent != oldselection:
     sprojwnd = GUI.GetWndByName("selectprojection")
     selinfownd = GUI.GetWndByName("selectinfo")
@@ -26,8 +28,11 @@ if selectedent != oldselection:
         if selinfownd != 0:
            if GUI.Memory_Get(selinfownd,"hastarget"):
                 GAPI.ResetInfoWnd(selinfownd)     
-           GAPI.SetInfoWnd(selectedent)
+           GAPI.SetInfoWnd(selectedent, selinfownd)
         if schoicewnd != 0:
            if GUI.Memory_Get(schoicewnd,"hastarget"):
                 GAPI.ResetChoiceWnd(schoicewnd)
-           GAPI.SetChoiceWnd(schoicewnd)
+           GAPI.SetChoiceWnd(schoicewnd,schoicewnd)
+GUI.Memory_Set(1,"selected","PYOBJ",selectedent)
+if oldfind:
+    GAPI.ReleaseEntity(oldselection)

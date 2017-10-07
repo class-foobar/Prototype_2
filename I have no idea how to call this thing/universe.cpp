@@ -17,6 +17,11 @@ namespace DX2D
 namespace GAME
 {
 	extern vector<entity> entitylist;
+	namespace selecting
+	{
+		extern physics pcshipclick;
+	}
+	extern vector<entity> entitylist;
 	extern universe* uniclass;
 	string apploc;
 	string GetLinkToElSTR(string elemloc)
@@ -542,10 +547,11 @@ namespace GAME
 				*sysptr->statvec[i]->pos = actualpos /*= { 100 ,100}*/;
 				sysptr->statvec[i]->RenderInit(primaryf,cam);
 				*player.pos = /*-*/(actualpos +int2 {-100, -100});
-				debugging::debugwindow* dw = new debugging::debugwindow;
-				dw->dvarrect = int4{ 0,0,300,240 };
-				dw->subwindowsrect = int4(0, 240, 300, 300);
-				dw->wsize = { 300,340 };
+				sysptr->statvec[i]->PhysInit(selecting::pcshipclick, sysptr->statvec[i]->getlocalphys());
+				//debugging::debugwindow* dw = new debugging::debugwindow;
+				//dw->dvarrect = int4{ 0,0,300,240 };
+				//dw->subwindowsrect = int4(0, 240, 300, 300);
+				//dw->wsize = { 300,340 };
 				//dw->addvar(actualpos, "INT2", "station " + sysptr->statvec[i]->name);
 				//dw->init();
 				//debugging::dbm->addsw(dw);

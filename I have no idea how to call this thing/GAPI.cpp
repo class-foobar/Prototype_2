@@ -1,6 +1,80 @@
 #include "GUI.h"
+extern mutex _py_refmutex;
+#define Py_INCREFTS(obj) _py_refmutex.lock(); Py_INCREF(obj); _py_refmutex.unlock()
+#define Py_DECREFTS(obj) _py_refmutex.lock(); Py_DECREF(obj); _py_refmutex.unlock()
 namespace GAME
 {
+	extern ship* conship;
+	extern GUI::core* UI;
+	namespace selecting
+	{
+		extern physics pcshipclick;
+		extern crewman* scm;
+		extern vector<crewman*> cmv;
+		extern vector<crewman*> cmvlast;
+		extern int lasti = 0;
+	}
+	namespace GUI
+	{
+		void objectinfownd::create(window* w, entity ent)
+		{
+			ship* dummy = boost::any_cast<ship*>(ent.datav[0]);
+			boost::any undecodedclass = ent.datav[1];
+			entitytype type = boost::any_cast<entitytype>(ent.datav[2]);
+			if (type == entitytype::ship)
+			{
+				ship* sh = boost::any_cast<ship*>(undecodedclass);
+				info =
+				{
+					sh->pos,
+					sh->name,
+					0, // TODO: powerscore determination
+					sh->resusagept[shipres::power], // TODO: power usage determination for ships
+					"unknown",
+					"Ship",
+					"Trust me I'm a spaceship pilot",
+					"Quo",
+					nullptr, // I'm pretty sure I've created a way to get this information TODO: Find it
+					{ 0,0 } // Same as above
+				};
+			}
+			else if (type == entitytype::statmout || type == entitytype::statmin)
+			{
+				station* stat;
+				void* statmod;
+				if (type == entitytype::statmout)
+					stat = ((stationmodOUT*)(statmod = (void*)boost::any_cast<stationmodOUT*>(undecodedclass)))->statptr;
+				else if(type == entitytype::statmin || type == entitytype::statcore)
+					stat = ((stationmodIN*)(statmod = (void*)boost::any_cast<stationmodIN*>(undecodedclass)))->statptr;
+				info = 
+				{
+					stat->pos,
+					stat->name,
+					0, // TODO: powerscore determination
+					0, // TODO: power usage determination for stations
+					"unknown",
+					"Space Station",
+					"{Insert a catch-phrase}",
+					"Passive-Agressive",
+					nullptr, // I'm pretty sure I've created a way to get this information TODO: Actually find it
+					{0,0} // Same as above
+				};
+			}
+			wnd.w = w;
+			wnd.parent = w->parent;
+			wnd.name = w->strname;
+			wnd.pos = w->pos;
+			wnd.textwnds = {};
+			vector<string> vs = {"Position: " + info.pos->str(),"Sector: " + info.systempos.str(),"Powerscore: " + to_string(info.powerscore),
+				"Status: "+info.status,"Type: " + info.type,"\"" + info.infostr + "\"","Relation: "+ info.relation };
+			int i = 0;
+			while (i < vs.size())
+			{
+				UI->NewWindow(wnd.w, { 0.1,0.05 + 0.90 / vs.size() }, { 0.8,0.9 / vs.size() }, "TEXTBOX", (WF_SCALETO_V));
+				i++;
+			}
+		}
+	}
 	namespace Python
 	{
 		namespace GAPIMOD
@@ -51,13 +125,9 @@ namespace GAME
 			}
 			PYFUNC(ResetInfoWnd)
 			{
-
+				
 			}
 			PYFUNC(ResetChoiceWnd)
-			{
-
-			}
-			PYFUNC(GetSelectedEntity)
 			{
 
 			}
@@ -71,11 +141,19 @@ namespace GAME
 			}
 			PYFUNC(GetSelectedEntity)
 			{
-
+				return PyLong_FromVoidPtr((void*)(entity*) new auto (boost::any_cast<entity>(conship->pobj->anyvars[0])));
 			}
 			PYFUNC(ChangeBoolPtr)
 			{
-
+				bool* ptr;
+				bool state;
+				PyObject* obj;
+				PyArg_ParseTuple(args, "O|b", &obj, &state);
+				Py_INCREFTS(obj);
+				ptr = (bool*)(void*)PyLong_AsVoidPtr(obj);
+				Py_DECREFTS(obj);
+				*ptr = state;
+				Py_RETURN_TRUE;
 			}
 			PyObject* hError = NULL;
 			PyMethodDef arr[__COUNTER__];

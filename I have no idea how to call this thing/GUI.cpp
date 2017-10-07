@@ -1959,7 +1959,7 @@ namespace GAME
 			bslink = link;
 			PyImport_AppendInittab("GUI", Python::GUIMOD::PyInit_GUI);
 			PyImport_AppendInittab("AZflib", Python::AZFLIBMOD::PyInit_AZflib);
-			PyImport_AppendInittab("GAPI", Python::GAPIMOD::PyInit_GAPI);
+			PyImport_AppendInittab("GAPI", GUI::Python::GAPIMOD::PyInit_GAPI);
 			//PyEval_InitThreads();
 			Py_Initialize();
 			wstring wstr0 = STRtoWSTR((bslink + "scripts\\"));

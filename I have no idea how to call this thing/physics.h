@@ -149,6 +149,7 @@ namespace DX2D
 	{
 		friend class controls;
 	public:
+		bool wasinit = false;
 		bool roborders = false;
 		int2 roborderXY = { 0,0 }; // works only if roborders == true
 		vector <string> objvec;
@@ -927,6 +928,7 @@ namespace DX2D
 			{
 				fpslimit = -1;
 			}
+			wasinit = true;
 		}
 		bool addobj(string name, int2 size, int2 pos, bool bounce, bool gravaffected)
 		{

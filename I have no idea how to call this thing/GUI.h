@@ -40,15 +40,15 @@
 using namespace std;
 namespace GAME
 {
-	namespace Python
-	{
-		namespace GAPIMOD
-		{
-			PyMODINIT_FUNC PyInit_GAPI(void);
-		}
-	}
 	namespace GUI
 	{
+		namespace Python
+		{
+			namespace GAPIMOD
+			{
+				PyMODINIT_FUNC PyInit_GAPI(void);
+			}
+		}
 		namespace deffunc
 		{
 			extern map<string, void (*)(int2&)> list;
@@ -273,6 +273,41 @@ namespace GAME
 			{
 				delete argmodmutex;
 			}
+		};
+		class objectinfownd
+		{
+		private:
+		protected:
+		public:
+			struct
+			{
+				int2* pos;
+				window* w;
+				window* parent;
+				string name;
+				vector<window*> textwnds;
+			}wnd;
+			struct
+			{
+				int2* pos;
+				string name;
+				int powerscore = 0;
+				int powerem = 0;
+				string status = "unknown";
+				string type = "unknown";
+				string infostr = "";
+				string relation = "unknown";
+				GAME::company* comp;
+				int2 systempos; // sector coordinates
+			}info;
+			void create(window* w, entity ent);
+		};
+		class objectchoicewnd
+		{
+		private:
+		protected:
+		public:
+
 		};
 	}
 	struct pycall
