@@ -30,6 +30,7 @@
 #define WF_PROJECTION			(2 << 1)
 #define WF_POSBASELEFT			(2 << 2)
 #define WF_POSBASERIGHT			(2 << 3)
+#define WF_SUBFRAME				(2 << 4)
 #define AT_NULL					(0 << 0)
 #define AT_VINIT				(1 << 0)
 #define AT_STYLEPROPPOS			(1 << 1)
@@ -106,7 +107,7 @@ namespace GAME
 			bool* identp = nullptr;
 			int2* pos;
 			int2 nooffpos;
-			vector<pair<int2*,int2>> posvec;
+			vector<pair<int2*, int2>> posvec;
 			vector<pair<int2, int2>> defshapepossize;
 			vector<int2> cufoffsets;
 			frame* f = nullptr;
@@ -114,14 +115,25 @@ namespace GAME
 			vector<bool*> shaperb;
 			UIresult initvis(style& s, uni2<float> npos, uni2<float> screenmultip, ulli flags = 0);
 			UIresult scale(int2 nsize);
-			UIresult resize(uni2<float> npos, uni2<float> screenmultip,bool copypointers = false);
+			UIresult resize(uni2<float> npos, uni2<float> screenmultip, bool copypointers = false);
 			UIresult show();
 			UIresult hide();
 			UIresult switchvis();
 			vector<void*> otherobjts;
 			mutex waitmapmutex;
-			map<int,map<string, pair<string, boost::any>>> memory;
-			map<string, pair<map<string,void*>,void*>> waitmap;
+			map<int, map<string, pair<string, boost::any>>> memory;
+			map<string, pair<map<string, void*>, void*>> waitmap;
+			struct subshape
+			{
+				vector<pair<int2*, int2>> pospairs;
+				vector<sprite*> sprites;
+				vector<brush*> brushes;
+				button* bt;
+				frame* sf;
+			};
+			vector<subshape> shpb;
+			string handleattachto = "";
+			
 		};
 		struct simpleshape
 		{
@@ -213,7 +225,8 @@ namespace GAME
 			vector<box> boxes;
 			vector<textpiece*> textboxes;
 			string flagproc = "";
-			string initproc = "";
+			string initproc = ""; // not used
+			string attachtof = "";
 		};
 		struct UIresult
 		{
@@ -321,5 +334,13 @@ namespace GAME
 		GUI::window* wnd;
 		bool* cancontinue = nullptr;
 		bool isbeingprocessed = false;
+		string createstrid(GAME::GUI::core* coreptr)
+		{
+			do
+			{
+				strid = to_string(rand());
+			} while (MapFind(coreptr->args.getref(), strid));
+			return strid;
+		}
 	};
 }

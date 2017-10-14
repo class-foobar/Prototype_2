@@ -16,12 +16,6 @@
     <Filter Include="Scripts">
       <UniqueIdentifier>{039eb792-9092-4712-b2e1-fd1a06a57a0f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Scripts\basewindow">
-      <UniqueIdentifier>{4398e721-a8ed-4ceb-8961-4776727394c5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Scripts\button">
-      <UniqueIdentifier>{36f8e397-0764-42bd-9f41-ccec42a812b9}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Scripts\Utillity">
       <UniqueIdentifier>{1977001d-1ae7-4065-a7f2-eac9dbdc2564}</UniqueIdentifier>
     </Filter>
@@ -34,8 +28,23 @@
     <Filter Include="Scripts\Game\UI">
       <UniqueIdentifier>{d8cc19fe-2202-4fab-abd7-78873c992a0e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Scripts\empty">
+    <Filter Include="Scripts\Windows">
+      <UniqueIdentifier>{3ac5c1ce-5562-4e28-963f-8d6ff5ea50ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scripts\Windows\empty">
       <UniqueIdentifier>{97d5057b-f51b-470e-aabf-4ee8b299a6b2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scripts\Windows\basewindow">
+      <UniqueIdentifier>{4398e721-a8ed-4ceb-8961-4776727394c5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scripts\Windows\button">
+      <UniqueIdentifier>{36f8e397-0764-42bd-9f41-ccec42a812b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scripts\Windows\scrollable">
+      <UniqueIdentifier>{e7e193ca-c8ae-4a2a-b2de-83c6d5ca1db9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scripts\Windows\textbox">
+      <UniqueIdentifier>{3b1c4ed2-b682-4b30-a235-ed669e61b6ad}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -132,25 +141,25 @@
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="basewindow_flagproc.py">
-      <Filter>Scripts\basewindow</Filter>
+      <Filter>Scripts\Windows\basewindow</Filter>
     </None>
     <None Include="basewindow_msg_close.py">
-      <Filter>Scripts\basewindow</Filter>
+      <Filter>Scripts\Windows\basewindow</Filter>
     </None>
     <None Include="basewindow_msg_main.py">
-      <Filter>Scripts\basewindow</Filter>
+      <Filter>Scripts\Windows\basewindow</Filter>
     </None>
     <None Include="basewindow_msg_minimize.py">
-      <Filter>Scripts\basewindow</Filter>
+      <Filter>Scripts\Windows\basewindow</Filter>
     </None>
     <None Include="basewindow_msg_move.py">
-      <Filter>Scripts\basewindow</Filter>
+      <Filter>Scripts\Windows\basewindow</Filter>
     </None>
     <None Include="button_flagproc.py">
-      <Filter>Scripts\button</Filter>
+      <Filter>Scripts\Windows\button</Filter>
     </None>
     <None Include="button_msg_main.py">
-      <Filter>Scripts\button</Filter>
+      <Filter>Scripts\Windows\button</Filter>
     </None>
     <None Include="blank.py">
       <Filter>Scripts\Utillity</Filter>
@@ -162,16 +171,31 @@
       <Filter>Scripts\Game\UI</Filter>
     </None>
     <None Include="empty_flagproc.py">
-      <Filter>Scripts\empty</Filter>
+      <Filter>Scripts\Windows\empty</Filter>
     </None>
     <None Include="empty_msg_main.py">
-      <Filter>Scripts\empty</Filter>
+      <Filter>Scripts\Windows\empty</Filter>
     </None>
     <None Include="window_switchvis.py">
       <Filter>Scripts\Utillity</Filter>
     </None>
     <None Include="game_ui_select.py">
       <Filter>Scripts\Game\UI</Filter>
+    </None>
+    <None Include="scrollable_flagproc.py">
+      <Filter>Scripts\Windows\scrollable</Filter>
+    </None>
+    <None Include="scrollable_msg_jump.py">
+      <Filter>Scripts\Windows\scrollable</Filter>
+    </None>
+    <None Include="scrollable_msg_main.py">
+      <Filter>Scripts\Windows\scrollable</Filter>
+    </None>
+    <None Include="scrollable_msg_scroll.py">
+      <Filter>Scripts\Windows\scrollable</Filter>
+    </None>
+    <None Include="scrollable_onattachto.py">
+      <Filter>Scripts\Windows\scrollable</Filter>
     </None>
   </ItemGroup>
 </Project>

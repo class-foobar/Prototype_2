@@ -449,9 +449,14 @@ namespace DX2D
 					RT->CreateBitmap(nonsense, dbp, &targetbmp);
 					D2D1_POINT_2U whydoineedarefernce = { 0,0 };
 					targetbmp->CopyFromRenderTarget(&whydoineedarefernce, RT, &f[i]->capturerect.operator D2D1_RECT_U());
-					sprite sp;
-					sp.SetBitmap(targetbmp);
-					f[i]->capturetarget = sp;
+					if (f[i]->capturetarget == nullptr)
+					{
+						sprite *sp = new sprite;
+						sp->SetBitmap(targetbmp);
+						f[i]->capturetarget = sp;
+					}
+					else 
+						f[i]->capturetarget->SetBitmap(targetbmp);
 					RT->Release();
 					RT = RTCP;
 					f[i]->capture = false;

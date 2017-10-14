@@ -12,7 +12,7 @@ namespace GAME
 		extern crewman* scm;
 		extern vector<crewman*> cmv;
 		extern vector<crewman*> cmvlast;
-		extern int lasti = 0;
+		extern int lasti;
 	}
 	namespace GUI
 	{
@@ -29,18 +29,18 @@ namespace GAME
 					sh->pos,
 					sh->name,
 					0, // TODO: powerscore determination
-					sh->resusagept[shipres::power], // TODO: power usage determination for ships
+					(int)sh->resusagept[shipres::power], // TODO: power usage determination for ships
 					"unknown",
 					"Ship",
 					"Trust me I'm a spaceship pilot",
 					"Quo",
 					nullptr, // I'm pretty sure I've created a way to get this information TODO: Find it
-					{ 0,0 } // Same as above
+					int2( 0,0 ) // Same as above
 				};
 			}
 			else if (type == entitytype::statmout || type == entitytype::statmin)
 			{
-				station* stat;
+				station* stat = nullptr;
 				void* statmod;
 				if (type == entitytype::statmout)
 					stat = ((stationmodOUT*)(statmod = (void*)boost::any_cast<stationmodOUT*>(undecodedclass)))->statptr;
@@ -57,7 +57,7 @@ namespace GAME
 					"{Insert a catch-phrase}",
 					"Passive-Agressive",
 					nullptr, // I'm pretty sure I've created a way to get this information TODO: Actually find it
-					{0,0} // Same as above
+					int2(0,0) // Same as above
 				};
 			}
 			wnd.w = w;
@@ -70,7 +70,7 @@ namespace GAME
 			int i = 0;
 			while (i < vs.size())
 			{
-				UI->NewWindow(wnd.w, { 0.1,0.05 + 0.90 / vs.size() }, { 0.8,0.9 / vs.size() }, "TEXTBOX", (WF_SCALETO_V));
+				UI->NewWindow(wnd.w, { 0.1f,0.05f + 0.90f / vs.size() }, { 0.8f,0.9f / vs.size() }, "TEXTBOX", (WF_SCALETO_V));
 				i++;
 			}
 		}
@@ -125,19 +125,19 @@ namespace GAME
 			}
 			PYFUNC(ResetInfoWnd)
 			{
-				
+				Py_RETURN_TRUE;
 			}
 			PYFUNC(ResetChoiceWnd)
 			{
-
+				Py_RETURN_TRUE;
 			}
 			PYFUNC(SetInfoWnd)
 			{
-
+				Py_RETURN_TRUE;
 			}
 			PYFUNC(SetChoiceWnd)
 			{
-
+				Py_RETURN_TRUE;
 			}
 			PYFUNC(GetSelectedEntity)
 			{

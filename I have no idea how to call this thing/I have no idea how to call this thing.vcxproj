@@ -170,6 +170,11 @@
     <None Include="empty_flagproc.py" />
     <None Include="empty_msg_main.py" />
     <None Include="game_ui_select.py" />
+    <None Include="scrollable_flagproc.py" />
+    <None Include="scrollable_msg_jump.py" />
+    <None Include="scrollable_msg_main.py" />
+    <None Include="scrollable_msg_scroll.py" />
+    <None Include="scrollable_onattachto.py" />
     <None Include="window_switchvis.py" />
     <None Include="packages.config" />
     <None Include="game_ui_panelcreate.py" />

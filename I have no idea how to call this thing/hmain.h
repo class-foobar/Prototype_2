@@ -710,6 +710,10 @@ namespace common
 		{
 			return m.try_lock();
 		}
+		operator map<univar0, univar1>&()
+		{
+			return sm;
+		}
 		inline auto insert(pair<univar0,univar1> val)->decltype(sm.insert(val))
 		{
 			m.lock();
@@ -1213,7 +1217,6 @@ namespace GAME
 	enum class entitytype
 	{
 		empty = 0,
-		statcore,
 		statmout,
 		statmin,
 		statcore, // not used ( for now )

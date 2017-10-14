@@ -493,6 +493,57 @@ namespace GAME
 					}
 					return PyLong_FromLong(0);
 				}
+				PYFUNC(Memory_GetSafe)
+				{
+					string type, name;
+					ui ID;
+					char* ch0 = NULL;
+					PyObject* obj;
+					PyArg_ParseTuple(args, "I|s|O", &ID, &ch0,&obj);
+					Py_INCREFTS(obj);
+					if (ID == 0)
+						ID = 1;
+					name = ch0;
+					window* wnd = UI->wnds[ID];
+					if (!MapFind(wnd->memory[0], name))
+						return obj;
+					Py_DECREFTS(obj);
+					auto var = wnd->memory[0][name].second;
+					type = wnd->memory[0][name].first;
+					if (type == "PYOBJ")
+					{
+						auto val = boost::any_cast<PyObject*>(var);
+						return val;
+					}
+					else if (type == "STR")
+					{
+						auto val = boost::any_cast<string>(var);
+						//cout << val << endl;
+						return PyUnicode_FromStringAndSize(val.c_str(), val.size());
+					}
+					else if (type == "INT")
+					{
+						//cout << boost::any_cast<int>(var) << endl;
+						return PyLong_FromLong(boost::any_cast<int>(var));
+					}
+					else if (type == "UINT")
+					{
+						//cout << boost::any_cast<int>(var) << endl;
+						return PyLong_FromLong(boost::any_cast<ui>(var));
+					}
+					else if (type == "BOOL")
+					{
+						//cout << boost::any_cast<bool>(var) << endl;
+						return PyBool_FromLong((long)boost::any_cast<bool>(var));
+					}
+					else if (type == "FLOAT")
+					{
+						//cout << boost::any_cast<float>(var) << endl;
+						return PyFloat_FromDouble(boost::any_cast<float>(var));
+					}
+					return PyLong_FromLong(0);
+
+				}
 				PYFUNC(Memory_Find)
 				{
 					string name;
@@ -537,6 +588,46 @@ namespace GAME
 					PyArg_ParseTuple(args, "I|i", &ID, &i);
 					window* wnd = UI->wnds[ID];
 					return PyLong_FromLong(wnd->btts[i]->size.y);
+				}
+				PYFUNC(SetShapeSize)
+				{
+					int2 size;
+					ui ID;
+					int n;
+					PyArg_ParseTuple(args, "I|i|i|i", &ID, &n, &size.x, &size.y);
+					window* wnd = UI->wnds[ID];
+					auto s = wnd->shpb[n].sprites;
+					auto b = wnd->shpb[n].brushes;
+					int i = 0;
+					while (i < s.size())
+					{
+						s[i]->size = size;
+						i++;
+					}
+					i = 0;
+					while (i < b.size())
+					{
+						*b[i]->size  = size;
+						i++;
+					}
+					i = 0;
+					Py_RETURN_TRUE;
+				}
+				PYFUNC(SetShapePos)
+				{
+					int2 pos;
+					ui ID;
+					int n;
+					PyArg_ParseTuple(args, "I|i|i|i", &ID, &n, &pos.x,&pos.y);
+					window* wnd = UI->wnds[ID];
+					auto s = wnd->shpb[n].pospairs;
+					int i = 0;
+					while (i < s.size())
+					{
+						*s[i].first = s[i].second + pos;
+						i++;
+					}
+					Py_RETURN_TRUE;
 				}
 				PYFUNC(IsInside)
 				{
@@ -913,9 +1004,113 @@ namespace GAME
 					int2* i2sp;
 					sp.SyncPos(i2sp = new int2(/*pmf.toint2()+*/(s.shapes[shapen].pos * rmf).toint2()), false);
 					//*i2sp = *i2sp + (twnd->defpos*).toint2();
+					sp.useidentp = true;
+					auto ret = PyLong_FromVoidPtr(sp.render = sp.identp = new bool(true));
 					twnd->sf->sprites.push_back(sp);
 					twnd->posvec.push_back(make_pair(i2sp, *i2sp));
-					return PyLong_FromVoidPtr(sp.render = new bool(true));
+					return ret;
+				}
+				PYFUNC(GetTextureFromWindow)
+				{
+					ui wndid, target;
+					uni2<float> proppos, propsize;
+					int shapen;
+					PyArg_ParseTuple(args, "I|I|f|f|f|f|i", &target, &wndid, &proppos.x, &proppos.y, &propsize.x, &propsize.y, &shapen);
+					vector<window*> wnds;
+					window* wnd = UI->wnds[wndid];
+					sprite *spr = new sprite;
+					vector<bool*> waitvec;
+					std::function<void(window*,vector<window*>&, sprite*,vector<bool*>)> frf = [&](window* wnd, vector<window*>&_wnds,sprite *sp,vector<bool*>&waitvec)
+					{
+						int i = 0;
+						int4 rect(*wnd->pos,*wnd->pos+wnd->realsize);
+						wnd->f->capture = true;
+						waitvec.push_back(&wnd->f->capture);
+						wnd->f->capturerect = rect;
+						wnd->f->renderaftercapture = false;
+						wnd->f->capturetarget = sp;
+						while (i < wnd->children.size())
+						{
+							frf(wnd->children[i],_wnds,sp,waitvec);
+							i++;
+						}
+						_wnds.push_back(wnd);
+					};
+					frf(wnd,wnds,spr,waitvec);
+					window* twnd = UI->wnds[target];
+					int i = 0;
+					while (i < waitvec.size())
+					{
+						while (*waitvec[i])
+							Sleep(0);
+						i++;
+					}
+					i = 0;
+					//while (i < wnds.size())
+					//{
+					//	sprite sp = *spr;
+					//	twnd->sf[shapen].sprites.push_back(sp);
+					//}
+					//twnd->sf[shapen].sprites.push_back(*spr);
+					//delete spr;
+					return PyLong_FromVoidPtr(spr);
+				}
+				PYFUNC(ProjectTexture)
+				{
+					ui target;
+					ulli txint;
+					uni2<float> proppos, propsize;
+					int shapen;
+					PyArg_ParseTuple(args, "I|K|f|f|f|f|i", &target, &txint, &proppos.x, &proppos.y, &propsize.x, &propsize.y, &shapen);
+					sprite* sp = (sprite*)(void*)txint;
+					window* twnd = UI->wnds[target];
+					int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
+					style s = UI->styles[twnd->styleid];
+					uni2<float> mf;
+					uni2<float> pmf;
+					int4 rect(*twnd->pos, twnd->realsize + *twnd->pos);
+					ui flags = twnd->flags;
+					if (flags & WF_SCALETO_VH || flags == NULL)
+					{
+						mf.x = ((float)wsize.x)*twnd->size.x;
+						mf.y = ((float)wsize.y)*twnd->size.y;
+						pmf.x = ((float)wsize.x)*twnd->defpos.x;
+						pmf.y = ((float)wsize.y)*twnd->defpos.y;
+					}
+					else if (flags & WF_SCALETO_V)
+					{
+						mf.x = ((float)wsize.y)*twnd->size.x;
+						mf.y = ((float)wsize.y)*twnd->size.y;
+						pmf.x = ((float)wsize.y)*twnd->defpos.x;
+						pmf.y = ((float)wsize.y)*twnd->defpos.y;
+					}
+					else if (flags & WF_SCALETO_H)
+					{
+						mf.x = ((float)wsize.x)*twnd->size.x;
+						mf.y = ((float)wsize.x)*twnd->size.y;
+						pmf.x = ((float)wsize.x)*twnd->defpos.x;
+						pmf.y = ((float)wsize.x)*twnd->defpos.y;
+					}
+					uni2<float> rmf = mf;
+					if (s.shapes[shapen].lockh)
+						rmf.x = mf.x;
+					if (s.shapes[shapen].lockv)
+						rmf.y = mf.y;
+					sp->SetOffsetXYp(twnd->pos, true);
+					//bool* rb = new bool(true);
+					sp->render = twnd->shaperb[shapen];
+					sp->useidentp = true;
+					sp->identp = twnd->identp;
+					uni2<float> copy;
+					sp->size = (copy = s.shapes[shapen].size * rmf).toint2();
+					int2* i2sp;
+					sp->SyncPos(i2sp = new int2(/*pmf.toint2()+*/(s.shapes[shapen].pos * rmf).toint2()), false);
+					//*i2sp = *i2sp + (twnd->defpos*).toint2();
+					sp->useidentp = true;
+					auto ret = PyLong_FromVoidPtr(sp->render = sp->identp = new bool(true));
+					twnd->sf->sprites.push_back(sp);
+					twnd->posvec.push_back(make_pair(i2sp, *i2sp));
+					return ret;
 				}
 				PYFUNC(ChangeBoolPtr)
 				{
@@ -935,6 +1130,20 @@ namespace GAME
 					PyArg_ParseTuple(args, "I|I|I", &pid,&chid,&flags);
 					UI->AttachTo(UI->wnds[pid], UI->wnds[chid], flags);
 					Py_RETURN_TRUE;
+				}
+				PYFUNC(SetAttachToF)
+				{
+					ui ID = 0;
+					char* ch0 = NULL;
+					PyArg_ParseTuple(args, "I|s", &ID,&ch0);
+					string fname = ch0;
+					window* wnd = UI->wnds[ID];
+					wnd->handleattachto = fname;
+					Py_RETURN_TRUE;
+				}
+				PYFUNC(IsDestroyed)
+				{
+					Py_RETURN_FALSE;
 				}
 				static  PyObject* test(PyObject *self, PyObject *args)
 				{
@@ -1423,6 +1632,40 @@ namespace GAME
 				child->initvis(styles[child->styleid], child->defpos, GAME::camrect.second().touni2<float>(),visflags);
 			}
 			ret.code = UI_OK;
+			string attachfunc;
+			if(parent != nullptr)
+				if ((attachfunc = /*UI->styles[parent->styleid].attachtof*/parent->handleattachto) != "")
+				{
+					pycall* call = new pycall();
+					call->createstrid(UI);
+					call->c = UI;
+					call->scriptname = UI->bslink + "scripts\\" + attachfunc;
+					call->args.push_back(parent);
+					call->args.push_back(child);
+					call->cancontinue = false;
+					call->args.push_back(flags);
+					call->args.push_back(visflags);
+					GAME::UI->argmodmutex->lock();
+					calls.push_back(call);
+					GAME::UI->argmodmutex->unlock();
+				}
+			if ((attachfunc = /*UI->styles[child->styleid].attachtof*/child->handleattachto) != "")
+			{
+				pycall* call = new pycall();
+				call->createstrid(UI);
+				call->c = UI;
+				call->scriptname = UI->bslink + "scripts\\" + attachfunc;
+				call->args.push_back(child);
+				call->args.push_back(parent);
+				call->cancontinue = false;
+				call->args.push_back(flags);
+				call->args.push_back(visflags);
+				GAME::UI->argmodmutex->lock();
+				calls.push_back(call);
+				GAME::UI->argmodmutex->unlock();
+
+			}
+
 			return ret;
 		}
 		void GUI::window::updatenesting()
@@ -1530,6 +1773,8 @@ namespace GAME
 			while (i < s.shapes.size())
 			{
 				bool* rb = new bool(true);
+				window::subshape subsh;
+				subsh.sf = sf;
 				if (s.shapes[i].hassprite)
 				{
 					sprite sp = s.shapes[i].ico;
@@ -1581,6 +1826,9 @@ namespace GAME
 					}
 					sf->sprites.push_back(sp);
 					posvec.push_back(make_pair(i2sp,*i2sp));
+					subsh.pospairs.push_back(make_pair(i2sp, *i2sp));
+					subsh.sprites.push_back(&sf->sprites[sf->sprites.size() - 1]);
+
 				}
 				if (s.shapes[i].col != NULL || s.shapes[i].seccol != NULL)
 				{
@@ -1656,8 +1904,11 @@ namespace GAME
 						b.b.solidbrush->second = nullptr;
 					b.renderp = rb;
 					f->brushes.push_back(b);
+					subsh.brushes.push_back(&f->brushes[f->brushes.size() - 1]);
 				}
 				i++;
+				subsh.bt = bt;
+				shpb.push_back(subsh);
 			}
 			i = start;
 			{
@@ -1913,6 +2164,7 @@ namespace GAME
 			w->strname = strname;
 			w->flags = flags;
 			w->coreptr = this;
+			w->handleattachto = s.attachtof;
 			do
 			{
 				w->ID = rand();
@@ -2255,6 +2507,7 @@ namespace GAME
 				ii = 0;
 				f.GetVarSafe(st.flagproc, str + "SCRIPTF@FLAGPROC");
 				f.GetVarSafe(st.initproc, str + "SCRIPTF@INITPROC");
+				f.GetVarSafe(st.attachtof, str + "SCRIPTF@ATTACHTO");
 				f.GetVarSafe(st.procondefault, str + "DEFUSEFPROC");
 				addstyle(st,names[i]);
 				i++;

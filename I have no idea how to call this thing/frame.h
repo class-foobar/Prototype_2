@@ -24,11 +24,11 @@ namespace DX2D
 		bool capture = false;
 		bool renderaftercapture = true;
 		int4 capturerect;
-		sprite capturetarget;
+		sprite *capturetarget;
 		bool ismactive = true; // is main frame active
-		vector <sprite> sprites;
+		deque<sprite> sprites;
 		vector <pixel> freepixels;
-		vector <brush> brushes;
+		deque <brush> brushes;
 		vector<line> lines;
 		map <string, vector<frame*>> f;
 		bool ischfact = false; // is children frame active
