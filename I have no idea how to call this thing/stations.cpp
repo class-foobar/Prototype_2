@@ -84,7 +84,7 @@ namespace GAME
 	}
 	void stationmodOUT::PhysInit(physics& pclass, string s)
 	{
-		if (dummyship != nullptr)
+		if (dummyship == nullptr)
 		{
 			dummyship = new ship();
 			dummyship->makedummy();

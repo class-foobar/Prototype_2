@@ -87,6 +87,9 @@
     <ClCompile Include="GAPI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="artificial.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="hmain.h">
@@ -135,6 +138,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GUI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="artificial.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

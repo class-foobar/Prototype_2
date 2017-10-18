@@ -600,6 +600,7 @@ namespace boost
 			return false;
 	}
 }
+#define bintest 0b0000010
 #define stype					shadertypes
 #define float2					XMFLOAT2
 #define float3					XMFLOAT3

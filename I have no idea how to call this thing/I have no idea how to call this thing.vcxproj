@@ -127,6 +127,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\economy\economy\economy.cpp" />
+    <ClCompile Include="artificial.cpp" />
     <ClCompile Include="controls.cpp" />
     <ClCompile Include="debugmodule.cpp" />
     <ClCompile Include="DX_main.cpp" />
@@ -142,6 +143,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\economy\economy\economy.h" />
+    <ClInclude Include="artificial.h" />
     <ClInclude Include="brush.h" />
     <ClInclude Include="button.h" />
     <ClInclude Include="debugmodule.h" />
