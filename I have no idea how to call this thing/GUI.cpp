@@ -2457,7 +2457,10 @@ namespace GAME
 					textpiece* tp = new textpiece;
 					tp->pos = new int2 ((pos*100).toint2());
 					tp->size = (size*100).toint2();
-					tp->changetext(f.GetVar<string>(str + "TEXTBOX" + common::INTtoSTR(ii) + "@DEFTEXT"));
+					string deftext = "";
+					if (f.findvar(str + "@TEXTBOX" + common::INTtoSTR(ii) + "@DEFTEXT"))
+						deftext = f.GetVar<string>(str + "TEXTBOX" + common::INTtoSTR(ii) + "@DEFTEXT");
+					tp->changetext(deftext);
 					st.textboxes.push_back(tp);
 					ii++;
 				}

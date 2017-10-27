@@ -1,0 +1,281 @@
+namespace python
+		{
+			void pyfile::setf(string name, bool closeold)
+			{
+				if (closeold)
+					if (f != NULL)
+						fclose(f);
+				f = _Py_fopen((bslink + "/scripts/" + name).c_str(), "r+");
+				filename = name;
+			}
+			void pyfile::close()
+			{
+				fclose(f);
+			}
+			pyfile::pyfile(string name, bool closeold)
+			{
+				setf(name, closeold);
+			}
+			pyfile::pyfile()
+			{
+				filename = "";
+			}
+		}
+
+		mainframe * environment::createmainframe()
+		{
+			mainframe* glados = new mainframe();
+			glados->env = this;
+			glados->both = false;
+			glados->modmap = {};
+			glados->modmap = {};
+			glados->stridmap = {};
+			glados->ID = assignrandomIDtomap(mfmap.getref(), glados);
+			mfvec.push_back(glados);
+			return glados;
+		}
+
+		AImodule * environment::createmodule(mainframe * glados)
+		{
+			AImodule* wheatley = new AImodule;
+			wheatley->interfaces = {};
+			assignrandomIDtomap(glados->modmap, wheatley);
+			glados->modvec.push_back(wheatley);
+			return wheatley;
+		}
+
+		mainframe * environment::get(ui ID)
+		{
+			return mfmap[ID];
+		}
+
+		/*void environment::resume()
+		{
+			ispaused = false;
+			if (isstarted)
+				mttw->notify_one();
+		}
+
+		void environment::ticktoc()
+		{
+			map<ui, double> tim;
+			while (!isstarted)
+				;
+		start:;
+			if (forcepause)
+			{
+				ispaused = true;
+				forcepause = false;
+				mutex mtex;
+				unique_lock<std::mutex> lk(mtex);
+				mttw->wait(lk);
+				ispaused = false;
+			}
+			if (forcestop)
+				return;
+			auto mm = mfmap.getcopy();
+			int i = 0;
+			for (auto it : mm)
+			{
+				if (!MapFind(tim, it.first))
+				{
+					tim.insert(make_pair(it.first, it.second->time));
+				}
+				else
+					tim[it.first] += it.second->time;
+				if (tim[it.first] >= it.second->time)
+				{
+					double start = clock();
+					it.second->tick();
+					double end = clock();
+					tim[it.first] -= (end - start) / CLOCKS_PER_SEC;
+				}
+			}
+			goto start;
+		}*/
+
+		void* IOinterface::out()
+		{
+			int i = 0;
+			vector<void*> v;
+			while (i < outcalls.size())
+			{
+				v.push_back((*outcalls[i])());
+				i++;
+			}
+			if(argprocessf == nullptr)
+				return (void*) new vector<void*>(v);
+			return (*argprocessf)(this, v, &ret);
+		}
+
+		AImodule * mainframe::get(ui ID)
+		{
+			return (MapFind(modmap,ID)?modmap[ID]:nullptr);
+		}
+
+		AImodule * mainframe::get(string ID)
+		{
+			return (MapFind(stridmap, ID) ? modmap[stridmap[ID]] : nullptr);
+		}
+		ui mainframe::getid(string ID)
+		{
+			return (MapFind(stridmap, ID) ? stridmap[ID] : 0);
+		}
+		inline void * mainframe::putout(ui modid, ui ID)
+		{
+			if (!MapFind(modmap, modid))
+				return nullptr;
+			m.lock();
+			void* ret = modmap[modid]->putout(ID);
+			m.unlock();
+			return ret;
+		}
+
+		void * mainframe::putout(ui ID)
+		{
+			m.lock();
+			int i = 0;
+			vector<void*> v;
+			while (i < modvec.size())
+			{
+				v.push_back(modvec[i]->putout(ID));
+				i++;
+			}
+			m.unlock();
+			return (void*) new vector<void*>(v);
+		}
+
+		/*void mainframe::tick()
+		{
+		}	
+		*/
+
+		/*mainframe::mainframe()
+		{
+		}
+*/
+		void * AImodule::putout(ui ID)
+		{
+			int i = 0;
+			vector<void*> intret;
+			while (i < interfaces.size())
+			{
+				intret.push_back(interfaces[i]->out());
+				i++;
+			}
+			if (argprocessf == nullptr)
+				return (void*)new vector<void*>(intret);
+			return (*argprocessf)(this, intret);
+		}
+		inline function::function(python::pyfunc * pyf, void *(*f)(...))
+		{ 
+			this->f = f;
+			this->pyf = pyf;
+		}
+		inline function::function(void *(*f)(...))
+		{
+			this->f = f;
+		}
+		inline function::function(python::pyfunc * pyf)
+		{
+			this->pyf = pyf;
+		}
+		template<typename ...uniarg>
+		inline void IOinterface::in(uniarg... args)
+		{
+			int i = 0;
+			pair<vector<void*>,vector<void*>> pir;
+			vector<void*> v0, v1;
+			while (i < incalls.size())
+			{
+				v0.push_back(incalls[i](args));
+				i++;
+			}
+			i = 0;
+			while (i < incalls.size())
+			{
+				v1.push_back(unicalls[i](args));
+				i++;
+			}
+			pir.first = v0;
+			pir.second = v1;
+			ret.push_back(pir);
+			i = 0;
+		}
+		template<typename ...uniarg>
+		inline bool mainframe::putin(ui modid, ui ID, uniarg... args)
+		{
+			if (!MapFind(modmap, modid))
+				return false;
+			m.lock();
+			bool b = modmap[modid]->putin(ID, args);
+			m.unlock();
+			return b;
+		}
+		template<typename ...uniarg>
+		inline bool mainframe::putin(ui ID, uniarg... args)
+		{
+			m.lock();
+			int i = 0;
+			bool b = false;
+			while (i < modvec.size())
+			{
+				if (modvec[i]->putin(ID, args))
+					b = true;
+				i++;
+			}
+			m.unlock();
+			return b;
+		}
+		template<typename ...uniarg>
+		inline bool AImodule::putin(ui ID, uniarg... args)
+		{
+			if (!MapFind(interfaces, ID))
+				return false;
+			interfaces[ID](args);
+			return true;
+		}
+		namespace AIMOD
+		{
+			vecbreaker <PyObject*(*)(PyObject*, PyObject*)> vb;
+			PyObject* hError = NULL;
+			PyMethodDef arr[__COUNTER__];
+			struct PyModuleDef AIAPImodule;
+			PyMODINIT_FUNC PyInit_AIAPI(void)
+			{
+				int i = 0;
+				vector<PyMethodDef> moddefs;
+				while (i < vb.names.size())
+				{
+					PyMethodDef md[] = { { vb.names[i].c_str(),vb.vec[i],METH_VARARGS,"No idea" } };
+					moddefs.push_back(md[0]);
+					i++;
+				}
+				PyMethodDef md[] = { { NULL, NULL, 0, NULL } };
+				moddefs.push_back(md[0]);
+				std::copy(moddefs.begin(), moddefs.end(), arr);
+				AIAPImodule = {
+					PyModuleDef_HEAD_INIT,
+					"ARINT",   /* name of module */
+					NULL, /* module documentation, may be NULL */
+					-1,       /* size of per-interpreter state of the module,
+							  or -1 if the module keeps state in global variables. */
+					arr/*&moddefsnew->operator[](0)*/
+				};
+				PyObject *m;
+				m = PyModule_Create(&AIAPImodule);
+				if (m == NULL)
+					return NULL;
+				hError = PyErr_NewException("AIAPI.error", NULL, NULL);
+				Py_INCREF(hError);
+				PyModule_AddObject(m, "error", hError);
+				return m;
+			}
+		}
+		void AIinit()
+		{
+			PyImport_AppendInittab("ARINT", GAME::AI::AIMOD::PyInit_AIAPI);
+			PyImport_ImportModule("ARINT");
+
+		}
+	}

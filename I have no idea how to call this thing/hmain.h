@@ -46,6 +46,7 @@
 #include <thread>
 #include <uberlibmods.h>
 #include <vector>
+#include <tuple>
 #include <windows.h>
 #include <windowsx.h>
 #include <Wincodec.h>
@@ -600,7 +601,7 @@ namespace boost
 			return false;
 	}
 }
-#define bintest 0b0000010
+#define bintest					0b0000010
 #define stype					shadertypes
 #define float2					XMFLOAT2
 #define float3					XMFLOAT3
@@ -715,6 +716,7 @@ namespace common
 		{
 			return sm;
 		}
+		explicit operator map<univar0, univar1>&() const { return sm; }
 		inline auto insert(pair<univar0,univar1> val)->decltype(sm.insert(val))
 		{
 			m.lock();
@@ -1128,7 +1130,20 @@ inline std::string reverseSTR(std::string str)
 	rstr += str[0];
 	return rstr;
 }
-inline std::string copyfromchtoend(std::string str, char ch, bool includech) // copies everything AFTER str[i] == ch
+inline std::string copytochfromstart(std::string str, char ch, bool includech=false, int start = 0)
+{
+	string ret = "";
+	int i = start;
+	while (i < str.size())
+	{
+		if (str[i] == ch)
+			return (includech) ? ret + ch : ret;
+		ret += str[i];
+		i++;
+	}
+	return ret;
+}
+inline std::string copyfromchtoend(std::string str, char ch, bool includech=false) // copies everything AFTER str[i] == ch
 {
 	std::string rstr;
 	int i = 0;
@@ -1407,7 +1422,7 @@ bool MapFind(map<univar, univar2> m, univar key)
 	return true;
 }
 template<typename univar, typename univar2>
-bool InsertToMapOfVecs(map<univar, vector<univar2>> &m, pair<univar, univar2> p)
+inline bool InsertToMapOfVecs(map<univar, vector<univar2>> &m, pair<univar, univar2> p)
 {
 	if (MapFind(m, p.first))
 	{
@@ -1418,6 +1433,11 @@ bool InsertToMapOfVecs(map<univar, vector<univar2>> &m, pair<univar, univar2> p)
 		m.insert(make_pair(p.first, vector<univar2>{p.second}));
 	}
 	return true;
+}
+template<typename univar, typename univar2>
+inline bool InsertToMapOfVecs(map<univar, vector<univar2>> &m, univar key, univar2 val)
+{
+	return InsertToMapOfVecs(m, make_pair(key, val));
 }
 template<typename univar, typename univar2>
 bool MapTGT(map<univar, univar2> m, univar key, univar2 val)

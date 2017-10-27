@@ -1,0 +1,275 @@
+#pragma once
+#include "hmain.h"
+#define pyobj PyObject
+namespace GAME
+{
+	template <typename unifunc, typename univar, typename... uniarg>
+	void executevatemp(unifunc& f, univar& ref, uniarg... args)
+	{
+		int dummy[] = { 0, ((void)f(ref,std::forward<uniarg>(args)), 0) ... };
+	}
+	template<typename ... uniarg>
+	inline void* tempfunc(uniarg...args)
+	{
+		return nullptr;
+	}
+	namespace AI
+	{
+		class mainframe;
+		class IOinterface;
+		class AImodule;
+		enum generalenum
+		{
+			all = 0,
+			none = 0
+		};
+		template <typename univar0, typename univar1>
+		inline univar0 assignrandomIDtomap(map < univar0, univar1> m)
+		{
+			univar0 ID;
+			do
+			{
+				ID = rand();
+			} while (MapFind(m, ID) || ID == 0 || ID == 1 || ID == 2 || ID == -1);
+
+			return ID;
+		};
+		template <typename univar0, typename univar1>
+		inline univar0 assignrandomIDtomap(map < univar0, univar1> m, univar1 val)
+		{
+			univar0 ID;
+			do
+			{
+				ID = rand();
+			} while (MapFind(m, ID) || ID == 0 || ID == 1 || ID == 2 || ID == -1);
+			m.insert(make_pair(ID, val));
+			return ID;
+		}
+		struct function;
+		namespace python
+		{
+			struct pyfile;
+			struct pyfunc
+			{
+			private:
+				vector<pyobj*> v;
+				template<typename... ArgTypes> void parsecall(ArgTypes... Args)
+				{
+					for (const auto& arg : { Args... })
+					{
+						auto rec = [](auto arg)
+						{
+							return (pyobj*)common::Python::ToPyObj(arg);
+						};
+						pobj* o = rec(arg);
+						Py_INCREF(o);
+						v.push_back(o);
+					}
+				}
+			public:
+				pyfile* f;
+				string name;
+				function* translator = nullptr;
+				template<typename ...uniarg>
+				PyObject* call(uniarg...args);
+				template<typename ...uniarg>
+				void* operator()(uniarg...);
+			};
+			struct pyfile
+			{
+				void setf(string,bool=false);
+				void close();
+				pyfile(string, bool=false);
+				pyfile();
+				FILE* f;
+				string filename;
+				template<typename ...uniarg>
+				void* operator()(uniarg...);
+			};
+			
+			template<typename ...uniarg>
+			inline PyObject * pyfunc::call(uniarg... args)
+			{
+				int i = 0;
+				int n = sizeof...(args);
+				PyObject* modstr = PyUnicode_FromStringAndSize(f->filename.c_str(),f->filename.size());
+				PyObject* mod = PyImport_Import(modstr);
+				PyObject* func = PyObject_GetAttrString(mod, name.c_str());
+				//using expand_type = pyobj*[];
+				//expand_type{ 0, PyDict_SetItem(obj,(rec(args)), 0)... };
+				//for ( auto &arg : { args... })
+				//{
+				//	PyDict_SetItem(obj, rec(arg));
+				//}
+				//while (i < n)
+				//{
+				//	auto x = forward<uniarg>(args)...;
+				//	PyDict_SetItem(obj, common::Python::ToPyObj(x));
+				//	i++;
+				//}
+				pyobj* obj;
+				obj = PyTuple_New(v.size());
+				parsecall(args...);
+				while (i < v.size())
+				{
+					PyTuple_SetItem(obj,i, v[i]);
+					Py_DECREF(v[i]);
+					i++;
+				}
+				return PyObject_CallObject(func, obj);
+			}
+			template<typename ...uniarg>
+			inline void * pyfunc::operator()(uniarg ...args)
+			{
+				return (void*) this->call(args...);
+			}
+
+			template<typename ...uniarg>
+			inline void * pyfile::operator()(uniarg ...args)
+			{
+				int i = 0;
+				int n = sizeof...(args);
+				pyobj* obj = PyDict_New();
+				while (i < n)
+				{
+					PyDict_SetItem(obj, PyLong_FromLong(i), common::Python::ToPyObj(forward(args)));
+					i++;
+				}
+				return PyRun_File(f, filename.c_str(), 1, PyDict_New(), obj);
+			}
+
+		}
+		class environment
+		{
+			friend class GAME::AI::IOinterface;
+			friend class GAME::AI::mainframe;
+			friend class GAME::AI::AImodule;
+		private:
+		protected:
+			deque<mainframe*> mfvec;
+			common::safemap<ui, mainframe*> mfmap;
+			bool ispaused = false;
+			bool forcestop = false;
+			bool isstarted = false;
+			bool forcepause = false;
+		public:
+			mainframe* createmainframe();
+			mainframe* get(ui ID);
+			AImodule* createmodule(mainframe* = nullptr);
+			thread* th;
+			mutex mt;
+			condition_variable *mttw = new condition_variable;
+			float processtime = 1;
+			/*void start()
+			{
+				if (ispaused)
+				{
+					resume();
+					return;
+				}
+				th = new thread(&ticktoc);
+				isstarted = true;
+				ispaused = false;
+				return;
+			}
+			void pause()
+			{
+				forcepause = true;
+			}
+			void resume();
+			void ticktoc();
+			void stop()
+			{
+				forcestop = true;
+				th->join();
+			}
+			environment()
+			{
+
+			}*/
+		};
+		struct function
+		{
+			python::pyfunc* pyf = nullptr;
+			void* (*f)(...);
+			bool bothb = false;
+			template<typename ... uniarg>
+			void* operator()(uniarg... args)
+			{
+				if(!bothb)
+					return (pyf == nullptr) ? f(args...) : pyf->call(args...);
+				return new pair<void*,void*>(make_pair((void*)(pyf == nullptr) ? nullptr : pyf->call(args...), (void*)(f == nullptr) ? nullptr : f(args...)));
+			}
+			template<typename ... uniarg>
+			pair<void*, void*> both(uniarg...args)
+			{
+				return make_pair((void*)(pyf == nullptr) ? nullptr : pyf->call(args...), (void*)(f == nullptr) ? nullptr : f(args...));
+			}
+			function();
+			function(python::pyfunc* pyf, void* (*f)(...));
+			function( void* (*f)(...));
+			function(python::pyfunc* pyf);
+
+		};
+		class IOinterface
+		{
+		private:
+		protected:
+			ui ID;
+			vector <function*> incalls;
+			vector <function*> outcalls;
+			vector <function*> unicalls;
+			deque<pair<vector<void*>, vector<void*>>> ret;
+		public:
+			function* argprocessf = nullptr;
+			template<typename ... uniarg>
+			void in(uniarg...args);
+			void* out();
+		};
+		class mainframe
+		{
+			friend class GAME::AI::environment;
+			friend class GAME::AI::AImodule;
+			friend class GAME::AI::IOinterface;
+		private:
+		protected:
+			deque<AImodule*> modvec;
+			map<ui, AImodule*> modmap;
+			map<string, ui> stridmap;
+		public:
+			mutex m;
+			environment* env = nullptr;
+			float time = 0.2f;
+			ui ID;
+			AImodule* get(ui ID);
+			AImodule* get(string ID);
+			template<typename ...uniarg>
+			inline bool putin(ui modid,ui ID, uniarg...args);
+			inline void* putout(ui modid,ui ID);
+			template<typename ...uniarg>
+			bool putin(ui ID, uniarg...args);
+			void* putout(ui ID);
+			function* func = nullptr;
+			//void tick();
+			bool both = false;
+			ui getid(string ID);
+			template<typename ... uniarg>
+			void* operator()(uniarg...args)
+			{
+				return (!both)?tick(args):new pair(tick->both(args));
+			}
+			mainframe();
+		};
+		class AImodule
+		{
+		private:
+		protected:
+		public:
+			map<ui, IOinterface*> interfaces;
+			function* argprocessf = nullptr;
+			template<typename ...uniarg>
+			bool putin(ui ID, uniarg...args);
+			void* putout(ui ID);
+		};
+}
+}

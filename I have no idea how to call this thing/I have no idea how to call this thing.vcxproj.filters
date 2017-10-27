@@ -46,6 +46,12 @@
     <Filter Include="Scripts\Windows\textbox">
       <UniqueIdentifier>{3b1c4ed2-b682-4b30-a235-ed669e61b6ad}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Scripts\AI">
+      <UniqueIdentifier>{d4c8b344-fdcd-494e-befc-5e223bf8826c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Archive">
+      <UniqueIdentifier>{91a78a71-c807-4774-84b9-b9170f900a29}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -88,6 +94,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="artificial.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AIfunctions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -203,5 +212,22 @@
     <None Include="scrollable_onattachto.py">
       <Filter>Scripts\Windows\scrollable</Filter>
     </None>
+    <None Include="AI_movement.py">
+      <Filter>Scripts\AI</Filter>
+    </None>
+    <None Include="AI_core.py">
+      <Filter>Scripts\AI</Filter>
+    </None>
+    <None Include="AI_docker.py">
+      <Filter>Scripts\AI</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="artifical.h.txt">
+      <Filter>Source Files\Archive</Filter>
+    </Text>
+    <Text Include="artifical.cpp.txt">
+      <Filter>Source Files\Archive</Filter>
+    </Text>
   </ItemGroup>
 </Project>

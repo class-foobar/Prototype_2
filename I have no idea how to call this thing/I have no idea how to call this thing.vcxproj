@@ -127,6 +127,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\economy\economy\economy.cpp" />
+    <ClCompile Include="AIfunctions.cpp" />
     <ClCompile Include="artificial.cpp" />
     <ClCompile Include="controls.cpp" />
     <ClCompile Include="debugmodule.cpp" />
@@ -161,6 +162,9 @@
     <ClInclude Include="universe.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="AI_core.py" />
+    <None Include="AI_docker.py" />
+    <None Include="AI_movement.py" />
     <None Include="basewindow_flagproc.py" />
     <None Include="basewindow_msg_close.py" />
     <None Include="basewindow_msg_main.py" />
@@ -186,6 +190,10 @@
     <ProjectReference Include="..\..\economy\economy\economy.vcxproj">
       <Project>{264abede-b613-4fb4-9167-cb0cdb456a06}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="artifical.cpp.txt" />
+    <Text Include="artifical.h.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
