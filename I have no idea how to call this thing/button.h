@@ -564,7 +564,7 @@ namespace DX2D
 			b->targetstate = b->pressn;
 			if (!b->callonrelease)
 			{
-				if (b->callpfunc && b->buttonpressfunc != nullptr)
+				if (b->callpfunc && b->mbuttonpressfunc != nullptr)
 					b->mbuttonpressfunc(pos);
 			}
 		}
@@ -588,7 +588,7 @@ namespace DX2D
 			b->targetstate = b->pressn;
 			if (!b->callonrelease)
 			{
-				if (b->callpfunc && b->buttonpressfunc != nullptr)
+				if (b->callpfunc && b->rbuttonpressfunc != nullptr)
 					b->rbuttonpressfunc(pos);
 			}
 		}

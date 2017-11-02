@@ -97,6 +97,10 @@ inline std::string INTtoSTR(int i)
 {
 	return std::to_string(i);
 }
+inline void pass()
+{
+
+}
 namespace classvariables
 {
 	template<typename univar>
@@ -692,7 +696,7 @@ public:
 namespace common
 {
 	template<class univar0, class univar1>
-	class safemap /*: public std::map*/
+	class safemap
 	{
 	private:
 	protected:

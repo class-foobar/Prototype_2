@@ -75,6 +75,7 @@ namespace GAME
 			}
 		}
 	}
+	using namespace GUI;
 	namespace Python
 	{
 		namespace GAPIMOD
@@ -133,6 +134,15 @@ namespace GAME
 			}
 			PYFUNC(SetInfoWnd)
 			{
+				ui id = 0u;
+				entity* ent;
+				PyObject* obj;
+				PyArg_ParseTuple(args, "O|K", &obj, &id);
+				ent = (entity*)(void*)PyLong_AsVoidPtr(obj);
+				window* wnd = UI->wnds[id];
+				objectinfownd* oinfwnd = new objectinfownd;
+				wnd->internalmemory.insert(make_pair("objectinfownd", (void*)oinfwnd));
+				oinfwnd->create(wnd, *ent);
 				Py_RETURN_TRUE;
 			}
 			PYFUNC(SetChoiceWnd)

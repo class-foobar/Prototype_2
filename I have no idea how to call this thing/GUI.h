@@ -78,6 +78,7 @@ namespace GAME
 		protected:
 			bool hidden = false;
 		public:
+			map<string, void*> internalmemory;
 			bool isnull = false;
 			list<pair<string, string>> activescripts;
 			int2 realsize = { 0,0 };

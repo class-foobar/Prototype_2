@@ -52,6 +52,9 @@
     <Filter Include="Source Files\Archive">
       <UniqueIdentifier>{91a78a71-c807-4774-84b9-b9170f900a29}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Scripts\Base">
+      <UniqueIdentifier>{ecc2038e-55ea-44e3-ba7b-b6234127a831}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -220,6 +223,9 @@
     </None>
     <None Include="AI_docker.py">
       <Filter>Scripts\AI</Filter>
+    </None>
+    <None Include="..\x64\Debug\GTYPES.py">
+      <Filter>Scripts\Base</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

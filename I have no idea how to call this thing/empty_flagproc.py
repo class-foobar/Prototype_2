@@ -17,7 +17,7 @@ if floc != "NULL":
         propsize = 1.0 / float(num)
         while i < num:
             nwnd = GUI.NewWindow(wnd,"EMPTY",0,propsize * i, 1,propsize,(1 << 3) | (2 << 0),"NULL")
-            GUI.Memory_Set(wnd,"subwindow" + repr(i))
+            GUI.Memory_Set(wnd,"PYOBJ","subwindow" + repr(i),nwnd)
             i += 1
     if AZflib.FindVar(file,floc + "@DATA@" + "hide"):
         if AZflib.GetVar(file,"BOOL",floc + "@DATA@" + "hide") == True:

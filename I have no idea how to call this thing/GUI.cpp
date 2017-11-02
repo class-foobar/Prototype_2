@@ -377,8 +377,17 @@ namespace GAME
 					ui ID;
 					char* ch0 = NULL, *ch1 = NULL;
 					bool b = false;
+					auto size = PyTuple_Size(args);
 					PyObject* obj;
-					PyArg_ParseTuple(args, "I|s|s|O", &ID, &ch0, &ch1, &obj);
+					if (size == 3)
+					{
+						ch1 = "PYOBJ";
+						PyArg_ParseTuple(args, "I|s|O", &ID, &ch0, &obj);
+					}
+					else if (size == 4)
+						PyArg_ParseTuple(args, "I|s|s|O", &ID, &ch0, &ch1, &obj);
+					else
+						return NULL;
 					Py_INCREFTS(obj);
 					if (ID == 0)
 						ID = 1;
@@ -547,9 +556,12 @@ namespace GAME
 				PYFUNC(Memory_Find)
 				{
 					string name;
-					ui ID;
+					ui ID = 1;
 					char* ch0 = NULL;
-					PyArg_ParseTuple(args, "I|s", &ID, &ch0);
+					if(PyTuple_Size(args) == 1)
+						PyArg_ParseTuple(args, "s", &ch0);
+					else
+						PyArg_ParseTuple(args, "I|s", &ID, &ch0);
 					if (ID == 0)
 						ID = 1;
 					name = ch0;
@@ -871,6 +883,12 @@ namespace GAME
 					string strid = UI->processtridmap[getpid()];
 					//cout << strid << " has reached GetSTRID\n";
 					_GetSTRIDMutex.unlock();
+					int i = 0;
+					string s = "";
+					while (!IsNumberCH(strid[i]))
+						s += strid[i++];
+					if (s == "basewindow_msg_move.py")
+						pass();
 					return PyUnicode_FromStringAndSize (strid.c_str(), strid.size());
 				}
 				PYFUNC(GetFLoc)
@@ -1532,6 +1550,13 @@ namespace GAME
 					parent == nullptr;
 			UIresult ret;
 			window* oldparent = child->parent;
+			bool deloldparent = false;
+			if (!oldparent)
+			{
+				deloldparent = true;
+				oldparent = new window;
+				oldparent->size = uni2<float>(1, 1);
+			}
 			if (parent == oldparent && flags & AT_VINIT)
 			{
 				child->initvis(styles[child->styleid], child->defpos, GAME::camrect.second().touni2<float>()*child->size,visflags);
@@ -1580,6 +1605,8 @@ namespace GAME
 						child->initvis(styles[child->styleid], pos,surf, visflags);
 					}
 				}
+				if (deloldparent)
+					delete oldparent;
 				child->updatenesting();
 				//child->updatepos();
 	/*			if (!(flags & AT_NULL))
@@ -1962,13 +1989,15 @@ namespace GAME
 				int2* pos = new int2((rmfp).toint2());
 				//*pos = *pos + (defpos*wsize.touni2<float>()).toint2();
 				posvec.push_back(make_pair(pos,*pos));
-				int2 size = rmfs.toint2();
+				int2 bsize = rmfs.toint2();
 				if (flags & WF_POSBASERIGHT)
 					pos->x -= rmfs.x;
 				simpleshape sh = s.boxes[i].sh;
 				textclass tc;
 				tc.init(); 
-				con.addbutton("", pos, size, nullptr, f, coreptr->cam, false, tc);
+				//if (flags & WF_POSBASERIGHT)
+				//	size = int2(size.y, size.x);
+				con.addbutton("", pos, bsize, nullptr, f, coreptr->cam, false, tc);
 				button* butt = con.latestcreation;
 				butt->renderingoff();
 				butt->anyvars.push_back(this);
@@ -2005,7 +2034,7 @@ namespace GAME
 			string inputstr;
 		feachdone:;
 			string msgf = inputstr;
-			string strid = to_string(ID);
+			string strid = s.flagproc + to_string(ID);
 			wstring wstr0 = STRtoWSTR(strid);
 			wchar_t * ch0 = new wchar_t[wstr0.size() + 1];
 			wcsncpy(ch0, wstr0.c_str(), wstr0.size() + 1);
@@ -2189,7 +2218,10 @@ namespace GAME
 			w->size = size;
 			if (!(flags & WF_NOVINIT))
 			{
-				ret = w->initvis(s, pos, mf,flags);
+				if (parent == nullptr)
+					ret = w->initvis(s, pos, mf, flags);
+				else
+					ret = AttachTo(parent, w, AT_VINIT | AT_FORCE | AT_PROPPOS, flags);
 			}
 			if (flags & WF_HIDE)
 				w->hide();
@@ -2486,27 +2518,38 @@ namespace GAME
 					st.subs.push_back(sw);
 					ii++;
 				}
-				map<string, bool> flags;
-				auto v = f.GetVarNamesInNode(str + "FLAGS@");
-				ii = 0;
-				while(ii < v.size())
+				try
 				{
-					flags.insert(make_pair(v[ii], f.GetVar<bool>(str + "FLAGS@" + v[ii])));
-					ii++;
+					map<string, bool> flags;
+					auto v = f.GetVarNamesInNode(str + "FLAGS@");
+					ii = 0;
+					while (ii < v.size())
+					{
+						flags.insert(make_pair(v[ii], f.GetVar<bool>(str + "FLAGS@" + v[ii])));
+						ii++;
+					}
+					map<string, bool> falseflags;
+					st.defaultflags = flags;
+					BOOST_FOREACH(auto it, flags)
+					{
+						falseflags.insert(make_pair(it.first, false));
+					}
 				}
-				map<string, bool> falseflags;
-				st.defaultflags = flags;
-				BOOST_FOREACH(auto it, flags)
+				catch (...)
 				{
-					falseflags.insert(make_pair(it.first, false));
+
 				}
-				ii = 0;
-				v = f.GetVarNamesInNode(str + "SCRIPTF@MSG@");
-				while (ii < v.size())
+				try
 				{
-					st.msgproc.insert(make_pair(v[ii], f.GetVar<string>(str + "SCRIPTF@MSG@" + v[ii])));
-					ii++;
+					ii = 0;
+					auto v = f.GetVarNamesInNode(str + "SCRIPTF@MSG@");
+					while (ii < v.size())
+					{
+						st.msgproc.insert(make_pair(v[ii], f.GetVar<string>(str + "SCRIPTF@MSG@" + v[ii])));
+						ii++;
+					}
 				}
+				catch(...){}
 				ii = 0;
 				f.GetVarSafe(st.flagproc, str + "SCRIPTF@FLAGPROC");
 				f.GetVarSafe(st.initproc, str + "SCRIPTF@INITPROC");

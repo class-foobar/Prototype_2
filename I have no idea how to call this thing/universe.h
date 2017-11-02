@@ -675,7 +675,7 @@ namespace GAME
 		physobj* pobj;
 		bool ison = true;
 		void tick();
-		void PhysInit(physics& pclass, string s = ""/*do not use*/);
+		void PhysInit(physics& pclass, int2 posoffset = { 0,0 }, string s = ""/*do not use*/);
 		void RenderInit(camera* ncam, frame* nf, string nstationname,stationmodOUTslot* slot,station* stat,bool iscore=false);
 		void  RenderRelease();
 	};
@@ -846,7 +846,7 @@ namespace GAME
 				stationmodOUT* mod = core->slotsout[i]->mod;
 				if (mod != nullptr)
 				{
-					mod->PhysInit(global);
+					mod->PhysInit(global,*pos);
 					mod->PhysInit(local);
 				}
 				i++;

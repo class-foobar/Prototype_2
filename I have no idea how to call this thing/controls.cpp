@@ -53,8 +53,17 @@ namespace DX2D
 		UI->argmodmutex->unlock();
 		//try
 		//{
-		if (fname == "basewindow_msg_move.py")
-			_testi++;
+		if (fname == "")
+		{
+			fname = reverseSTR(copytochfromstart(reverseSTR(loc), '/'));
+			if(fname == "")
+				fname = reverseSTR(copytochfromstart(reverseSTR(loc), '\\'));
+		}
+#ifndef nopydebugoutput
+		string str = loc + ", " + " strid: " + strid + "\n";
+		OutputDebugStringA(str.c_str());
+#endif // !nopydebugoutput
+
 		auto res = PyRun_AnyFileEx(_f, fname.c_str(), true);
 		//PyGILState_Release(gstate);
 		UI->idmapmutex.lock();
@@ -62,26 +71,31 @@ namespace DX2D
 		UI->idmapmutex.unlock();
 		auto fuckvs = UI;
 		UI->argmodmutex->lock();
-		_realtesti++;
-		auto bargs = UI->args[strid];
-		auto fargs = boost::any_cast<vector<wchar_t*>>(bargs[(bargs.size() < 10) ? 1 : 8]);
 		int i = 0;
-		while (i < fargs.size())
+		auto bargs = UI->args[strid];
+		if (bargs.size() != 0)
 		{
-			delete[] fargs[i];
-			i++;
+			auto fargs = boost::any_cast<vector<wchar_t*>>(bargs[(bargs.size() < 10) ? 1 : 8]);
+			while (i < fargs.size())
+			{
+				delete[] fargs[i];
+				i++;
+			}
 		}
 		if (bargs.size() > 10)
 		{
 			*boost::any_cast<bool*>(bargs[13]) = true;
 		}
-		if (MapFind(UI->oncescmap[boost::any_cast<ui>(UI->args[strid][0])], fname))
-		{
-			UI->oncemutex.lock();
-			UI->oncescmap[boost::any_cast<ui>(UI->args[strid][0])].erase(fname);
-			UI->oncemutex.unlock();
-		}
-		UI->args.erase(strid);
+		if (MapFind(UI->args.getref(),strid))
+			if(UI->args[strid].size() != 0)
+				if (MapFind(UI->oncescmap[boost::any_cast<ui>(UI->args[strid][0])], fname))
+				{
+					UI->oncemutex.lock();
+					UI->oncescmap[boost::any_cast<ui>(UI->args[strid][0])].erase(fname);
+					UI->oncemutex.unlock();
+				}
+		if (MapFind(UI->args.getref(), strid))
+			UI->args.erase(strid);
 		UI->argmodmutex->unlock();
 		delete call;
 		/*GAME::scriptthreadmutex.lock();
@@ -152,6 +166,7 @@ namespace DX2D
 		{
 			strid = to_string(rand());
 		} while (MapFind(UI->args.getref(),strid));
+		strid = scriptname + strid;
 		UI->args.unlock();
 		string msgf = inputstr;
 		v.push_back(msgf);
@@ -295,6 +310,7 @@ namespace DX2D
 		btnspr.clear();
 		currentlycheckingc = nullptr;
 		int i = 0;
+		map<int2*, void*> mp; //should be deleted once the positioning gets fixed, for fuck sake how does this keep happening?
 		while (i < buttons.size())
 		{
 			if (buttons[i] == NULL)
@@ -324,6 +340,13 @@ namespace DX2D
 				}
 				else
 				{
+					/*if (!MapFind(mp, &buttons[i]->size))
+					{
+						int y = buttons[i]->size.x;
+						buttons[i]->size.x = buttons[i]->size.y;
+						buttons[i]->size.y = y;
+						mp.insert(make_pair(&buttons[i]->size, (void*)nullptr));
+					}*/
 					int4 rec(*buttons[i]->pos, *buttons[i]->pos + buttons[i]->size);
 					if (classvariables::isinside(rec, pos))
 					{

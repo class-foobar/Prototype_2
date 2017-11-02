@@ -6,7 +6,7 @@ namespace DX2D
 	class sprite
 	{
 	protected:
-		ID2D1Bitmap *bitmap;
+		ID2D1Bitmap *bitmap = NULL;
 	protected:
 		int2* pos;
 		int2* offset;

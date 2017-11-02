@@ -2,7 +2,7 @@ import sys
 import GUI
 import AZflib
 import importlib
-from GTYPES import *
+from GTYPES import int2
 strid = GUI.GetSTRID()
 wnd = GUI.GetArg(strid, 0)
 GUI.Once(wnd,strid)

@@ -82,7 +82,7 @@ namespace GAME
 			i++;
 		}
 	}
-	void stationmodOUT::PhysInit(physics& pclass, string s)
+	void stationmodOUT::PhysInit(physics& pclass,int2 possoffset, string s)
 	{
 		if (dummyship == nullptr)
 		{
@@ -95,13 +95,13 @@ namespace GAME
 		}
 		else
 			s += name;
-		int2* pos;
-		pclass.addobj(s,pos = new int2(size), pos, false, false);
+		pclass.addobj(s, new int2(size),new int2(*pos+possoffset), false, false);
 		pobj = pclass.GetLastObj();
 		physreact ph;
 		ph.callfunc = true;
 		ph.ftocall = shipselecthit;
 		ph.callfuncinstant = true;
+		pobj->isron = true;
 		entity ent;
 		ent.selectf = GAME::selectship;
 		ent.datav.push_back(dummyship);
@@ -118,7 +118,7 @@ namespace GAME
 		i = 0;
 		while (i < slotsout.size())
 		{
-			slotsout[i]->mod->PhysInit(pclass, s);
+			slotsout[i]->mod->PhysInit(pclass, possoffset,s);
 			i++;
 		}
 		i = 0;

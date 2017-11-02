@@ -702,6 +702,7 @@ namespace DX2D
 		map<shipres, float> resproductionlt; // use the ones below. those two are here for multithreating reasons and will act as buffers
 		map<shipres, float> resusagelt;
 	public:
+		bool isplayercontrolled = false;
 		GAME::system* sys = nullptr;
 		GAME::universe* uniclass = nullptr;
 		debugging::debugwindow *dwnd = nullptr;

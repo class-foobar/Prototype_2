@@ -337,7 +337,15 @@ namespace DX2D
 						//{
 						//	RT->SetTransform(trans*Matrix3x2F::Rotation(f[i]->sprites[ii].GetRot(), cam->customrotpoint));
 						//}
-						RT->DrawBitmap(f[i]->sprites[ii].GetBitmap(), loc, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
+						if (f[i]->sprites[ii].GetBitmap() != nullptr)
+							RT->DrawBitmap(f[i]->sprites[ii].GetBitmap(), loc, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
+						else
+						{
+							stringstream ss;
+							ss << (void*)f[i];
+							string dmsg = + "Error: sprite's bitmap is NULL " + ss.str() + " [" +INTtoSTR(i) + "] [" + INTtoSTR(ii) + "]\n" ;
+							OutputDebugStringA(dmsg.c_str()); 
+						}
 						RT->SetTransform(oldtransform2);
 						ii++;
 					}
@@ -1320,6 +1328,7 @@ namespace DX2D
 		entity mainshipen;
 		ship* conshipbullshit = conship;
 		conship->name = curship;
+		conship->isplayercontrolled = true;
 		mainshipen.selectf = GAME::selectship;
 		mainshipen.datav.push_back(conship);
 		mainshipen.datav.push_back(conship); // yes this is supposed to happen twice

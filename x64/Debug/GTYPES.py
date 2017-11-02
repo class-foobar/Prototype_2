@@ -52,36 +52,32 @@ class float2 :
         return float2(self.x/another.x,self.y/another.y)
     def str():
         return "{" + str(float(x)) + ", " + str(float(y)) + "}"
-class RGB:
+class RGBA:
     r = 0.0
     g = 0.0
     b = 0.0
-    class colour:
-        RGB darkblue(0,0,1)
-        RGB blue(0.1,0.1,0.9)
-        RGB lightblue(0.3,0.3,0.7)
-        RGB red(0.9,0.1,0.1)
-        RGB green(0.1,0.9,0.1)
-        RGB white(1,1,1)
-        RGB lightgrey(0.85,0.85,0.85)
-        RGB grey(0.5,0.5,0.5)
-        RGB darkgrey(0.25,0.25,0.25)
-        RGB black(0,0,0)
-    def __init__(self, r = 0.0, g = 0.0, b = 0.0):
+    a = 1.0
+    def __init__(self, r = 0.0, g = 0.0, b = 0.0, a = 1.0):
         self.r = float(r)
         self.b = float(b)
         self.g = float(g)
-    def __init__ (self, x):
-        if type(x) == type([]):
-            r = x[0]
-            g = x[1]
-            b = x[2]
-        if(type(x) == type(RGB):
-           self.r = x.r
-           self.g = x.g
-           self.b = x.b
+        self.a = float(a)
     def get255base():
-        return [r*255,b*255,g*255]
+        return [r*255,b*255,g*255,a*255]
+class colour:
+    darkblue    =RGBA (0,0,1)
+    blue        =RGBA (0.1,0.1,0.9)
+    lightblue   =RGBA (0.3,0.3,0.7)
+    red         =RGBA (0.9,0.1,0.1)
+    green       =RGBA (0.1,0.9,0.1)
+    white       =RGBA (1,1,1)
+    lightgrey   =RGBA (0.85,0.85,0.85)
+    grey        =RGBA (0.5,0.5,0.5)
+    darkgrey    =RGBA (0.25,0.25,0.25)
+    black       =RGBA (0,0,0)
+    yellow      =RGBA (1,1,0)
+    pink        =RGBA (1,0,1)
+    cyan        =RGBA (0,1,1)
 class WF:
     NULL = (0<<0)
     SHOW = (1<<0)
@@ -126,3 +122,20 @@ class winapi:
             MOUSEWHEEL = 0x020A
     def MakeLParam(a,b):
         return (a & 0xffff | ((b & 0xffff) << 16))
+class pair:
+    first = None
+    second = None
+    def __init__(self, first=None, second=None):
+        self.first = first
+        self.second = second
+def splitvariable(v, totalbits=64, signed=True):
+    pir = pair()
+    v = int(v)
+    first = (v & (pow(2,totalbits)-pow(2,totalbits/2)) >> totalbits/2)
+    second = (v & pow(2,totalbits))
+    if signed:
+        pir.first -= pow(2,totalbits/2)
+        pir.second -= pow(2,totalbits/2)
+    pir.first = int(first)
+    pir.second = int(second)
+    return pir

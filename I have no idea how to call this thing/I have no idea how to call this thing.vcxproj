@@ -162,6 +162,7 @@
     <ClInclude Include="universe.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\x64\Debug\GTYPES.py" />
     <None Include="AI_core.py" />
     <None Include="AI_docker.py" />
     <None Include="AI_movement.py" />

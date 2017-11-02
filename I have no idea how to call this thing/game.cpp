@@ -27,6 +27,7 @@ namespace debugging
 }
 namespace DX2D
 {
+	controls dummycon;
 	extern 	string bslink;
 	extern main* DXclass;
 	void crewman::tick()
@@ -505,7 +506,7 @@ namespace GAME
 	{
 		if (!classvariables::isinside(camrect, _pos))
 			return;
-		int2 pos = (((uni2<float>)_pos - (uni2<float>)*mcam->GetXYp() + (uni2<float>)mcam->GetOffset())
+		int2 pos = (( (uni2<float>)*mcam->GetXYp() + (uni2<float>)mcam->GetOffset()+ (uni2<float>)_pos)
 			*(uni2<float>)mcam->scale).toint2();
 		if (selecting::pcshipclick.FindOBJ("mouse"))
 			*selecting::mousepos = pos;
@@ -513,6 +514,7 @@ namespace GAME
 			selecting::pcshipclick.addobj("mouse", 1.0f, selecting::mousepos = new int2(pos), false, false);
 		physobj* m = selecting::pcshipclick.objmap["mouse"];
 		m->rectID = mousephysid;
+		m->isron = true;
 		selecting::objs = {};
 		selecting::pcshipclick.tick();
 		int i = 0;
@@ -562,6 +564,7 @@ namespace GAME
 		v.push_back(bp = new bool(false));
 		call.strid = strid;
 		call.args = v;
+		call.conptr = &dummycon;
 		call.scriptloc = bslink + "scripts\\game_ui_select.py";
 		GAME::UI->argmodmutex->lock();
 		calls.push_back(new pycall(call));
@@ -603,6 +606,8 @@ namespace GAME
 		int2 pos = (_pos + *mcam->GetXYp()) - (int2)((uni2<float>)((uni2<float>)mcam->GetBitmapSize().touni2<float>()*
 			(uni2<float>(1.0f,1.0f)-(uni2<float>)mcam->scale)) / 2).toint2();
 		ship& sh = *conship;
+		if (!sh.isplayercontrolled)
+			return;
 		camera* cam = sh.shcam;
 		int2 p1 = *sh.pos + int2{ (int)sh.size.width / 2,(int)sh.size.height / 2 };
 		int2 p2 = pos;
