@@ -110,6 +110,7 @@ class AT:
     SAMEPOS = (1<<3)
     FORCE = (1<<5)
 class winapi:
+    inputvec = ["LBUTTONUP","RBUTTONUP","LBUTTONDOWN","RBUTTONDOWN","MBUTTONUP","MBUTTONDOWN","MOUSEMOVE"]
     class msg:
         class WM:
             MOUSEMOVE = 0x0200

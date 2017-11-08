@@ -16,7 +16,7 @@ using namespace D2D1;
 using namespace AZfilelib;
 namespace GAME
 {
-	extern pathsystem mainpaths;
+	//extern pathsystem mainpaths;
 	extern GUI::core* UI;
 	extern deque<pycall*> calls;;
 }
@@ -153,7 +153,7 @@ namespace DX2D
 			}
 			case move:
 			{
-				auto pat = boost::any_cast<path>(actions[i].second);
+				auto pat = boost::any_cast<NBPF::path>(actions[i].second);
 				uni2<long double> normalised = classvariables::normalize(*pos-pat.nodes[0].first);
 				normalised = normalised* uni2<long double> {-1, -1};
 				posprec = posprec + normalised;
@@ -637,7 +637,7 @@ namespace GAME
 				if (GAME::selecting::scm == nullptr)
 					return;
 				crewman* cm = GAME::selecting::scm;
-				path pa;
+				NBPF::path pa;
 				if ((bool)(pa = sh.psystem.FindPath(*cm->pos, pos - *sh.pos, true)))
 				{
 					cm->actions.push_back(make_pair(caction::move, (boost::any)pa));

@@ -3,6 +3,7 @@ import GUI
 import GAPI
 selectedent = GAPI.GetSelectedEntity()
 oldfind = GUI.Memory_Find(1,"selected")
+oldselection = 0
 if oldfind:
     oldselection = GUI.Memory_Get(1,"selected")
 if selectedent != oldselection:

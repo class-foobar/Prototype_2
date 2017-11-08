@@ -1,6 +1,5 @@
 #pragma once
 #include "hmain.h"
-#define pyobj PyObject* 
 namespace GAME
 {
 	inline void executevatemp()

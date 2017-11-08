@@ -3,6 +3,7 @@ import GUI
 import AZflib
 import importlib
 import os
+from inspect import signature
 def main (strid):
     wnd = GUI.GetArg(strid,0)
     boxn = GUI.GetArg(strid,1)
@@ -50,7 +51,11 @@ def main (strid):
         npyf = pyf.replace(".py","")
         mod = importlib.import_module(npyf)
         met = getattr(mod,"main")
-        met(strid)
+        sig = signature(met)
+        if len(sig.parameters) == 1:
+            met(strid)
+        else:
+            met(strid,{"loc":loc,"wnd":wnd,"strid":strid})
     if msg == "MOUSEMOVE":
         if(not hasmover) and isinside:
             GUI.Memory_Set(wnd,"hasmover","BOOL",true)

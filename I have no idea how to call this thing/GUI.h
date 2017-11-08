@@ -248,7 +248,7 @@ namespace GAME
 			mutex _m;
 			unique_lock<std::mutex> _ulm;
 			condition_variable _mttw;
-			map<ui, map<string, string>> oncescmap;
+			common::safemap<ui, map<string, string>> oncescmap;
 			void reinit();
 			//mutex argmutex;
 			common::safemap<string, vector<boost::any>> args;

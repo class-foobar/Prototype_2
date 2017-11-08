@@ -100,9 +100,13 @@ namespace DX2D
 				i++;
 				continue;
 			}
-
-			if(TMAP[cam][i]->wtext != L"")
-				TMAP[cam][i]->Render(*cam->GetRenderTargetP());
+			if (TMAP[cam][i]->wasreleased)
+			{
+				TMAP[cam].erase(TMAP[cam].begin() + i);
+			}
+			else 
+				if(TMAP[cam][i]->wtext != L"")
+					TMAP[cam][i]->Render(*cam->GetRenderTargetP());
 			i++;
 		}
 	}

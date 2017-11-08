@@ -161,7 +161,6 @@ namespace GAME
 		ent.entname = name;
 		ent.datav.push_back(this);
 		entitylist.push_back(ent);
-		int DONT_OPTIMISE_THIS_SHIT = abs(-1 * (rand() / 2));
 		delete fakeslot->pos;
 		delete fakeslot;
 		return;

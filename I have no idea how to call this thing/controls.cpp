@@ -46,6 +46,8 @@ namespace DX2D
 		pycall* call = static_cast<pycall*>  (callptr);
 		FILE* _f = NULL;
 		_f = _Py_fopen(loc.c_str(), "r");
+		if (loc == "")
+			loc = fname;
 		UI->argmodmutex->lock();
 		UI->idmapmutex.lock();
 		UI->processtridmap.insert(make_pair(getpid(), strid));
@@ -56,14 +58,22 @@ namespace DX2D
 		if (fname == "")
 		{
 			fname = reverseSTR(copytochfromstart(reverseSTR(loc), '/'));
-			if(fname == "")
+			if(fname == loc)
 				fname = reverseSTR(copytochfromstart(reverseSTR(loc), '\\'));
 		}
 #ifndef nopydebugoutput
 		string str = loc + ", " + " strid: " + strid + "\n";
 		OutputDebugStringA(str.c_str());
 #endif // !nopydebugoutput
-
+		if (fname.find("\\") != string::npos || fname.find("/") != string::npos)
+		{
+			string fnameold = fname;
+			fname = reverseSTR(copytochfromstart(reverseSTR(fname), '/'));
+			if (fname == fnameold)
+				fname = reverseSTR(copytochfromstart(reverseSTR(fname), '\\'));
+		}
+		if (!UI->args.find(strid))
+			UI->args.insert(make_pair(strid, call->args));
 		auto res = PyRun_AnyFileEx(_f, fname.c_str(), true);
 		//PyGILState_Release(gstate);
 		UI->idmapmutex.lock();
@@ -73,29 +83,53 @@ namespace DX2D
 		UI->argmodmutex->lock();
 		int i = 0;
 		auto bargs = UI->args[strid];
-		if (bargs.size() != 0)
+		if (bargs.size() != 0 && bargs.size() > 10)
 		{
-			auto fargs = boost::any_cast<vector<wchar_t*>>(bargs[(bargs.size() < 10) ? 1 : 8]);
-			while (i < fargs.size())
+			try
 			{
-				delete[] fargs[i];
-				i++;
+				auto fargs = boost::any_cast<vector<wchar_t*>>(bargs[(bargs.size() < 10) ? 1 : 8]);
+				while (i < fargs.size())
+				{
+					delete[] fargs[i];
+					i++;
+				}
 			}
+			catch (...) {} // at least you tried
 		}
 		if (bargs.size() > 10)
 		{
-			*boost::any_cast<bool*>(bargs[13]) = true;
+			try
+			{
+				*boost::any_cast<bool*>(bargs[13]) = true;
+			}
+			catch (...) {}
 		}
-		if (MapFind(UI->args.getref(),strid))
-			if(UI->args[strid].size() != 0)
-				if (MapFind(UI->oncescmap[boost::any_cast<ui>(UI->args[strid][0])], fname))
-				{
-					UI->oncemutex.lock();
-					UI->oncescmap[boost::any_cast<ui>(UI->args[strid][0])].erase(fname);
-					UI->oncemutex.unlock();
-				}
-		if (MapFind(UI->args.getref(), strid))
-			UI->args.erase(strid);
+		bool isfirstargwindow = true;
+		if(UI->args.size() > 0 && MapFind(UI->args.getref(), strid))
+		{ 
+			try
+			{
+				auto bs = UI->args[strid][0];
+				if (UI->args[strid].size() != 0)
+					boost::any_cast<ui>(UI->args[strid][0]);
+				else
+					isfirstargwindow = false;
+			}
+			catch (...)
+			{
+				isfirstargwindow = false;
+			}
+			if (isfirstargwindow)
+				if(UI->args[strid].size() != 0)
+					if (MapFind(UI->oncescmap.getref()[boost::any_cast<ui>(UI->args[strid][0])], fname))
+					{
+						UI->oncemutex.lock();
+						UI->oncescmap.getref()[boost::any_cast<ui>(UI->args[strid][0])].erase(fname);
+						UI->oncemutex.unlock();
+					}
+			if (MapFind(UI->args.getref(), strid))
+				UI->args.erase(strid);
+		}
 		UI->argmodmutex->unlock();
 		delete call;
 		/*GAME::scriptthreadmutex.lock();
@@ -144,7 +178,7 @@ namespace DX2D
 		}
 		try
 		{
-			auto ONMAP = UI->oncescmap;
+			auto ONMAP = UI->oncescmap.getref();
 			//UI->oncemutex.lock();
 			if (MapFind(ONMAP, wnd->ID))
 				if (MapFind(ONMAP[wnd->ID], scriptname))

@@ -3,6 +3,8 @@
 mutex _py_refmutex;
 #define Py_INCREFTS(obj) _py_refmutex.lock(); Py_INCREF(obj); _py_refmutex.unlock()
 #define Py_DECREFTS(obj) _py_refmutex.lock(); Py_DECREF(obj); _py_refmutex.unlock()
+#define PY_INCREFTS Py_INCREFTS
+#define PY_DECREFTS Py_DECREFTS
 namespace GAME
 {
 	extern mutex detachUIthmutex;
@@ -29,12 +31,34 @@ namespace GAME
 					ui flags, parentid;
 					uni2<float> pos, size;
 					char* chstylename = NULL, *chthisname = NULL;
-					PyArg_ParseTuple(args, "I|s|f|f|f|f|I|s", &parentid, &chstylename, &pos.x, &pos.y, &size.x, &size.y, &flags, &chthisname);
+					auto argn = PyTuple_Size(args);
+					string thisname = "NULL";
+					if (argn == 7)
+					{
+						PyArg_ParseTuple(args, "I|s|f|f|f|f|I", &parentid, &chstylename, &pos.x, &pos.y, &size.x, &size.y, &flags);
+						thisname = "NULL";
+					}
+					else if(argn == 8)
+					{
+						PyArg_ParseTuple(args, "I|s|f|f|f|f|I|s", &parentid, &chstylename, &pos.x, &pos.y, &size.x, &size.y, &flags, &chthisname);
+						if (chthisname != NULL)
+							thisname = chthisname;
+					}
+					else if (argn == 1)
+					{
+						auto tuple = PyTuple_GetItem(args, 0);
+						PY_INCREFTS(tuple);
+						PyArg_ParseTuple(tuple, "I|s|f|f|f|f|I|s", &parentid, &chstylename, &pos.x, &pos.y, &size.x, &size.y, &flags, &chthisname);
+						PY_DECREFTS(tuple);
+						if (chthisname != NULL)
+							thisname = chthisname;
+					}
+					else
+					{
+						return NULL;
+					}
 					ui flagscopy = WF_SCALETO_V;
 					string stylename = chstylename;
-					string thisname = "NULL";
-					if(chthisname != NULL)
-						thisname = chthisname;
 					auto res = UI->NewWindow(UI->wnds[parentid], pos, size, stylename, (ui)flags);
 					auto wnd = boost::any_cast<window*>(res.retval[0]);
 					wnd->strname = thisname;
@@ -235,6 +259,16 @@ namespace GAME
 					string strid;
 					char* stridch = NULL;
 					int it;
+					auto argn = PyTuple_Size(args);
+					if (argn == 3)
+					{
+						char* ch0;
+						PyArg_ParseTuple(args, "s|i|s", &stridch, &it,&ch0);
+						strid = stridch;
+						string type = ch0;
+						_GetArgMutex.unlock();
+						return common::Python::CastPyObj(UI->args[strid][it], type);
+					}
 					PyArg_ParseTuple(args, "s|i", &stridch, &it);
 					strid = stridch;
 					//cout << strid << " has reached GetArg(" << to_string(it) << ")\n";
@@ -246,7 +280,7 @@ namespace GAME
 					}
 					if (UI->args[strid].size() == 0)
 					{
-						PyErr_SetString(hError, "GetArg error: No arguments");
+						PyErr_SetString(hError, "GetArg error: No arguments found");
 						_GetArgMutex.unlock();
 						return NULL;
 					}
@@ -388,11 +422,19 @@ namespace GAME
 						PyArg_ParseTuple(args, "I|s|s|O", &ID, &ch0, &ch1, &obj);
 					else
 						return NULL;
+					if (string(ch0).find("subwindow") != string::npos)
+						pass;
 					Py_INCREFTS(obj);
 					if (ID == 0)
 						ID = 1;
 					name = ch0;
 					type = ch1;
+					if (istypestr(name))
+					{
+						string str = type;
+						type = name;
+						name = str;
+					}
 					int pid = 0;
 					window* wnd = UI->wnds[ID];
 					if (!MapFind(wnd->memory, pid))
@@ -469,9 +511,12 @@ namespace GAME
 					window* wnd = UI->wnds[ID];
 					auto var = wnd->memory[0][name].second;
 					type = wnd->memory[0][name].first;
+					if (string(ch0).find("subwindow") != string::npos)
+						pass;
 					if (type == "PYOBJ")
 					{
 						auto val = boost::any_cast<PyObject*>(var);
+						Py_INCREFTS(val);
 						return val;
 					}
 					else if (type == "STR")
@@ -589,17 +634,68 @@ namespace GAME
 				{
 					int i;
 					ui ID;
-					PyArg_ParseTuple(args, "I|i", &ID, &i);
+					auto size = PyTuple_Size(args);
+					if (size == 2)
+					{
+						PyArg_ParseTuple(args, "I|i", &ID, &i);
+						window* wnd = UI->wnds[ID];
+						return PyLong_FromLong(wnd->btts[i]->size.x);
+					}
+					int ii;
+					PyArg_ParseTuple(args, "I|i|i", &ID, &i,&ii);
 					window* wnd = UI->wnds[ID];
-					return PyLong_FromLong(wnd->btts[i]->size.x);
+					return PyLong_FromLong((wnd->shpb[i].brushes.size()>i)?wnd->shpb[i].brushes[ii]->size->x:wnd->shpb[i].sprites[ii]->size.width);
 				}
 				PYFUNC(GetRealSizeY)
 				{
 					int i;
 					ui ID;
-					PyArg_ParseTuple(args, "I|i", &ID, &i);
+					auto size = PyTuple_Size(args);
+					if (size == 2)
+					{
+						PyArg_ParseTuple(args, "I|i", &ID, &i);
+						window* wnd = UI->wnds[ID];
+						return PyLong_FromLong(wnd->btts[i]->size.y);
+					}
+					int ii;
+					PyArg_ParseTuple(args, "I|i|i", &ID, &i, &ii);
 					window* wnd = UI->wnds[ID];
-					return PyLong_FromLong(wnd->btts[i]->size.y);
+					return PyLong_FromLong((wnd->shpb[i].brushes.size()>ii) ? wnd->shpb[i].brushes[ii]->size->y : wnd->shpb[i].sprites[ii]->size.height);
+				}
+				PYFUNC(GetRealSize)
+				{
+					int i, ii;
+					ui ID;
+					auto argn = PyTuple_Size(args);
+					int2 size;
+					if (argn == 2)
+					{
+						PyArg_ParseTuple(args, "I|i", &ID, &i);
+						window* wnd = UI->wnds[ID];
+						size = wnd->btts[i]->size;
+					}
+					else
+					{
+						PyArg_ParseTuple(args, "I|i|i", &ID, &i, &ii);
+						window* wnd = UI->wnds[ID];
+						size = int2(((wnd->shpb[i].brushes.size() > i) ? *wnd->shpb[i].brushes[ii]->size : wnd->shpb[i].sprites[ii]->size));
+					}
+					pyobj mod = PyImport_ImportModule("GTYPES");
+					PY_INCREFTS(mod);
+					pyobj _class = PyObject_GetAttrString(mod, "int2");
+					PY_INCREFTS(_class);
+					pyobj ret = PyInstanceMethod_New(_class);
+					PY_INCREFTS(ret);
+					PyObject_SetAttrString(ret, "x", PyLong_FromLong(size.x));
+					PyObject_SetAttrString(ret, "y", PyLong_FromLong(size.y));
+					PY_DECREFTS(_class);
+					PY_DECREFTS(mod);
+					return ret;
+
+				}
+				PYFUNC(GetRealSizeXY)
+				{
+					return GetRealSize(self, args);
 				}
 				PYFUNC(SetShapeSize)
 				{
@@ -888,7 +984,7 @@ namespace GAME
 					while (!IsNumberCH(strid[i]))
 						s += strid[i++];
 					if (s == "basewindow_msg_move.py")
-						pass();
+						pass;
 					return PyUnicode_FromStringAndSize (strid.c_str(), strid.size());
 				}
 				PYFUNC(GetFLoc)
@@ -909,7 +1005,7 @@ namespace GAME
 					char* ch0 = NULL;
 					PyArg_ParseTuple(args, "I|s", &ID, &ch0);
 					string strid = ch0;
-					if (!MapFind(UI->oncescmap, ID))
+					if (!MapFind(UI->oncescmap.getref(), ID))
 						UI->oncescmap.insert(make_pair(ID, map<string,string>()));
 					auto filename = boost::any_cast<string>(UI->args[strid][9]);
 					UI->oncescmap[ID].insert(make_pair(filename, strid));
@@ -1163,6 +1259,28 @@ namespace GAME
 				{
 					Py_RETURN_FALSE;
 				}
+				PYFUNC(SendMsg)
+				{
+					ui ID;
+					ui lpid, wpid;
+					LPARAM lParam;
+					WPARAM wParam;
+					window* wnd;
+					ui msg;
+					PyArg_ParseTuple(args, "I|I|I|I",&ID,&wpid,&lpid,&msg);
+					lParam = lpid;
+					wParam = wpid;
+					wnd = UI->wnds[ID];
+					wnd->con.MouseEvent(wParam, lParam, msg);
+					Py_RETURN_TRUE;
+				}
+				PYFUNC(GetWndID)
+				{
+					pyobj obj;
+					PyArg_ParseTuple(args, "O", &obj);
+					window* wnd = (window*)(void*)PyLong_AsVoidPtr(obj);
+					return PyLong_FromUnsignedLongLong(wnd->ID);
+				}
 				static  PyObject* test(PyObject *self, PyObject *args)
 				{
 					return NULL;
@@ -1252,12 +1370,24 @@ namespace GAME
 				PYFUNC(GetVar)
 				{
 					ulli ptr;
-					char *ch0, *ch1;
+					char *ch0 = NULL;
+					char *ch1;
 					string type, name;
-					PyArg_ParseTuple(args, "K|s|s", &ptr, &ch0, &ch1);
-					name = ch1;
-					type = ch0;
+					if (PyTuple_Size(args) == 3)
+					{
+						PyArg_ParseTuple(args, "K|s|s", &ptr, &ch0, &ch1);
+						type = ch0;
+						name = ch1;
+						type = STRtoUP(type);
+					}
+					else
+					{
+						PyArg_ParseTuple(args, "K|s", &ptr, &ch1);
+						name = ch1;
+					}
 					auto file = static_cast<AZfile*>((void*)ptr);
+					if (ch0 == NULL)
+						type = file->GetType(name);
 					return common::Python::CastPyObj(file->GetVarAny(name), type);
 				}
 				PYFUNC(SetVar)
@@ -1301,7 +1431,10 @@ namespace GAME
 						Py_RETURN_FALSE;
 					if (name.find("NULL") != string::npos)
 						Py_RETURN_FALSE;
-					return PyBool_FromLong(file->findvar(name));
+					bool b = file->findvar(name);
+					if (name.find("call") != string::npos)
+						pass;
+					return PyBool_FromLong(b);
 				}
 				//static PyMethodDef AZMethods[] =
 				//{
@@ -1461,50 +1594,6 @@ namespace GAME
 				calls.pop_front();
 				UI->argmodmutex->unlock();
 				GUIthmutex.unlock();
-				
-				//if (calls[ii]->isbeingprocessed)
-				//{
-				//	//GAME::scriptthreadmutex.lock();
-				//	//calls.erase(calls.begin() + ii);
-				//	//GAME::scriptthreadmutex.unlock();
-				//	ii++;
-				//	continue;
-				//}
-				//GUIthmutex.lock();
-				//if (calls.size() == 0)
-				//	break;
-				//calls[ii]->isbeingprocessed = true;
-				//auto call = calls[ii];
-				////GAME::scriptthreadmutex.lock();
-				////calls.erase(calls.begin() + ii);
-				////GAME::scriptthreadmutex.unlock();
-				//call->conptr->callpyscript(call->strid,call->scriptloc,call->scriptname,(void*)call,&calls);
-				//if (curth != thisth)
-				//{
-				//	i = 0;
-				//	*call->cancontinue = true;
-				//	delete call;
-				//	while (i < scriptthreads.size())
-				//	{
-				//		if (scriptthreads[i].first == curth)
-				//		{
-				//			*scriptthreads[i].second = true;
-				//			break;
-				//		}
-				//		i++;
-				//	}
-				//	GUIthmutex.unlock();
-				//	return;
-				//}
-				//*call->cancontinue = true;
-				////UI->argmodmutex->lock();
-				///*GAME::scriptthreadmutex.lock();
-				//cout << calls[ii]->scriptname << endl;
-				//calls.erase(calls.begin() + ii);
-				//GAME::scriptthreadmutex.unlock();*/
-				//delete call;
-				////UI->argmodmutex->unlock();
-				//GUIthmutex.unlock();
 			}
 			goto restart;
 		}
@@ -1549,6 +1638,10 @@ namespace GAME
 				if (parent->isnull)
 					parent == nullptr;
 			UIresult ret;
+			int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
+			uni2<float> mf;
+			mf.x = ((float)wsize.x)*child->size.x;
+			mf.y = ((float)wsize.y)*child->size.y;
 			window* oldparent = child->parent;
 			bool deloldparent = false;
 			if (!oldparent)
@@ -1559,7 +1652,7 @@ namespace GAME
 			}
 			if (parent == oldparent && flags & AT_VINIT)
 			{
-				child->initvis(styles[child->styleid], child->defpos, GAME::camrect.second().touni2<float>()*child->size,visflags);
+				child->initvis(styles[child->styleid], child->defpos, parent->realsize,visflags);
 				ret.code = UI_OK;
 				return ret;
 			}
@@ -1584,7 +1677,10 @@ namespace GAME
 						uni2<float> pos = child->proppos;
 						if (flags & AT_PROPPOS)
 						{
-							pos = ((child->parent == nullptr)? GAME::camrect.second().touni2<float>() : oldparent->size) / child->pos->touni2<float>();
+							if (child->pos == 0)
+								pos = uni2<float>(0, 0);
+							else 
+								pos = ((child->parent == nullptr)? GAME::camrect.second().touni2<float>() : oldparent->size) / child->pos->touni2<float>();
 							
 						}
 						else if (flags & AT_SAMEPOS)
@@ -1666,14 +1762,15 @@ namespace GAME
 					pycall* call = new pycall();
 					call->createstrid(UI);
 					call->c = UI;
-					call->scriptname = UI->bslink + "scripts\\" + attachfunc;
-					call->args.push_back(parent);
-					call->args.push_back(child);
+					call->scriptloc = UI->bslink + "scripts\\" + attachfunc;
+					call->args.push_back((void*)parent);
+					call->args.push_back((void*)child);
 					call->cancontinue = false;
 					call->args.push_back(flags);
 					call->args.push_back(visflags);
 					GAME::UI->argmodmutex->lock();
 					calls.push_back(call);
+					
 					GAME::UI->argmodmutex->unlock();
 				}
 			if ((attachfunc = /*UI->styles[child->styleid].attachtof*/child->handleattachto) != "")
@@ -1681,9 +1778,9 @@ namespace GAME
 				pycall* call = new pycall();
 				call->createstrid(UI);
 				call->c = UI;
-				call->scriptname = UI->bslink + "scripts\\" + attachfunc;
-				call->args.push_back(child);
-				call->args.push_back(parent);
+				call->scriptloc = UI->bslink + "scripts\\" + attachfunc;
+				call->args.push_back((void*)child);
+				call->args.push_back((void*)parent);
 				call->cancontinue = false;
 				call->args.push_back(flags);
 				call->args.push_back(visflags);
@@ -1751,13 +1848,14 @@ namespace GAME
 		{
 			UIresult ret;
 			proppos = npos;
-			int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
+			//int2 wsize = { GAME::camrect.z - GAME::camrect.x, GAME::camrect.w - GAME::camrect.y };
+			uni2<float>wsize = screenmultip;
 			int i = 0;
-			pos = new int2((npos*wsize.touni2<float>()).toint2());
-			if (flags & WF_POSBASERIGHT)
-			{
-				pos->x = wsize.x - pos->x;
-			}
+			pos = new int2((npos*wsize).toint2());
+			//if (flags & WF_POSBASERIGHT)
+			//{
+			//	pos->x = wsize.x - pos->x;
+			//}
 			//if (flags & WF_SCALETO_VH || flags == NULL)
 			//{
 			//	pos = new int2((npos*wsize.touni2<float>()).toint2());
@@ -1839,10 +1937,11 @@ namespace GAME
 						else
 							rmfs.y = s.shapes[i].size.y * mf.y;
 						rmfp.y = s.shapes[i].pos.y * mf.y;
+						if (flags & WF_POSBASERIGHT)
+							rmfp.x += screenmultip.x - rmfs.x;
+							//i2sp->x += screenmultip.x-rmfs.x;
 						sp.size =  int2((rmfs).toint2());
 						i2sp = new int2((rmfp).toint2());
-						if (flags & WF_POSBASERIGHT)
-							i2sp->x -= rmfs.x;
 						sp.SyncPos(i2sp, false);
 						//*i2sp = *i2sp + (defpos*rmf).toint2();
 					}
@@ -1894,10 +1993,11 @@ namespace GAME
 						else
 							rmfs.y = s.shapes[i].size.y * mf.y;
 						rmfp.y = s.shapes[i].pos.y * mf.y;
+						if (flags & WF_POSBASERIGHT)
+							rmfp.x += screenmultip.x - rmfs.x;
+							//b.pos->x -= rmfs.x;
 						b.size = new int2(( rmfs).toint2());
 						b.pos = new int2((rmfp).toint2());
-						if (flags & WF_POSBASERIGHT)
-							b.pos->x -= rmfs.x;
 						//*b.pos = *b.pos + (defpos*wsize.touni2<float>()).toint2();
 					}
 					else
@@ -1986,13 +2086,16 @@ namespace GAME
 				else
 					rmfs.y = s.boxes[i].sh.size.y * mf.y;
 				rmfp.y = s.boxes[i].sh.pos.y * mf.y;
+				if (flags & WF_POSBASERIGHT)
+					rmfp.x += screenmultip.x - rmfs.x;
+					//pos->x += screenmultip.x - rmfs.x;
 				int2* pos = new int2((rmfp).toint2());
 				//*pos = *pos + (defpos*wsize.touni2<float>()).toint2();
 				posvec.push_back(make_pair(pos,*pos));
 				int2 bsize = rmfs.toint2();
-				if (flags & WF_POSBASERIGHT)
-					pos->x -= rmfs.x;
 				simpleshape sh = s.boxes[i].sh;
+				sh.pos = *pos;
+				sh.size = bsize;
 				textclass tc;
 				tc.init(); 
 				//if (flags & WF_POSBASERIGHT)
@@ -2083,9 +2186,11 @@ namespace GAME
 				{
 					*boost::any_cast<bool*>(bargs[13]) = true;
 				}
-				UI->args.erase(strid);
 				UI->argmodmutex->unlock();
 			}
+			UI->argmodmutex->lock();
+			UI->args.erase(strid);
+			UI->argmodmutex->unlock();
 			return ret;
 		}
 		UIresult window::scale(int2 nsize)
@@ -2194,6 +2299,8 @@ namespace GAME
 			w->flags = flags;
 			w->coreptr = this;
 			w->handleattachto = s.attachtof;
+			if (s.name == "SCROLLABLE" || s.name == "scrollable")
+				pass;
 			do
 			{
 				w->ID = rand();
@@ -2216,10 +2323,11 @@ namespace GAME
 			mf.x = ((float)wsize.x)*size.x;
 			mf.y = ((float)wsize.y)*size.y;
 			w->size = size;
+			MapSet(UI->wndnamemap, make_pair(strname, w->ID));
 			if (!(flags & WF_NOVINIT))
 			{
 				if (parent == nullptr)
-					ret = w->initvis(s, pos, mf, flags);
+					ret = w->initvis(s, pos, wsize.touni2<float>(), flags);
 				else
 					ret = AttachTo(parent, w, AT_VINIT | AT_FORCE | AT_PROPPOS, flags);
 			}
@@ -2230,7 +2338,6 @@ namespace GAME
 			ret.retval.push_back(w);
 			ret.retval.push_back(w->ID);
 			string strid = to_string(w->ID);
-			MapSet(UI->wndnamemap, make_pair(strname, w->ID));
 			return ret;
 		}
 		UIresult core::NewWindow(window * parent, uni2<float> pos, uni2<float> size, string stylename, unsigned long int flags,string strname)

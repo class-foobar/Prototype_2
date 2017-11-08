@@ -709,7 +709,7 @@ namespace DX2D
 		debugging::debugwindow *resdwnd = nullptr;
 		int2* mousepos = new int2(0, 0);
 		physobj* pobj;
-		pathsystem psystem;
+		NBPF::pathsystem psystem;
 		physics crewphys;
 		factoken* ft;
 		vector<smove> moves;

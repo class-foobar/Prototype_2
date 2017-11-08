@@ -165,6 +165,18 @@ namespace GAME
 				*ptr = state;
 				Py_RETURN_TRUE;
 			}
+			PYFUNC(GetPathMaking)
+			{
+				Py_RETURN_TRUE;
+			}
+			PYFUNC(DebugOutput)
+			{
+				char* ch0;
+				PyArg_ParseTuple(args, "s", &ch0);
+				string text = ch0;
+				OutputDebugStringA(text.c_str());
+				return Py_None;
+			}
 			PyObject* hError = NULL;
 			PyMethodDef arr[__COUNTER__];
 			struct PyModuleDef GAPImodule;

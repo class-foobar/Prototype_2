@@ -3,8 +3,7 @@ import GUI
 import GAPI
 from GTYPES import *
 strid = GUI.GetSTRID()
-loc = GUI.GetFLoc(strid)
-wnd = GUI.GetArg(strid,0)
-floc = GUI.GetName(wnd)
+wndptr = GUI.GetArg(strid,0,"VOIDPTR")
+wnd = GUI.GetWndID(wndptr)
 GUI.Memory_Set(wnd,"BOOL", "isattaching",True)
 GUI.Memory_Set(wnd,"BOOL", "isattaching",False)

@@ -97,10 +97,13 @@ inline std::string INTtoSTR(int i)
 {
 	return std::to_string(i);
 }
-inline void pass()
+#pragma optimize( "", off )
+inline void _pass()
 {
-
+	return;
 }
+#pragma optimize( "", on )
+#define pass _pass()
 namespace classvariables
 {
 	template<typename univar>
@@ -670,6 +673,7 @@ namespace boost
 #define BS(name) void name (string s); vecbreaker<void(*)(string s)> name ## vbreaker = vb + &name
 #define PYMETH(name) {#name,name,METH_VARARGS, "If I'd tell you I'd have to kill you"}
 #define PYWRITESCRIPTDATA false
+#define pyobj PyObject* 
 template<typename univar>
 class vecbreaker
 {
@@ -981,7 +985,14 @@ namespace common
 		}
 		inline PyObject* CastPyObj(boost::any val, string type)
 		{
-			if (type == "INT" || type == "INT32")
+			if (type == "VOID*" || type == "VOIDPTR" || type == "PTR")
+			{
+				void* ptr = boost::any_cast<void*>(val);
+				pyobj obj = ToPyObj(ptr);
+				//void* nptr = PyLong_AsVoidPtr(obj);
+				return obj;
+			}
+			else if (type == "INT" || type == "INT32")
 			{
 				return ToPyObj(boost::any_cast<int>(val));
 			}
@@ -1426,6 +1437,11 @@ bool MapFind(map<univar, univar2> m, univar key)
 	return true;
 }
 template<typename univar, typename univar2>
+bool MapFind(common::safemap<univar, univar2> m, univar key)
+{
+	return m.find(key);
+}
+template<typename univar, typename univar2>
 inline bool InsertToMapOfVecs(map<univar, vector<univar2>> &m, pair<univar, univar2> p)
 {
 	if (MapFind(m, p.first))
@@ -1656,6 +1672,39 @@ inline std::string RandomString(int len, ui seed = 0/*won't be used if 0*/)
 		i++;
 	}
 	return retval;
+}
+inline std::string STRtoUP(std::string str)
+{
+	int i = 0;
+	while (i < str.size())
+	{
+		str[i] = toupper(str[i]);
+		i++;
+	}
+	return str;
+}
+inline std::string STRtoLO(std::string str)
+{
+	int i = 0;
+	while (i < str.size())
+	{
+		str[i] = tolower(str[i]);
+		i++;
+	}
+	return str;
+}
+inline bool istypestr(std::string str)
+{
+	deque<string> tpl = { "PYOBJ","DOUBLE","SLN","LONG","ULLI","LLI","UI","BOOLEAN","BOOL","INT","STR","WSTR","UINT","INT32","INT64","UINT32","UINT64","FLOAT","CHAR","VOID*","VOID","VOIDPTR" };
+	int i = 0;
+	str = STRtoUP(str);
+	while (i < tpl.size())
+	{
+		if (tpl[i] == str)
+			return true;
+		i++;
+	}
+	return false;
 }
 //inline bool isblankch(char ch)
 //{
